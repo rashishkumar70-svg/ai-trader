@@ -114,36 +114,6 @@ div[data-testid="stTextInput"]>div>div>input{background:white !important;border:
 .badge{display:inline-block;border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:800;color:white;}
 .dashhead{background:linear-gradient(135deg,#7c2d12,#b45309,#d97706);border-radius:18px;padding:18px 24px;
   margin-bottom:16px;box-shadow:0 8px 28px rgba(180,83,9,0.25);}
-/* ─── responsive / mobile terminal ─── */
-.block-container{padding:0.6rem 0.9rem 2rem !important;max-width:100% !important;}
-.trow{display:flex;align-items:center;gap:12px;background:#0f172a;border:1px solid #1e293b;
-  border-left:3px solid #22c55e;border-radius:12px;padding:8px 14px;margin:5px 0;flex-wrap:wrap;}
-.trow .rk{color:#475569;font-weight:900;font-size:15px;width:30px;font-family:ui-monospace,Menlo,Consolas,monospace;}
-.trow .nm{min-width:150px;}
-.trow .nm1{color:#f1f5f9;font-weight:800;font-size:14px;}
-.trow .nm2{color:#64748b;font-size:10px;}
-.trow .pr{min-width:96px;color:#e2e8f0;font-weight:800;font-size:14px;font-family:ui-monospace,Menlo,Consolas,monospace;}
-.trow .ch{min-width:70px;font-weight:900;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace;}
-.trow .bars{min-width:132px;}
-.trow .bline{display:flex;align-items:center;gap:6px;margin:2px 0;}
-.trow .btrack{background:#1e293b;width:70px;height:6px;border-radius:3px;overflow:hidden;}
-.trow .bfill{height:6px;border-radius:3px;}
-.trow .btxt{color:#94a3b8;font-size:10px;font-family:ui-monospace,Menlo,Consolas,monospace;}
-.trow .sp{min-width:132px;}
-.trow .bdg{margin-top:2px;}
-@media only screen and (max-width:820px){
-  .navbar{padding:12px 14px !important;border-radius:14px !important;}
-  [data-testid="stMetric"]{padding:8px 10px !important;}
-  [data-testid="stMetricValue"]{font-size:18px !important;}
-  .stButton>button{padding:10px 12px !important;font-size:13px !important;}
-  .trow{gap:8px;padding:8px 10px;}
-  .trow .nm{min-width:118px;flex:1 1 118px;}
-  .trow .pr{min-width:84px;font-size:13px;}
-  .trow .ch{min-width:58px;}
-  .trow .bars{min-width:112px;}
-  .trow .sp{min-width:100%;order:9;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .sh{font-size:13px;padding:8px 12px;}
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2698,26 +2668,49 @@ def _lb_row(i, r, now):
     chg = r.get("chg", 0); cc = "#22c55e" if chg >= 0 else "#ef4444"
     badges = ""
     if r.get("up_since") and now - r["up_since"] < 3600:
-        badges += _pill("\U0001f195 NEW UPTREND", "#4ade80", "rgba(34,197,94,0.16)")
+        badges += _pill("🆕 NEW UPTREND", "#4ade80", "rgba(34,197,94,0.16)")
     if r.get("above200"):
-        badges += _pill("\u2b06 200EMA", "#93c5fd", "rgba(59,130,246,0.16)")
+        badges += _pill("⬆ 200EMA", "#93c5fd", "rgba(59,130,246,0.16)")
     if (r.get("vr") or 0) >= 2:
-        badges += _pill(f"\U0001f50a VOL {r['vr']:.1f}x", "#fbbf24", "rgba(245,158,11,0.16)")
+        badges += _pill(f"🔊 VOL {r['vr']:.1f}x", "#fbbf24", "rgba(245,158,11,0.16)")
     spark = svg_spark(r.get("spark"))
-    return (f"<div class='trow'>"
-            f"<div class='rk'>{i}</div>"
-            f"<div class='nm'><div class='nm1'>{r['name'][:19]}</div>"
-            f"<div class='nm2'>{r['sym'].replace('.NS','')} \u00b7 {r['sig'].title()}</div></div>"
-            f"<div class='pr'>\u20b9{r['price']:,.2f}</div>"
-            f"<div class='ch' style='color:{cc};'>{chg:+.2f}%</div>"
-            f"<div class='bars'>"
-            f"<div class='bline'><div class='btrack'><div class='bfill' style='background:#22c55e;width:{min(r['conf'],100):.0f}%;'></div></div>"
-            f"<span class='btxt'>{r['conf']:.0f}%</span></div>"
-            f"<div class='bline'><div class='btrack'><div class='bfill' style='background:#3b82f6;width:{min(r['score'],100):.0f}%;'></div></div>"
-            f"<span class='btxt'>score {r['score']:.0f}</span></div></div>"
-            f"<div class='sp'>{spark}<div class='bdg'>{badges}</div></div></div>")
+    return (f"<div style='display:flex;align-items:center;gap:12px;background:#0f172a;border:1px solid #1e293b;"
+            f"border-left:3px solid #22c55e;border-radius:12px;padding:8px 14px;margin:5px 0;flex-wrap:wrap;'>"
+            f"<div style='color:#475569;font-weight:900;font-size:15px;width:32px;font-family:monospace;'>{i}</div>"
+            f"<div style='min-width:148px;'><div style='color:#f1f5f9;font-weight:800;font-size:14px;'>{r['name'][:19]}</div>"
+            f"<div style='color:#64748b;font-size:10px;'>{r['sym'].replace('.NS','')} · {r['sig'].title()}</div></div>"
+            f"<div style='min-width:96px;color:#e2e8f0;font-weight:800;font-size:14px;font-family:monospace;'>\u20b9{r['price']:,.2f}</div>"
+            f"<div style='min-width:72px;'><span style='color:{cc};font-weight:900;font-size:13px;font-family:monospace;'>{chg:+.2f}%</span></div>"
+            f"<div style='min-width:126px;'><div style='display:flex;align-items:center;gap:6px;'>"
+            f"<div style='background:#1e293b;width:70px;height:6px;border-radius:3px;'><div style='background:#22c55e;width:{min(r['conf'],100):.0f}%;height:6px;border-radius:3px;'></div></div>"
+            f"<span style='color:#94a3b8;font-size:10px;font-family:monospace;'>{r['conf']:.0f}%</span></div>"
+            f"<div style='display:flex;align-items:center;gap:6px;margin-top:3px;'>"
+            f"<div style='background:#1e293b;width:70px;height:6px;border-radius:3px;'><div style='background:#3b82f6;width:{min(r['score'],100):.0f}%;height:6px;border-radius:3px;'></div></div>"
+            f"<span style='color:#94a3b8;font-size:10px;font-family:monospace;'>score {r['score']:.0f}</span></div></div>"
+            f"<div style='min-width:126px;'>{spark}<div style='margin-top:2px;'>{badges}</div></div></div>")
+
+def spark_fig(r):
+    y = r.get("spark") or []
+    up = (y[-1] >= y[0]) if len(y) >= 2 else True
+    clr = "#16a34a" if up else "#dc2626"
+    fig = go.Figure(go.Scatter(y=y, mode="lines", line=dict(color=clr, width=2.2),
+                               fill="tozeroy",
+                               fillcolor="rgba(22,163,74,0.08)" if up else "rgba(220,38,38,0.08)"))
+    fig.update_layout(height=230, margin=dict(l=8, r=8, t=6, b=6), showlegend=False,
+                      paper_bgcolor="white", plot_bgcolor="white",
+                      xaxis=dict(showticklabels=False, showgrid=False),
+                      yaxis=dict(showticklabels=True, showgrid=True, gridcolor="#e0e7ff", tickfont=dict(size=9)))
+    return fig
 
 
+def _fmt_age(sec):
+    sec = int(max(sec, 0))
+    return f"{sec//60}m {sec%60}s" if sec >= 60 else f"{sec}s"
+
+
+# ============================================================
+# 🔴 LIVE DASHBOARD TAB (the common board)
+# ============================================================
 def dashboard_tab(ss, mst_s, ml, mm):
     MONO = "ui-monospace,Menlo,Consolas,monospace"
 
@@ -3390,7 +3383,6 @@ def main():
         <div class='tr-i'><b style='color:#2563eb;'>🔴 Live Dashboard workflow:</b> START the board → watch the 🚀 UPTREND panel → open a stock's tab or click Analyze on a top card → confirm with pivots/news/ML in the full analysis → trade only with a stop. The board finds candidates; the deep analysis confirms.</div>
         <div class='tr-i'><b style='color:#2563eb;'>Pivots — which to use:</b> Standard = general S/R · Camarilla = tight intraday reversals (R3/S3) & breakouts (R4/S4) · Woodie = faster, momentum-weighted · Fibonacci = 38.2/50/61.8% pullback zones.</div>
         <div class='tr-i'><b style='color:#2563eb;'>Data source (current + upgrade path):</b> this app uses Yahoo Finance — free, no key, ~15-min delay possible and occasional throttling on huge boards. When you want true broker-grade real-time for NSE, the good options are: <b>Upstox API v2</b> (free with an account), <b>Angel One SmartAPI</b> (free), <b>Fyers API</b> (free), or <b>Zerodha Kite Connect</b> (paid, most popular). The app's logic stays the same — only the data fetch layer would change.</div>
-        <div class='tr-i'><b style='color:#2563eb;'>📱 Use on your phone:</b> Easiest — on your PC run <code>streamlit run ai_trader_v13_500.py --server.address 0.0.0.0</code>, find your PC's IP (Windows: <code>ipconfig</code> → IPv4, e.g. 192.168.1.5). Phone on the <b>same Wi-Fi</b>: open <code>http://192.168.1.5:8501</code> → browser menu → <b>Add to Home screen</b> = it works like an app. For access from anywhere (mobile data too): host it free on Streamlit Community Cloud (github.com + share.streamlit.io) or Hugging Face Spaces.</div>
         <div class='tr-g'><b style='color:#16a34a;'>Honest truth:</b> no tool predicts price. These stack the odds and define your risk — they don't remove it. The stop loss is what actually protects your capital.</div>
         """, unsafe_allow_html=True)
 
