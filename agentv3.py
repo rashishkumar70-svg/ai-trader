@@ -1505,6 +1505,143 @@ def journal_verify(entry):
         return {"status": "ERROR", "color": "#6b7280", "detail": f"{type(e).__name__}"}
 
 
+# ============================================================
+# 🧠 BOARD MEMORY + 🌙 EOD (END-OF-DAY) VERIFICATION
+#   The dashboard auto-saves WHAT IT SHOWED (snapshots). The EOD
+#   tab later fetches what ACTUALLY happened and scores every
+#   call — "how many stocks went as per our calculation?"
+# ============================================================
+SNAP_FILE = "board_snapshots.json"
+EOD_FILE = "eod_results.json"
+_SNAP_FIELDS = ("sym", "name", "price", "chg", "sig", "conf", "bp", "sp", "dtr",
+                "above200", "score", "buy_at", "sl", "t1", "t2", "rr", "sit")
+
+
+def snaps_load():
+    try:
+        if _os.path.exists(SNAP_FILE):
+            with open(SNAP_FILE, "r", encoding="utf-8") as f:
+                d = _json.load(f)
+            return d if isinstance(d, list) else []
+    except Exception:
+        pass
+    return []
+
+
+def snaps_save(rows):
+    """ONE snapshot per day = that day's calculation (today's board). While the
+    terminal runs, today's snapshot is refreshed — no intraday pile-up. The EOD
+    tab verifies it the NEXT day. Keeps the last 40 days."""
+    try:
+        now = datetime.now()
+        snap = {"id": now.strftime("%Y-%m-%d"),
+                "saved": now.strftime("%Y-%m-%d %H:%M"),
+                "rows": [{k: r.get(k) for k in _SNAP_FIELDS} for r in rows.values()]}
+        data = [s for s in snaps_load() if s.get("id") != snap["id"]]
+        data.append(snap)
+        data.sort(key=lambda s: s.get("saved", ""))
+        data = data[-40:]
+        with open(SNAP_FILE, "w", encoding="utf-8") as f:
+            _json.dump(data, f)
+        return True
+    except Exception:
+        return False
+
+
+def eod_load():
+    try:
+        if _os.path.exists(EOD_FILE):
+            with open(EOD_FILE, "r", encoding="utf-8") as f:
+                d = _json.load(f)
+            return d if isinstance(d, list) else []
+    except Exception:
+        pass
+    return []
+
+
+def eod_save(entry):
+    try:
+        data = [d for d in eod_load() if d.get("id") != entry.get("id")]
+        data.append(entry)
+        data.sort(key=lambda d: d.get("date", ""))
+        data = data[-100:]
+        with open(EOD_FILE, "w", encoding="utf-8") as f:
+            _json.dump(data, f, indent=2)
+        return True
+    except Exception:
+        return False
+
+
+def verify_snapshot(snap):
+    """AFTER: fetch what prices ACTUALLY did after a snapshot and score
+    every call. Returns per-stock results + a summary."""
+    syms = [r["sym"] for r in snap["rows"] if r.get("sym")]
+    got = {}
+    for i in range(0, len(syms), 50):
+        try:
+            got.update(fetch_chunk(tuple(syms[i:i + 50]), "1d", "1mo"))
+        except Exception:
+            pass
+    try:
+        sdate = datetime.strptime(snap["saved"][:10], "%Y-%m-%d").date()
+    except Exception:
+        sdate = datetime.now().date()
+    results = []
+    for r in snap["rows"]:
+        row = dict(r)
+        row.update({"outcome": "NO DATA", "moved": 0.0, "correct": None,
+                    "hi": None, "lo": None, "last": None})
+        df = got.get(r.get("sym"))
+        if df is not None and len(df):
+            after = df[[ix.date() > sdate for ix in df.index]]
+            same_day = False
+            if len(after) == 0:   # snapshot is from today → use today's candle
+                after = df[[ix.date() == sdate for ix in df.index]]
+                same_day = True
+            if len(after):
+                hi = float(after["High"].max()); lo = float(after["Low"].min())
+                last = float(after["Close"].iloc[-1])
+                row["hi"], row["lo"], row["last"] = round(hi, 2), round(lo, 2), round(last, 2)
+                row["moved"] = round((last - r["price"]) / r["price"] * 100, 2) if r["price"] else 0.0
+                buy_call = ("BUY" in (r.get("sig") or "")) or r.get("dtr") == "UPTREND"
+                hit_t1 = hi >= (r.get("t1") or 1e18)
+                hit_t2 = hi >= (r.get("t2") or 1e18)
+                hit_sl = lo <= (r.get("sl") or -1e18)
+                if buy_call:
+                    if hit_t2:                       row["outcome"] = "WIN T2 ✅"
+                    elif hit_t1 and not hit_sl:      row["outcome"] = "WIN T1 ✅"
+                    elif hit_sl and not hit_t1:      row["outcome"] = "LOSS SL ❌"
+                    elif hit_t1 and hit_sl:          row["outcome"] = "BOTH T1&SL ⚠️"
+                    else:                            row["outcome"] = "NO MOVE ➖"
+                    row["correct"] = row["moved"] > 0
+                elif r.get("dtr") == "DOWNTREND":
+                    row["outcome"] = "FELL ✅" if row["moved"] < 0 else "ROSE ❌"
+                    row["correct"] = row["moved"] < 0
+                else:
+                    row["outcome"] = "—"
+                if same_day:
+                    row["outcome"] += " (same-day)"
+        results.append(row)
+    ups = [x for x in results if x.get("dtr") == "UPTREND"]
+    dns = [x for x in results if x.get("dtr") == "DOWNTREND"]
+    bu = [x for x in results if "BUY" in (x.get("sig") or "")]
+    up_ok = [x for x in ups if x.get("correct") is True]
+    t1w = [x for x in bu if str(x["outcome"]).startswith("WIN")]
+    sls = [x for x in bu if str(x["outcome"]).startswith("LOSS")]
+
+    def _avg(lst):
+        v = [x["moved"] for x in lst if isinstance(x.get("moved"), (int, float))]
+        return round(sum(v) / len(v), 2) if v else 0.0
+
+    summary = {"snap": snap["saved"], "checked": len(results),
+               "n_up": len(ups), "up_ok": len(up_ok),
+               "up_acc": round(len(up_ok) / len(ups) * 100, 1) if ups else 0.0,
+               "avg_up": _avg(ups), "avg_dn": _avg(dns),
+               "n_buy": len(bu), "n_t1": len(t1w), "n_sl": len(sls),
+               "buy_wr": round(len(t1w) / (len(t1w) + len(sls)) * 100, 1) if (t1w or sls) else 0.0}
+    return results, summary
+
+
 def detect_regime(res):
     adx = res.get('adx', np.nan); bbw = res.get('bbw', np.nan)
     tr = res['trend']
@@ -2679,7 +2816,7 @@ def _lb_row(i, r, now):
             f"<div style='color:#475569;font-weight:900;font-size:15px;width:32px;font-family:monospace;'>{i}</div>"
             f"<div style='min-width:148px;'><div style='color:#f1f5f9;font-weight:800;font-size:14px;'>{r['name'][:19]}</div>"
             f"<div style='color:#64748b;font-size:10px;'>{r['sym'].replace('.NS','')} · {r['sig'].title()}</div></div>"
-            f"<div style='min-width:96px;color:#e2e8f0;font-weight:800;font-size:14px;font-family:monospace;'>\u20b9{r['price']:,.2f}</div>"
+            f"<div style='min-width:96px;color:#e2e8f0;font-weight:800;font-size:14px;font-family:monospace;'>₹{r['price']:,.2f}</div>"
             f"<div style='min-width:72px;'><span style='color:{cc};font-weight:900;font-size:13px;font-family:monospace;'>{chg:+.2f}%</span></div>"
             f"<div style='min-width:126px;'><div style='display:flex;align-items:center;gap:6px;'>"
             f"<div style='background:#1e293b;width:70px;height:6px;border-radius:3px;'><div style='background:#22c55e;width:{min(r['conf'],100):.0f}%;height:6px;border-radius:3px;'></div></div>"
@@ -2688,6 +2825,7 @@ def _lb_row(i, r, now):
             f"<div style='background:#1e293b;width:70px;height:6px;border-radius:3px;'><div style='background:#3b82f6;width:{min(r['score'],100):.0f}%;height:6px;border-radius:3px;'></div></div>"
             f"<span style='color:#94a3b8;font-size:10px;font-family:monospace;'>score {r['score']:.0f}</span></div></div>"
             f"<div style='min-width:126px;'>{spark}<div style='margin-top:2px;'>{badges}</div></div></div>")
+
 
 def spark_fig(r):
     y = r.get("spark") or []
@@ -2708,9 +2846,6 @@ def _fmt_age(sec):
     return f"{sec//60}m {sec%60}s" if sec >= 60 else f"{sec}s"
 
 
-# ============================================================
-# 🔴 LIVE DASHBOARD TAB (the common board)
-# ============================================================
 def dashboard_tab(ss, mst_s, ml, mm):
     MONO = "ui-monospace,Menlo,Consolas,monospace"
 
@@ -2826,6 +2961,29 @@ def dashboard_tab(ss, mst_s, ml, mm):
         st.checkbox("🔴 LIVE auto-refresh (keeps scanning — late uptrends get caught)", value=False, key="dash_auto")
     with q2:
         st.selectbox("Every", ["1 min", "2 min", "3 min", "5 min"], index=1, key="dash_int")
+
+    # ── 🧠 DAY MEMORY — ONE snapshot/day (today's board), verified next day ──
+    try:
+        _st = ss.get("dash") or {}
+        if rows and time.time() - _st.get("last_snap", 0) > 600:
+            if snaps_save(rows):
+                ss["dash"]["last_snap"] = time.time()
+    except Exception:
+        pass
+    mc1, mc2 = st.columns([3, 1])
+    with mc1:
+        _ls = (ss.get("dash") or {}).get("last_snap", 0)
+        st.markdown("<div style='background:#0f172a;border:1px dashed #1e293b;border-radius:10px;padding:7px 12px;"
+                    "color:#64748b;font-size:11px;'>🧠 <b style='color:#94a3b8;'>Day memory (1/day):</b> "
+                    f"today's board last saved {datetime.fromtimestamp(_ls).strftime('%d %b %H:%M') if _ls else '— (saves automatically once the board is live)'}"
+                    " · 1 snapshot per day · verify next day in the 🌙 EOD Review tab</div>", unsafe_allow_html=True)
+    with mc2:
+        if st.button("📸 Snapshot now", key="dash_snap", use_container_width=True):
+            if snaps_save(rows):
+                ss["dash"]["last_snap"] = time.time()
+                st.success("✅ Today's calculation saved — verify it tomorrow in 🌙 EOD Review.")
+            else:
+                st.error("Couldn't write snapshot file.")
 
     # ================= PANEL 2 — KPI STRIP =================
     n_up = sum(1 for r in data if r["dtr"] == "UPTREND")
@@ -3031,6 +3189,162 @@ def dashboard_tab(ss, mst_s, ml, mm):
                 pass
 
 
+
+# ============================================================
+# 🌙 EOD REVIEW TAB — before vs after (did the board get it right?)
+# ============================================================
+def eod_review_tab(ss):
+    st.markdown("""<div style='background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:18px;
+    padding:20px 24px;margin-bottom:16px;'>
+    <div style='color:white;font-size:20px;font-weight:900;'>🌙 EOD REVIEW — before vs after</div>
+    <div style='color:#c7d2fe;font-size:13px;margin-top:6px;'>The 🔴 dashboard saves a <b>memory snapshot</b>
+    automatically — ONE snapshot per day (that day's calculation) — exactly what it showed you. Pick a day below and press
+    VERIFY: the app fetches what prices <b>ACTUALLY did afterwards</b> and scores every call — how many stocks went
+    as per the calculation, how many hit T1/T2, how many hit the stop. This is your real accuracy record.</div></div>""",
+                unsafe_allow_html=True)
+    with st.expander("💾 Where is my data saved? · Backup & Restore (Streamlit Cloud)"):
+        st.markdown("""<div style='background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px 16px;
+        color:#94a3b8;font-size:12px;line-height:1.8;'>
+        ● <b style='color:#e2e8f0;'>On your own PC:</b> memory saves automatically as
+        <code>board_snapshots.json</code> + <code>eod_results.json</code> in the same folder as this app —
+        permanent, nothing to upload, comparing is automatic.<br>
+        ● <b style='color:#e2e8f0;'>On Streamlit Cloud:</b> the files live inside the app's private cloud container —
+        they survive while the app runs/sleeps, but are <b style='color:#f87171;'>wiped whenever the app redeploys</b>
+        (each GitHub update). VERIFY always works (it fetches live market prices by itself) — only past days' memory
+        needs restoring: press ⬇️ Backup before you update the app, and ⬆️ Restore after.</div>""",
+                    unsafe_allow_html=True)
+        _bk = {"snapshots": snaps_load(), "eod": eod_load(),
+               "exported": datetime.now().strftime("%Y-%m-%d %H:%M")}
+        st.download_button("⬇️ Backup memory (download .json)", data=_json.dumps(_bk).encode(),
+                           file_name=f"ai_trader_memory_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+                           mime="application/json", use_container_width=True, key="eod_backup_dl")
+        _up = st.file_uploader("⬆️ Restore memory (.json backup)", type=["json"], key="eod_restore")
+        if _up is not None:
+            try:
+                _d = _json.loads(_up.read().decode("utf-8"))
+                _news = _newe = 0
+                _olds = snaps_load(); _ids = {s.get("id") for s in _olds}
+                _srcs = _d.get("snapshots") if isinstance(_d, dict) else (_d if isinstance(_d, list) else [])
+                _add = [s for s in _srcs if isinstance(s, dict) and s.get("id") and s.get("id") not in _ids and s.get("rows")]
+                if _add:
+                    _json.dump(sorted(_olds + _add, key=lambda x: x.get("saved", ""))[-40:],
+                               open(SNAP_FILE, "w", encoding="utf-8"))
+                    _news = len(_add)
+                if isinstance(_d, dict) and _d.get("eod"):
+                    _olde = eod_load(); _eids = {x.get("id") for x in _olde}
+                    _adde = [x for x in _d["eod"] if isinstance(x, dict) and x.get("id") not in _eids]
+                    if _adde:
+                        _json.dump(sorted(_olde + _adde, key=lambda x: x.get("date", ""))[-100:],
+                                   open(EOD_FILE, "w", encoding="utf-8"), indent=2)
+                        _newe = len(_adde)
+                if _news or _newe:
+                    st.success(f"✅ Restored {_news} day-snapshots + {_newe} scorecard entries — pick a day below.")
+                else:
+                    st.info("Nothing new in that backup (I already have it all).")
+            except Exception as _e:
+                st.error(f"Couldn't read that backup: {_e}")
+
+    snaps = snaps_load()
+    if not snaps:
+        st.info("🧠 No board memory yet. Open the 🔴 Live Dashboard tab → START TERMINAL → let it run "
+                "(a snapshot saves automatically within seconds of the board going live) → come back here.")
+        return
+    snaps = sorted(snaps, key=lambda s: s.get("saved", ""), reverse=True)
+    _tdy = datetime.now().strftime("%Y-%m-%d")
+    labels = [f"{s['saved']}  ·  {len(s['rows'])} stocks  ·  "
+              + ("✅ full results ready" if s['saved'][:10] < _tdy else "⏳ today · partial so far")
+              for s in snaps]
+    _defi = next((i for i, s in enumerate(snaps) if s['saved'][:10] < _tdy), 0)
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        si = st.selectbox("WHICH DAY'S calculation (the ‘before’) should I verify?", labels, index=_defi, key="eod_snap")
+    with c2:
+        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+        go = st.button("▶ VERIFY NOW (the ‘after’)", type="primary", use_container_width=True, key="eod_go")
+    snap = snaps[labels.index(si)]
+    st.caption("How it works: pick YESTERDAY'S calculation → VERIFY → the app itself fetches today's real market "
+               "prices (Yahoo) and scores every call — direction accuracy, T1/T2 hits, stops. No manual file work: "
+               "comparing with the market is always automatic.")
+    if go:
+        with st.spinner(f"🔍 Fetching what actually happened after {snap['saved']} …"):
+            try:
+                results, summary = verify_snapshot(snap)
+                ss["eod_cache"] = {"id": snap["id"], "results": results, "summary": summary}
+                eod_save({"id": snap["id"], "date": snap["saved"][:10],
+                          **{k: summary[k] for k in ("checked", "n_up", "up_ok", "up_acc",
+                                                      "n_buy", "n_t1", "n_sl", "buy_wr")}})
+            except Exception as e:
+                st.error(f"Verification failed: {type(e).__name__}: {e}")
+    cached = ss.get("eod_cache")
+    if cached and cached.get("id") == snap.get("id"):
+        s = cached["summary"]; res = cached["results"]
+        st.markdown(f"<div style='background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:12px 16px;"
+                    f"margin-bottom:12px;color:#94a3b8;font-size:12px;'>🔎 Verified snapshot <b>{s['snap']}</b> "
+                    f"· {s['checked']} stocks checked against real prices after that time</div>", unsafe_allow_html=True)
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
+        with m1: st.metric("Stocks checked", s["checked"])
+        with m2: st.metric("📈 Uptrend calls", s["n_up"], f"avg move {s['avg_up']:+.2f}%")
+        with m3: st.metric("Uptrend accuracy", f"{s['up_acc']:.0f}%", f"{s['up_ok']}/{s['n_up']} closed higher")
+        with m4: st.metric("🔴 Downtrend avg", f"{s['avg_dn']:+.2f}%", "avoid-long list")
+        with m5: st.metric("BUY signals", s["n_buy"], f"{s['n_t1']} hit T1/T2 · {s['n_sl']} hit SL")
+        with m6: st.metric("Buy win-rate", f"{s['buy_wr']:.0f}%", "of resolved (T1 vs SL)")
+        acc = max(0.0, min(100.0, s["up_acc"]))
+        st.markdown(f"""<div style='background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px 16px;margin-bottom:12px;'>
+        <div style='display:flex;height:14px;border-radius:7px;overflow:hidden;'>
+        <div style='background:#16a34a;width:{acc:.1f}%;'></div>
+        <div style='background:#334155;width:{100-acc:.1f}%;'></div></div>
+        <div style='display:flex;justify-content:space-between;color:#64748b;font-size:11px;font-weight:700;margin-top:6px;'>
+        <span style='color:#22c55e;'>▲ {s['up_ok']} calls right</span>
+        <span>BOARD DIRECTION ACCURACY</span>
+        <span style='color:#ef4444;'>▼ {s['n_up'] - s['up_ok']} calls wrong</span></div></div>""",
+                    unsafe_allow_html=True)
+        okr = sorted([x for x in res if isinstance(x.get("moved"), (int, float))], key=lambda x: -x["moved"])
+        if okr:
+            best = "".join(f"<span style='background:rgba(34,197,94,.14);border:1px solid #22c55e;color:#4ade80;"
+                           f"font-size:11px;font-weight:800;padding:4px 10px;border-radius:9px;margin:3px 4px 3px 0;display:inline-block;'>"
+                           f"👍 {x['name']} {x['moved']:+.1f}%</span>" for x in okr[:10])
+            worst = "".join(f"<span style='background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#f87171;"
+                            f"font-size:11px;font-weight:800;padding:4px 10px;border-radius:9px;margin:3px 4px 3px 0;display:inline-block;'>"
+                            f"👎 {x['name']} {x['moved']:+.1f}%</span>" for x in okr[-10:][::-1])
+            st.markdown(f"<div style='background:#0b1220;border:1px solid #1e293b;border-radius:14px;padding:12px 16px;"
+                        f"margin-bottom:12px;'><div style='color:#94a3b8;font-size:11px;font-weight:900;margin-bottom:6px;'>"
+                        f"🎯 BEST calls after this snapshot</div>{best}"
+                        f"<div style='color:#94a3b8;font-size:11px;font-weight:900;margin:10px 0 6px;'>💀 WORST calls</div>{worst}</div>",
+                        unsafe_allow_html=True)
+        disp = pd.DataFrame([{
+            "Stock": x.get("name"), "Symbol": x.get("sym"),
+            "Signal@snap": x.get("sig"), "Trend@snap": x.get("dtr"),
+            "Price@snap": x.get("price"), "After_Last": x.get("last"),
+            "Moved%": x.get("moved"), "High": x.get("hi"), "Low": x.get("lo"),
+            "T1": x.get("t1"), "T2": x.get("t2"), "SL": x.get("sl"),
+            "Outcome": x.get("outcome"), "Score@snap": x.get("score"),
+        } for x in res])
+        try:
+            st.dataframe(disp, use_container_width=True, height=420, hide_index=True)
+        except Exception:
+            st.dataframe(disp, use_container_width=True)
+        try:
+            st.download_button("⬇️ Download EOD review (CSV)", data=disp.to_csv(index=False).encode(),
+                               file_name=f"eod_review_{snap['id']}.csv", mime="text/csv",
+                               use_container_width=True)
+        except Exception:
+            pass
+    hist = eod_load()
+    if hist:
+        with st.expander(f"🏦 Scorecard history — {len(hist)} past verifications"):
+            h = pd.DataFrame([{"Date": d.get("date"), "Stocks": d.get("checked"),
+                               "UptrendCalls": d.get("n_up"), "UptrendAcc%": d.get("up_acc"),
+                               "Buys": d.get("n_buy"), "T1/T2Wins": d.get("n_t1"),
+                               "SLosses": d.get("n_sl"), "BuyWinRate%": d.get("buy_wr")}
+                              for d in sorted(hist, key=lambda x: x.get("date", ""), reverse=True)])
+            try:
+                st.dataframe(h, use_container_width=True, hide_index=True)
+            except Exception:
+                st.dataframe(h, use_container_width=True)
+            st.caption("Memory files live next to the app: board_snapshots.json + eod_results.json — "
+                       "on your PC they persist forever; on Streamlit Cloud they survive until the app redeploys.")
+
+
 # ============================================================
 # SCANNER
 # ============================================================
@@ -3131,9 +3445,9 @@ def main():
     <div style='color:#fbbf24;font-weight:700;font-size:12px;'>Focus</div><div style='color:white;font-weight:900;font-size:16px;'>Uptrend + Levels</div></div>
     </div></div></div>""", unsafe_allow_html=True)
 
-    tab_dash, tab_analyze, tab_scan, tab_search, tab_journal, tab_guide = st.tabs(
+    tab_dash, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
         ["🔴 Live Dashboard (500)", "📊 Analyze Stock", "🔍 Scanner", "🔎 Search Any Stock",
-         "📓 Journal", "📚 Trading Guide"])
+         "📓 Journal", "🌙 EOD Review", "📚 Trading Guide"])
 
     # ── TAB 0: LIVE DASHBOARD (the common board) ──
     with tab_dash:
@@ -3370,6 +3684,13 @@ def main():
                         journal_delete(e.get("id", ""))
                         st.rerun()
 
+    # ── TAB: EOD REVIEW (before vs after) ──
+    with tab_eod:
+        try:
+            eod_review_tab(ss)
+        except Exception as e:
+            st.warning(f"⚠️ EOD review problem: {type(e).__name__}: {e}")
+
     # ── TAB 6: GUIDE ──
     with tab_guide:
         st.markdown("## 📚 Quick Trading Guide")
@@ -3383,6 +3704,7 @@ def main():
         <div class='tr-i'><b style='color:#2563eb;'>🔴 Live Dashboard workflow:</b> START the board → watch the 🚀 UPTREND panel → open a stock's tab or click Analyze on a top card → confirm with pivots/news/ML in the full analysis → trade only with a stop. The board finds candidates; the deep analysis confirms.</div>
         <div class='tr-i'><b style='color:#2563eb;'>Pivots — which to use:</b> Standard = general S/R · Camarilla = tight intraday reversals (R3/S3) & breakouts (R4/S4) · Woodie = faster, momentum-weighted · Fibonacci = 38.2/50/61.8% pullback zones.</div>
         <div class='tr-i'><b style='color:#2563eb;'>Data source (current + upgrade path):</b> this app uses Yahoo Finance — free, no key, ~15-min delay possible and occasional throttling on huge boards. When you want true broker-grade real-time for NSE, the good options are: <b>Upstox API v2</b> (free with an account), <b>Angel One SmartAPI</b> (free), <b>Fyers API</b> (free), or <b>Zerodha Kite Connect</b> (paid, most popular). The app's logic stays the same — only the data fetch layer would change.</div>
+        <div class='tr-i'><b style='color:#2563eb;'>🌙 EOD Review workflow:</b> run the 🔴 board during market hours (it saves ONE memory snapshot per day — that day's calculation) → end of day / next day open 🌙 EOD Review → pick the day → VERIFY → see exactly how many stocks moved as per the calculation, how many hit T1/T2 vs the stop, and your accuracy scorecard over time. On Streamlit Cloud, memory is wiped on redeploy — use 💾 Backup / ⬆️ Restore in the EOD tab around app updates.</div>
         <div class='tr-g'><b style='color:#16a34a;'>Honest truth:</b> no tool predicts price. These stack the odds and define your risk — they don't remove it. The stop loss is what actually protects your capital.</div>
         """, unsafe_allow_html=True)
 
