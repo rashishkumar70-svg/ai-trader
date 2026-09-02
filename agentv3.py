@@ -4320,21 +4320,56 @@ def main():
                 st.warning("No stocks found. Lower confidence or change category.")
 
         if ss.scan_results:
-            results = ss.scan_results[:20]
+            total_found = len(ss.scan_results)
+            rc1, rc2 = st.columns(2)
+            with rc1:
+                _sho = st.selectbox("📋 Results to show", ["200", "100", "50", "300", "500", "ALL"],
+                                    index=0, key="sc_shown")
+            show_n = total_found if _sho == "ALL" else min(int(_sho), total_found)
+            with rc2:
+                detail_n = st.slider("🖼️ Detail cards (top N)", 10, 200, 25, 5, key="sc_detail",
+                                     help="Expandable detail cards for the top N. The FULL table + CSV "
+                                          "download below always covers everything you selected.")
+            results = ss.scan_results[:show_n]
+            st.markdown(f"<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;"
+                        f"padding:8px 14px;color:#166534;font-size:12.5px;'>📋 Showing <b>{show_n}</b> of "
+                        f"<b>{total_found}</b> matched stocks · full sortable table + ⬇️ CSV download below</div>",
+                        unsafe_allow_html=True)
             st.markdown("### 🏆 Top 3")
             top3 = st.columns(min(3, len(results))); medals = ["🥇", "🥈", "🥉"]
             for i, (col, r) in enumerate(zip(top3, results[:3])):
                 with col:
                     up = r['tr'] == 'UPTREND'
                     st.markdown(f"<div style='background:white;border:2px solid {r['sc']};border-radius:18px;padding:20px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,0.08);'><div style='font-size:28px;'>{medals[i]}</div><div style='font-size:15px;font-weight:800;color:#1a1f36;margin:6px 0;'>{r['name'][:22]}</div><div style='font-size:24px;font-weight:900;color:#1d4ed8;'>₹{r['price']:.2f}</div><div style='background:{r['sc']};color:white;border-radius:20px;padding:5px 16px;font-size:12px;font-weight:800;margin:10px auto;display:inline-block;'>{r['sig']}</div><div style='font-size:15px;font-weight:800;color:{'#16a34a' if up else '#6b7280'};margin-top:6px;'>{'📈 UPTREND' if up else r['tr'].title()}</div><div style='color:#6b7280;font-size:12px;margin-top:4px;'>Conf {r['conf']:.0f}% · Buy ₹{r['buy_at']:.2f}</div></div>", unsafe_allow_html=True)
-            st.markdown("---"); st.markdown("### 📋 All Results")
-            for i, r in enumerate(results):
+            st.markdown("---"); st.markdown(f"### 📋 Top {min(detail_n, len(results))} — detail cards")
+            for i, r in enumerate(results[:detail_n]):
                 up = r['tr'] == 'UPTREND'
                 with st.expander(f"{'📈' if up else '•'} #{i+1} · {r['name'][:26]} · ₹{r['price']:.2f} · {r['sig']} · {r['conf']:.0f}% · {r['tr'].title()} · Gap {r['gap']:+.1f}%", expanded=i < 3):
                     st.markdown(f"<div class='sc-r'><div style='font-size:15px;font-weight:800;color:{r['ac']};margin-bottom:12px;'>{r['act']}</div><div style='display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center;'><div style='background:#eff6ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>TREND</div><div style='color:{'#16a34a' if up else '#6b7280'};font-weight:900;font-size:14px;'>{r['tr'].title()}</div></div><div style='background:white;border:1px solid #e0e7ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>BUY AT</div><div style='color:{r['ac']};font-weight:800;font-size:15px;'>₹{r['buy_at']:.2f}</div></div><div style='background:#fff1f2;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>STOP</div><div style='color:#dc2626;font-weight:800;font-size:15px;'>₹{r['sl']:.2f}</div></div><div style='background:#f0fdf4;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>TARGET 2</div><div style='color:#16a34a;font-weight:800;font-size:15px;'>₹{r['t2']:.2f}</div><div style='color:#6b7280;font-size:9px;'>+{r['t2p']:.1f}%</div></div><div style='background:#eff6ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>RISK:REWARD</div><div style='color:#1d4ed8;font-weight:900;font-size:16px;'>1:{r['rr']}</div></div></div><div style='color:#6b7280;font-size:11px;margin-top:10px;'>Conf {r['conf']:.0f}% · Vol {r['vr']:.1f}x · Buy strength {r['bp']:.0f}%</div></div>", unsafe_allow_html=True)
                     if st.button(f"📊 Full Analysis → {r['name'][:20]}", key=f"scf_{i}_{r['sym']}", use_container_width=True, type="primary"):
                         ss.sym = r['sym']; ss.stock_name = r['name']; ss.analyzed = True
                         st.info("✅ Open the '📊 Analyze Stock' tab — it's loaded with this stock.")
+
+            # ── 📋 FULL results table (all shown rows, sortable) + CSV download ──
+            st.markdown("---")
+            st.markdown(f"### 📋 Full Results Table ({len(results)} stocks)")
+            disp = pd.DataFrame([{
+                "#": i + 1, "Stock": r["name"], "Symbol": r["sym"], "Price": r["price"],
+                "Signal": r["sig"], "Conf%": round(r["conf"], 1), "Trend": str(r["tr"]).title(),
+                "Buy@": r["buy_at"], "SL": r["sl"], "T2": r["t2"], "T2%": r["t2p"],
+                "R:R": f"1:{r['rr']}", "Gap%": r["gap"], "Vol×": round(r["vr"], 2),
+                "BuyStr%": round(r["bp"], 1),
+            } for i, r in enumerate(results)])
+            try:
+                st.dataframe(disp, use_container_width=True, height=430, hide_index=True)
+            except Exception:
+                st.dataframe(disp, use_container_width=True)
+            try:
+                st.download_button("⬇️ Download ALL results (CSV)", data=disp.to_csv(index=False).encode(),
+                                   file_name=f"scan_results_{now_ist().strftime('%Y%m%d_%H%M')}.csv",
+                                   mime="text/csv", use_container_width=True, key="sc_csv")
+            except Exception:
+                pass
 
     # ── TAB 3: SEARCH ──
     with tab_search:
