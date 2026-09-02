@@ -27,6 +27,25 @@ import re
 import urllib.request
 from datetime import datetime
 from datetime import time as dtime
+from datetime import timezone as _dts, timedelta as _dtd
+
+# ── IST clock: cloud servers run on UTC — every time in this app is IST ──
+TZ_IST = _dts(_dtd(hours=5, minutes=30))
+
+
+def now_ist():
+    try:
+        return datetime.now(TZ_IST)
+    except Exception:
+        return datetime.now()
+
+
+def _dist(ix):
+    """IST calendar-date of a candle timestamp (yfinance sends IST-aware stamps)."""
+    try:
+        return ix.astimezone(TZ_IST).date() if getattr(ix, "tzinfo", None) else ix.date()
+    except Exception:
+        return ix.date()
 import concurrent.futures
 
 warnings.filterwarnings('ignore')
@@ -304,7 +323,7 @@ def universe_search(query, limit=40):
 # UTILITIES
 # ============================================================
 def mkt_status():
-    n = datetime.now()
+    n = now_ist()
     if n.weekday() >= 5:
         return "closed", "🔴 CLOSED", "Monday 9:15 AM"
     t = n.time()
@@ -315,7 +334,7 @@ def mkt_status():
 
 
 def session_time_context():
-    n = datetime.now()
+    n = now_ist()
     t = n.time()
     close = n.replace(hour=15, minute=30, second=0, microsecond=0)
     sqoff = n.replace(hour=15, minute=15, second=0, microsecond=0)
@@ -1566,7 +1585,7 @@ def snaps_save(rows):
     terminal runs, today's snapshot is refreshed — no intraday pile-up. The EOD
     tab verifies it the NEXT day. Keeps the last 40 days."""
     try:
-        now = datetime.now()
+        now = now_ist()
         snap = {"id": now.strftime("%Y-%m-%d"),
                 "saved": now.strftime("%Y-%m-%d %H:%M"),
                 "rows": [{k: r.get(k) for k in _SNAP_FIELDS} for r in rows.values()]}
@@ -2376,7 +2395,7 @@ Indicators agreeing ≠ price will move that way.</div>
     jc1, jc2 = st.columns([1, 2])
     with jc1:
         if st.button("📓 Save to Journal (verify tomorrow)", use_container_width=True, key="jrn_save"):
-            entry = {"saved": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            entry = {"saved": now_ist().strftime("%Y-%m-%d %H:%M"),
                      "sym": sym, "name": name, "price": res['price'],
                      "trend": res['trend'], "signal": res['sig'], "conf": res['conf'],
                      "stage": tim['stage'], "quality": tim['quality'],
@@ -2745,7 +2764,7 @@ def _ingest(syms, got, got_d, names, rows, prev, alerts):
             continue
         old = prev.get(sym)
         if old and (old.get("sig") != r["sig"] or old.get("dtr") != r["dtr"]):
-            alerts.insert(0, {"ts": datetime.now().strftime("%H:%M:%S"),
+            alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"),
                               "name": r["name"], "sym": sym,
                               "txt": f"{old.get('sig', '—')} → {r['sig']} · trend {old.get('dtr', '—')} → {r['dtr']}"})
         prev[sym] = {"sig": r["sig"], "dtr": r["dtr"]}
@@ -2917,14 +2936,25 @@ def _fmt_age(sec):
 def compute_movers(got):
     """Score every stock's LIVE climb from today's 5-minute candles."""
     out = []
-    today = datetime.now().date()
+    today = now_ist().date()
+    # effective session: today if candles exist, else the latest traded day
+    # (post-midnight / pre-open → full review of the LAST session)
+    all_dates = set()
+    for _s, _df in got.items():
+        try:
+            if _df is not None and len(_df):
+                for _ix in _df.index:
+                    all_dates.add(_dist(_ix))
+        except Exception:
+            pass
+    sess = max((d for d in all_dates if d <= today), default=today)
     for sym, df in got.items():
         try:
             if df is None or len(df) < 12:
                 continue
-            dates = [ix.date() for ix in df.index]
-            td = [i for i, d in enumerate(dates) if d == today]
-            if len(td) < 10:
+            dates = [_dist(ix) for ix in df.index]
+            td = [i for i, d in enumerate(dates) if d == sess]
+            if len(td) < 3:      # 9:30 AM IST = 3 candles — already scorable
                 continue
             d0 = td[0]
             prev_close = float(df["Close"].iloc[d0 - 1]) if d0 > 0 else float(df["Open"].iloc[d0])
@@ -3064,7 +3094,7 @@ def live_movers_tab(ss, mst_s):
         now_climb = {m["sym"] for m in movers if m["state"] == "CLIMBING"}
         alerts = ss.get("mv_alerts") or []
         for m in [x for x in movers if x["sym"] in (now_climb - prev_climb)]:
-            alerts.insert(0, {"ts": datetime.now().strftime("%H:%M:%S"), "sym": m["sym"],
+            alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": m["sym"],
                               "name": names.get(m["sym"], m["sym"].replace(".NS", "")),
                               "txt": (f"started climbing · {m['chg_day']:+.2f}% today · {m['green']}% green candles · "
                                       f"1h {m['slope1h']:+.2f}% · vol {m['vr']:.1f}× · ₹{m['last']:,.2f}"
@@ -3079,8 +3109,25 @@ def live_movers_tab(ss, mst_s):
 
     movers = ss.get("mv") or []
     if not movers:
-        st.info("No candles for today yet (market may not have opened). Press 🔄 Scan now after 9:15 AM IST.")
+        if mst_s == "open":
+            st.markdown("<div style='background:#0b2447;border:1px solid #3b82f6;border-radius:12px;padding:14px 18px;"
+                        "color:#bfdbfe;font-size:13px;line-height:1.8;'>🕘 <b>Market is open but the session just "
+                        "started.</b> Five-minute candles are still building (first ones arrive after 9:15).<br>"
+                        "✔️ Press <b>🔄 Scan now</b> again — from <b>~9:30 AM</b> you'll get early scores, and they "
+                        "become reliable from <b>~9:45 AM</b> (6+ candles).<br>"
+                        "⏰ Keep auto-refresh ON — the radar fills up by itself.</div>", unsafe_allow_html=True)
+        elif mst_s == "pre":
+            st.info("🌅 Market opens at 9:15 AM IST. Press ⚡ START before the open — the radar will begin scoring "
+                    "as soon as the first candles form (~9:20–9:30).")
+        else:
+            st.info("🔴 Market is closed — no candles for today. On the next trading day: START before 9:15, "
+                    "first scores from ~9:30, reliable from ~9:45 AM IST.")
         return
+    if mst_s == "open" and now_ist().time() < dtime(9, 45):
+        st.markdown("<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:10px;padding:8px 14px;"
+                    "color:#fde68a;font-size:12px;margin-bottom:10px;'>⚠️ Early session (before 9:45) — scores are "
+                    "based on few candles. Opening spikes can fake a climb; wait for 9:45–10:00 for confirmations."
+                    "</div>", unsafe_allow_html=True)
 
     climbing = [m for m in movers if m["state"] == "CLIMBING"]
     steady = [m for m in movers if m["steady"] and m["chg_day"] > 0]
@@ -3127,6 +3174,212 @@ def live_movers_tab(ss, mst_s):
             st.download_button("⬇️ Download movers (CSV)", data=disp.to_csv(index=False).encode(),
                                file_name=f"live_movers_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                                mime="text/csv", use_container_width=True, key="mv_csv")
+        except Exception:
+            pass
+
+
+# ============================================================
+# 🎯 COMBO — the accuracy booster: LIVE climb ∩ CALCULATION.
+#   A stock qualifies only if REAL money is moving it up now
+#   (⚡ climb score) AND the calculation agrees (uptrend / BUY /
+#   above 200EMA / confidence). Both green = highest-probability.
+# ============================================================
+def combo_scan(watch, names):
+    """One sweep → both engines: live movers + dashboard calculation."""
+    got, gotd = _sweep(watch, "5m", "2d", with_daily=True, progress=True)
+    movers = {m["sym"]: m for m in compute_movers(got)}
+    rows = {}
+    for sym in watch:
+        intra = got.get(sym)
+        if intra is None:
+            continue
+        try:
+            r = dash_row(names.get(sym, sym.replace(".NS", "")), sym, intra, gotd.get(sym))
+        except Exception:
+            r = None
+        if r:
+            rows[sym] = r
+    out = []
+    for sym, r in rows.items():
+        mv = movers.get(sym)
+        if not mv:
+            continue
+        sig = (r.get("sig") or "").upper()
+        live_pts = (2 if mv["climb"] >= 68 else 1 if mv["climb"] >= 58 else 0) \
+                   + (0.5 if mv["steady"] else 0) + (0.5 if mv["vr"] >= 1.3 else 0)
+        calc_pts = (1 if "BUY" in sig else 0) + (1 if r.get("dtr") == "UPTREND" else 0) \
+                   + (0.5 if r.get("above200") else 0) + (0.5 if (r.get("conf") or 0) >= 65 else 0)
+        combo = round(min(live_pts, 3.0) / 3.0 * 60 + min(calc_pts, 3.0) / 3.0 * 40, 1)
+        if mv["climb"] >= 68 and "BUY" in sig and r.get("dtr") == "UPTREND":
+            verdict = "🎯 PERFECT"
+        elif mv["climb"] >= 58 and calc_pts >= 1:
+            verdict = "✅ MATCH"
+        elif mv["climb"] >= 58:
+            verdict = "⚠️ LIVE ONLY"
+        elif calc_pts >= 2:
+            verdict = "🧮 CALC ONLY"
+        else:
+            verdict = "—"
+        out.append({"name": r.get("name", sym.replace(".NS", "")), "sym": sym,
+                    "price": mv["last"], "chg_day": mv["chg_day"], "climb": mv["climb"],
+                    "green": mv["green"], "slope1h": mv["slope1h"], "vr": mv["vr"],
+                    "steady": mv["steady"], "sig": r.get("sig"), "dtr": r.get("dtr"),
+                    "conf": r.get("conf"), "above200": bool(r.get("above200")),
+                    "score": r.get("score"), "combo": combo, "verdict": verdict})
+    order = {"🎯 PERFECT": 0, "✅ MATCH": 1, "⚠️ LIVE ONLY": 2, "🧮 CALC ONLY": 3, "—": 4}
+    out.sort(key=lambda x: (order.get(x["verdict"], 9), -x["combo"]))
+    return out
+
+
+def _combo_row(i, c):
+    vc = {"🎯 PERFECT": "#22c55e", "✅ MATCH": "#4ade80",
+          "⚠️ LIVE ONLY": "#fbbf24", "🧮 CALC ONLY": "#93c5fd"}.get(c["verdict"], "#64748b")
+    cc = "#22c55e" if c["chg_day"] >= 0 else "#ef4444"
+    cb = max(0, min(100, c["combo"]))
+    ema = "200EMA ✓" if c["above200"] else "below 200EMA"
+    return (f"<div style='display:flex;align-items:center;gap:12px;background:#0f172a;border:1px solid #1e293b;"
+            f"border-left:3px solid {vc};border-radius:12px;padding:8px 14px;margin:5px 0;flex-wrap:wrap;'>"
+            f"<div style='color:#475569;font-weight:900;font-size:15px;width:26px;font-family:monospace;'>{i}</div>"
+            f"<div style='min-width:148px;'><div style='color:#f1f5f9;font-weight:800;font-size:14px;'>{c['name'][:19]}</div>"
+            f"<div style='color:#64748b;font-size:10px;'>{c['sym'].replace('.NS','')} · {c['sig'].title()} · {ema}</div></div>"
+            f"<div style='min-width:92px;color:#e2e8f0;font-weight:800;font-size:14px;font-family:monospace;'>₹{c['price']:,.2f}</div>"
+            f"<div style='min-width:68px;color:{cc};font-weight:900;font-size:13px;font-family:monospace;'>{c['chg_day']:+.2f}%</div>"
+            f"<div style='min-width:98px;'><div style='color:#64748b;font-size:9px;'>⚡ LIVE CLIMB</div>"
+            f"<div style='background:#1e293b;width:66px;height:6px;border-radius:3px;'><div style='background:#16a34a;width:{c['climb']:.0f}%;height:6px;border-radius:3px;'></div></div>"
+            f"<div style='color:#94a3b8;font-size:9.5px;font-family:monospace;'>{c['climb']:.0f}/100 · {c['green']}% green</div></div>"
+            f"<div style='min-width:98px;'><div style='color:#64748b;font-size:9px;'>🧮 CALCULATION</div>"
+            f"<div style='background:#1e293b;width:66px;height:6px;border-radius:3px;'><div style='background:#3b82f6;width:{min(c['conf'] or 0,100):.0f}%;height:6px;border-radius:3px;'></div></div>"
+            f"<div style='color:#94a3b8;font-size:9.5px;font-family:monospace;'>conf {c['conf']:.0f}% · {str(c.get('dtr') or '—')[:8].title()}</div></div>"
+            f"<div style='min-width:98px;'><div style='color:#64748b;font-size:9px;'>🎯 COMBO SCORE</div>"
+            f"<div style='background:#1e293b;width:66px;height:6px;border-radius:3px;'><div style='background:{vc};width:{cb}%;height:6px;border-radius:3px;'></div></div>"
+            f"<div style='color:{vc};font-size:10px;font-family:monospace;font-weight:800;'>{c['combo']:.0f}/100</div></div>"
+            f"<div style='min-width:120px;'><span style='background:{'rgba(34,197,94,.16)' if 'PERFECT' in c['verdict'] or 'MATCH' in c['verdict'] else 'rgba(59,130,246,.16)'};"
+            f"color:{vc};font-size:10.5px;font-weight:900;padding:3px 10px;border-radius:8px;'>{c['verdict']}</span>"
+            + (" <span style='background:rgba(245,158,11,.16);color:#fbbf24;font-size:9.5px;font-weight:900;padding:2px 7px;border-radius:8px;'>🐢</span>" if c["steady"] else "")
+            + "</div></div>")
+
+
+def combo_tab(ss, mst_s):
+    st.markdown("""<div style='background:linear-gradient(135deg,#1e1b4b,#0f3d2e);border-radius:18px;
+    padding:18px 22px;margin-bottom:12px;'>
+    <div style='color:white;font-size:20px;font-weight:900;'>🎯 COMBO — live money ∩ calculation</div>
+    <div style='color:#c7d2fe;font-size:12.5px;margin-top:6px;line-height:1.7;'>The accuracy booster you asked for:
+    a stock appears here only when <b> BOTH </b> agree — ⚡ it is <b>actually climbing right now</b> (live candles)
+    <b>AND</b> 🧮 the <b>calculation</b> says uptrend/BUY/above-200EMA. 🎯 PERFECT = strongest possible agreement.
+    ⚠️ LIVE ONLY = money moving but math neutral (risky momentum). 🧮 CALC ONLY = math likes it, money not yet
+    (breakout watchlist).</div></div>""", unsafe_allow_html=True)
+    st.markdown("""<div style='background:#0b1220;border:1px dashed #1e293b;border-radius:12px;padding:10px 16px;
+    color:#94a3b8;font-size:12px;margin-bottom:10px;line-height:1.8;'>⏰ <b style='color:#e2e8f0;">Best time to run this
+    (IST):</b> 🥇 <b style='color:#4ade80;'>9:45 – 11:00 AM</b> (opening noise settles, real trend confirms) ·
+    🥈 1:30 – 2:30 PM (afternoon build) · 🥉 2:45 – 3:10 PM (closing strength). <b style='color:#f87171;">Avoid
+    9:15–9:35</b> — opening fake spikes. One clean scan at ~9:45 + one re-scan at ~2:45 is the professional routine.
+    </div>""", unsafe_allow_html=True)
+    if mst_s == "open" and now_ist().time() < dtime(9, 45):
+        st.markdown("<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:10px;padding:8px 14px;"
+                    "color:#fde68a;font-size:12px;margin-bottom:10px;'>⚠️ It's before 9:45 AM — you CAN scan now, but "
+                    "scores settle after 9:45–10:00. A re-scan at 9:45+ is worth it.</div>", unsafe_allow_html=True)
+
+    with st.expander("⚙️ UNIVERSE · REFRESH", expanded=not ss.get("cb_watch")):
+        k1, k2 = st.columns(2)
+        with k1:
+            _keys = list(DASH_SRC.keys())
+            _def = _keys.index("🌐 Full NSE (auto-fill to your count)") if "🌐 Full NSE (auto-fill to your count)" in _keys else 0
+            st.selectbox("Universe", _keys, index=_def, key="cb_src")
+            st.slider("How many stocks", 100, 500, 500, 50, key="cb_n")
+        with k2:
+            st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=1, key="cb_int")
+            st.caption("One scan = live 5-minute candles + daily history for the whole board (~1–2 min).")
+        s1, s2, s3 = st.columns(3)
+        with s1:
+            start_cb = st.button("🎯 START COMBO SCAN", type="primary", use_container_width=True, key="cb_start")
+        with s2:
+            rescan_cb = st.button("🔄 Scan now", use_container_width=True, key="cb_rescan")
+        with s3:
+            stop_cb = st.button("⏹ Stop", use_container_width=True, key="cb_stop")
+
+    if stop_cb:
+        ss["cb_on"] = False
+    if start_cb:
+        watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
+        ss["cb_watch"] = watch; ss["cb_names"] = names
+        ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
+
+    if not ss.get("cb_on"):
+        st.markdown("<div style='background:#0b1220;border-radius:20px;padding:44px;text-align:center;'>"
+                    "<div style='font-size:44px;'>🎯</div>"
+                    "<div style='font-size:20px;font-weight:900;color:#f1f5f9;margin-top:10px;'>COMBO SCANNER</div>"
+                    "<div style='color:#64748b;font-size:13px;margin-top:8px;'>All-India board · live climb + "
+                    "calculation agreement · 🎯 PERFECT picks · 🐢 slow-steady riders</div>"
+                    "<div style='color:#94a3b8;font-size:12px;margin-top:12px;'>↑ Best at <b>9:45–11:00 AM IST</b> · "
+                    "press <b style='color:#22c55e;'>🎯 START COMBO SCAN</b></div></div>", unsafe_allow_html=True)
+        return
+
+    try:
+        from streamlit_autorefresh import st_autorefresh
+        _sec = int(ss.get("cb_int", "2 min").split()[0]) * 60
+        st_autorefresh(interval=_sec * 1000, key="cb_tick")
+    except Exception:
+        pass
+
+    watch = ss.get("cb_watch") or []
+    names = ss.get("cb_names") or {}
+    _sec = int(ss.get("cb_int", "2 min").split()[0]) * 60
+    due = time.time() - ss.get("cb_last", 0) > (_sec - 10)
+    if rescan_cb or due or not ss.get("cb"):
+        with st.spinner("🎯 Combo scan — live candles + calculation for the whole board…"):
+            ss["cb"] = combo_scan(watch, names)
+            ss["cb_last"] = time.time()
+
+    combos = ss.get("cb") or []
+    if not combos:
+        st.info("No scorable stocks yet — see the timing note above (first reliable scores from ~9:45 AM IST; "
+                "after close you get the full-day review).")
+        return
+    if mst_s == "closed":
+        st.markdown("<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:10px;padding:8px 14px;"
+                    "color:#fde68a;font-size:12px;margin-bottom:10px;'>🔴 Market closed — this is today's FULL-SESSION "
+                    "combo review: who had both live money AND calculation agreement today.</div>", unsafe_allow_html=True)
+
+    perfect = [c for c in combos if c["verdict"] == "🎯 PERFECT"]
+    match = [c for c in combos if c["verdict"] == "✅ MATCH"]
+    liveonly = [c for c in combos if c["verdict"] == "⚠️ LIVE ONLY"]
+    calconly = [c for c in combos if c["verdict"] == "🧮 CALC ONLY"]
+    a1, a2, a3, a4, a5 = st.columns(5)
+    with a1: st.metric("🎯 Perfect", len(perfect), "live + calc agree")
+    with a2: st.metric("✅ Match", len(match), "good agreement")
+    with a3: st.metric("⚠️ Live only", len(liveonly), "momentum, no math")
+    with a4: st.metric("🧮 Calc only", len(calconly), "breakout watchlist")
+    with a5: st.metric("Scanned", len(combos))
+
+    top = perfect + match
+    if top:
+        st.markdown(f"<div style='color:#94a3b8;font-size:12px;font-weight:900;margin:10px 0 4px;'>"
+                    f"🎯 THE PICKS — live climb + calculation agree ({len(top)})</div>", unsafe_allow_html=True)
+        st.markdown("".join(_combo_row(i + 1, c) for i, c in enumerate(top[:30])), unsafe_allow_html=True)
+    else:
+        st.info("No PERFECT/MATCH picks right now — the two engines don't agree on anything this moment. "
+                "That's the system protecting you (no trade is better than a bad trade). Re-scan later.")
+    if liveonly:
+        with st.expander(f"⚠️ LIVE ONLY — climbing but calculation neutral ({len(liveonly)}) · higher risk"):
+            st.markdown("".join(_combo_row(i + 1, c) for i, c in enumerate(liveonly[:20])), unsafe_allow_html=True)
+    if calconly:
+        with st.expander(f"🧮 CALC ONLY — math likes them, money not moving yet ({len(calconly)}) · breakout watchlist"):
+            st.markdown("".join(_combo_row(i + 1, c) for i, c in enumerate(calconly[:20])), unsafe_allow_html=True)
+    with st.expander("📋 Full combo board (sortable) + download"):
+        disp = pd.DataFrame([{"Stock": c["name"], "Symbol": c["sym"], "Price": c["price"],
+                              "Day%": c["chg_day"], "ClimbScore": c["climb"], "GreenCandles%": c["green"],
+                              "Slope1h%": c["slope1h"], "Vol×": c["vr"], "Signal": c["sig"],
+                              "Trend": c["dtr"], "Conf%": c["conf"], "200EMA": "Above" if c["above200"] else "Below",
+                              "ComboScore": c["combo"], "Verdict": c["verdict"],
+                              "SlowSteady": "🐢" if c["steady"] else ""} for c in combos])
+        try:
+            st.dataframe(disp, use_container_width=True, height=420, hide_index=True)
+        except Exception:
+            st.dataframe(disp, use_container_width=True)
+        try:
+            st.download_button("⬇️ Download combo board (CSV)", data=disp.to_csv(index=False).encode(),
+                               file_name=f"combo_picks_{now_ist().strftime('%Y%m%d_%H%M')}.csv",
+                               mime="text/csv", use_container_width=True, key="cb_csv")
         except Exception:
             pass
 
@@ -3260,7 +3513,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
         _ls = (ss.get("dash") or {}).get("last_snap", 0)
         st.markdown("<div style='background:#0f172a;border:1px dashed #1e293b;border-radius:10px;padding:7px 12px;"
                     "color:#64748b;font-size:11px;'>🧠 <b style='color:#94a3b8;'>Day memory (1/day):</b> "
-                    f"today's board last saved {datetime.fromtimestamp(_ls).strftime('%d %b %H:%M') if _ls else '— (saves automatically once the board is live)'}"
+                    f"today's board last saved {datetime.fromtimestamp(_ls, TZ_IST).strftime('%d %b %H:%M') if _ls else '— (saves automatically once the board is live)'}"
                     f" · 1 snapshot per day · memory: {_ukey()} · verify next day in the 🌙 EOD Review tab</div>", unsafe_allow_html=True)
     with mc2:
         if st.button("📸 Snapshot now", key="dash_snap", use_container_width=True):
@@ -3776,8 +4029,8 @@ def main():
     <div style='color:#fbbf24;font-weight:700;font-size:12px;'>Focus</div><div style='color:white;font-weight:900;font-size:16px;'>Uptrend + Levels</div></div>
     </div></div></div>""", unsafe_allow_html=True)
 
-    tab_dash, tab_mv, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
-        ["🔴 Live Dashboard (500)", "⚡ Live Movers (Now)", "📊 Analyze Stock", "🔍 Scanner",
+    tab_dash, tab_mv, tab_cb, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
+        ["🔴 Live Dashboard (500)", "⚡ Live Movers (Now)", "🎯 Combo Picks", "📊 Analyze Stock", "🔍 Scanner",
          "🔎 Search Any Stock", "📓 Journal", "🌙 EOD Review", "📚 Trading Guide"])
 
     # ── TAB 0: LIVE DASHBOARD (the common board) ──
@@ -3797,6 +4050,13 @@ def main():
             live_movers_tab(ss, mst_s)
         except Exception as e:
             st.warning(f"⚠️ Live Movers problem: {type(e).__name__}: {e}")
+
+    # ── TAB: COMBO (live climb + calculation agreement) ──
+    with tab_cb:
+        try:
+            combo_tab(ss, mst_s)
+        except Exception as e:
+            st.warning(f"⚠️ Combo problem: {type(e).__name__}: {e}")
 
     # ── TAB 1: ANALYZE ──
     with tab_analyze:
