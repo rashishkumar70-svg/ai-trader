@@ -1472,6 +1472,63 @@ def snap_file():
 def eod_file():
     return f"eod_results_{_ukey()}.json"
 
+
+# ── ♾️ RUNTIME PERSISTENCE — analysis keeps running across page refreshes.
+#    The run state lives in a FILE (per person), so a browser refresh,
+#    phone screen-lock or reconnect AUTO-RESUMES the analysis. Only the
+#    ⏹ Stop / 🧹 Clear buttons end it.
+def runtime_file():
+    return f"runtime_{_ukey()}.json"
+
+
+def _rt_sanitize(o):
+    """Make everything JSON-safe (numpy floats, timestamps, etc.)."""
+    if isinstance(o, dict):
+        return {str(k): _rt_sanitize(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_rt_sanitize(v) for v in o]
+    if isinstance(o, (bool, str)) or o is None:
+        return o
+    try:
+        if isinstance(o, (int, float)):
+            return o
+        f = float(o)
+        return int(f) if f.is_integer() and abs(f) < 1e15 else f
+    except Exception:
+        return str(o)
+
+
+def rt_load():
+    try:
+        if _os.path.exists(runtime_file()):
+            with open(runtime_file(), "r", encoding="utf-8") as f:
+                d = _json.load(f)
+            return d if isinstance(d, dict) else {}
+    except Exception:
+        pass
+    return {}
+
+
+def rt_save(engine, **kw):
+    try:
+        d = rt_load()
+        d[engine] = {**d.get(engine, {}), **kw}
+        with open(runtime_file(), "w", encoding="utf-8") as f:
+            _json.dump(_rt_sanitize(d), f)
+        return True
+    except Exception:
+        return False
+
+
+def rt_clear(engine):
+    try:
+        d = rt_load()
+        d.pop(engine, None)
+        with open(runtime_file(), "w", encoding="utf-8") as f:
+            _json.dump(d, f)
+    except Exception:
+        pass
+
 _JOURNAL = "trade_journal.json"
 
 
@@ -3024,6 +3081,22 @@ def _mv_row(i, m, name):
 
 
 def live_movers_tab(ss, mst_s):
+    # ♾️ AUTO-RESUME — the radar keeps running across page refreshes
+    if not ss.get("mv_on"):
+        _rt = rt_load().get("mv") or {}
+        if _rt.get("on") and _rt.get("watch"):
+            ss["mv_on"] = True
+            ss["mv_watch"] = _rt["watch"]; ss["mv_names"] = _rt.get("names") or {}
+            ss["mv"] = _rt.get("movers") or None
+            ss["mv_last"] = _rt.get("last_scan", 0)
+            ss["mv_prev"] = _rt.get("prev") or []
+            ss["mv_alerts"] = _rt.get("alerts") or []
+            if _rt.get("src"):
+                ss["mv_src"] = _rt["src"]
+            if _rt.get("n"):
+                ss["mv_n"] = _rt["n"]
+            ss["_mv_resumed"] = True
+
     st.markdown("""<div style='background:linear-gradient(135deg,#052e16,#14532d);border-radius:18px;
     padding:18px 22px;margin-bottom:14px;'>
     <div style='color:white;font-size:20px;font-weight:900;'>⚡ LIVE MOVERS — follow the money, not the math</div>
@@ -3056,10 +3129,12 @@ def live_movers_tab(ss, mst_s):
 
     if stop_mv:
         ss["mv_on"] = False
+        rt_clear("mv")
     if start_mv:
         watch, names = build_watchlist(mv_src, mv_n)
         ss["mv_watch"] = watch; ss["mv_names"] = names
         ss["mv_on"] = True; ss["mv"] = None; ss["mv_last"] = 0
+        rt_save("mv", on=True, src=mv_src, n=mv_n, watch=watch, names=names)
 
     if not ss.get("mv_on"):
         st.markdown("<div style='background:#0b1220;border-radius:20px;padding:48px;text-align:center;'>"
@@ -3070,6 +3145,11 @@ def live_movers_tab(ss, mst_s):
                     "<div style='color:#94a3b8;font-size:12px;margin-top:12px;'>↑ Press "
                     "<b style='color:#22c55e;'>⚡ START LIVE MOVERS</b></div></div>", unsafe_allow_html=True)
         return
+
+    if ss.get("_mv_resumed"):
+        ss["_mv_resumed"] = False
+        st.info("♾️ Live Movers resumed automatically — a page refresh does NOT stop it. "
+                "Press ⏹ Stop to end the session.")
 
     # auto-refresh
     try:
@@ -3106,6 +3186,9 @@ def live_movers_tab(ss, mst_s):
                 st.toast(f"🔔 {a['name']} — {a['txt'][:70]}")
             except Exception:
                 pass
+        rt_save("mv", on=True, watch=watch, names=names, movers=movers,
+                last_scan=ss["mv_last"], prev=ss.get("mv_prev") or [],
+                alerts=ss.get("mv_alerts") or [], src=ss.get("mv_src"), n=ss.get("mv_n"))
 
     movers = ss.get("mv") or []
     if not movers:
@@ -3260,6 +3343,20 @@ def _combo_row(i, c):
 
 
 def combo_tab(ss, mst_s):
+    # ♾️ AUTO-RESUME — the combo scan keeps running across page refreshes
+    if not ss.get("cb_on"):
+        _rt = rt_load().get("cb") or {}
+        if _rt.get("on") and _rt.get("watch"):
+            ss["cb_on"] = True
+            ss["cb_watch"] = _rt["watch"]; ss["cb_names"] = _rt.get("names") or {}
+            ss["cb"] = _rt.get("combos") or None
+            ss["cb_last"] = _rt.get("last_scan", 0)
+            if _rt.get("src"):
+                ss["cb_src"] = _rt["src"]
+            if _rt.get("n"):
+                ss["cb_n"] = _rt["n"]
+            ss["_cb_resumed"] = True
+
     st.markdown("""<div style='background:linear-gradient(135deg,#1e1b4b,#0f3d2e);border-radius:18px;
     padding:18px 22px;margin-bottom:12px;'>
     <div style='color:white;font-size:20px;font-weight:900;'>🎯 COMBO — live money ∩ calculation</div>
@@ -3299,10 +3396,12 @@ def combo_tab(ss, mst_s):
 
     if stop_cb:
         ss["cb_on"] = False
+        rt_clear("cb")
     if start_cb:
         watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
         ss["cb_watch"] = watch; ss["cb_names"] = names
         ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
+        rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=watch, names=names)
 
     if not ss.get("cb_on"):
         st.markdown("<div style='background:#0b1220;border-radius:20px;padding:44px;text-align:center;'>"
@@ -3313,6 +3412,11 @@ def combo_tab(ss, mst_s):
                     "<div style='color:#94a3b8;font-size:12px;margin-top:12px;'>↑ Best at <b>9:45–11:00 AM IST</b> · "
                     "press <b style='color:#22c55e;'>🎯 START COMBO SCAN</b></div></div>", unsafe_allow_html=True)
         return
+
+    if ss.get("_cb_resumed"):
+        ss["_cb_resumed"] = False
+        st.info("♾️ Combo scan resumed automatically — a page refresh does NOT stop it. "
+                "Press ⏹ Stop to end the session.")
 
     try:
         from streamlit_autorefresh import st_autorefresh
@@ -3329,6 +3433,8 @@ def combo_tab(ss, mst_s):
         with st.spinner("🎯 Combo scan — live candles + calculation for the whole board…"):
             ss["cb"] = combo_scan(watch, names)
             ss["cb_last"] = time.time()
+        rt_save("cb", on=True, watch=watch, names=names, combos=ss["cb"],
+                last_scan=ss["cb_last"], src=ss.get("cb_src"), n=ss.get("cb_n", 500))
 
     combos = ss.get("cb") or []
     if not combos:
@@ -3387,6 +3493,24 @@ def combo_tab(ss, mst_s):
 def dashboard_tab(ss, mst_s, ml, mm):
     MONO = "ui-monospace,Menlo,Consolas,monospace"
 
+    # ♾️ AUTO-RESUME — the terminal keeps running across page refreshes
+    if not ss.get("dash_watch"):
+        _rt = rt_load().get("dash") or {}
+        if _rt.get("watch"):
+            ss["dash_watch"] = _rt["watch"]
+            ss["dash_names"] = _rt.get("names") or {}
+            _st = _rt.get("state") or {}
+            if _st.get("rows"):
+                for r in _st["rows"].values():
+                    r.pop("spark", None)
+                ss["dash"] = _st
+            ss["dash_per"] = _rt.get("per") or "5d"
+            if _rt.get("iv"):
+                ss["dash_iv"] = _rt["iv"]
+            if _rt.get("auto") is not None:
+                ss["dash_auto"] = _rt["auto"]
+            ss["_dash_resumed"] = True
+
     # ---------- settings ----------
     with st.expander("⚙️ WATCHLIST · SPEED · REFRESH", expanded=not ss.get("dash_watch")):
         c1, c2 = st.columns(2)
@@ -3419,6 +3543,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
 
     if wipe:
         ss["dash_watch"] = None; ss["dash"] = None
+        rt_clear("dash")
 
     if start:
         watch, names = build_watchlist(src, n_sel, custom_txt)
@@ -3440,6 +3565,11 @@ def dashboard_tab(ss, mst_s, ml, mm):
                     "<b style='color:#22c55e;'>🚀 START TERMINAL</b></div></div>", unsafe_allow_html=True)
         return
 
+    if ss.get("_dash_resumed"):
+        ss["_dash_resumed"] = False
+        st.info("♾️ Terminal resumed automatically — a page refresh does NOT stop it. "
+                "Press 🧹 Clear board to end the session.")
+
     iv = ss.get("dash_iv", "15m")
     per = ss.get("dash_per") or "5d"
     batch = ss.get("dash_batch", 200)
@@ -3451,6 +3581,16 @@ def dashboard_tab(ss, mst_s, ml, mm):
     if refresh_now or ss.get("dash_auto"):
         dash_refresh(ss, watch, iv, per, batch=batch,
                      ensure_min=min(200, len(watch)) if len(ss.get("dash", {}).get("rows", {})) < 200 else 0)
+
+    # ♾️ persist the running terminal — survives page refresh, resumes anywhere
+    try:
+        _st8 = ss.get("dash") or {}
+        _rows8 = {k: {kk: vv for kk, vv in v.items() if kk != "spark"}
+                  for k, v in (_st8.get("rows") or {}).items()}
+        rt_save("dash", watch=watch, names=ss.get("dash_names") or {}, per=per, iv=iv,
+                auto=bool(ss.get("dash_auto")), state={**_st8, "rows": _rows8})
+    except Exception:
+        pass
 
     state = ss.get("dash") or {"rows": {}, "alerts": []}
     rows = state.get("rows", {})
