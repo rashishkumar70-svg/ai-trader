@@ -4099,28 +4099,46 @@ def scan_one(args):
         return None
 
 
-def run_scan(stocks, iv, per, min_conf, stype, workers=10, cap_n=None):
+def run_scan(stocks, iv, per, min_conf, stype, workers=10, cap_n=None, stats_out=None):
     items = list(stocks.items())
     if cap_n:
         items = items[:cap_n]
     args = [(n, s, iv, per) for n, s in items]
     results = []; total = len(args); cnt = [0]
-    bar = st.progress(0); stat = st.empty()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
-        futs = {ex.submit(scan_one, a): a for a in args}
-        for f in concurrent.futures.as_completed(futs):
-            cnt[0] += 1
-            bar.progress(cnt[0] / total)
-            stat.markdown(f"<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;"
-                          f"padding:8px 16px;display:inline-block;color:#1d4ed8;font-size:13px;font-weight:600;'>"
-                          f"🔍 Scanned {cnt[0]}/{total} · ✅ Found {len(results)}</div>", unsafe_allow_html=True)
-            try:
-                r = f.result(timeout=15)
-                if r:
-                    results.append(r)
-            except Exception:
-                pass
-    bar.empty(); stat.empty()
+
+    def _pass(todo, label):
+        got = 0
+        bar = st.progress(0); stat = st.empty()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+            futs = {ex.submit(scan_one, a): a for a in todo}
+            for f in concurrent.futures.as_completed(futs):
+                cnt[0] += 1
+                bar.progress(min(cnt[0] / total, 1.0))
+                stat.markdown(f"<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;"
+                              f"padding:8px 16px;display:inline-block;color:#1d4ed8;font-size:13px;font-weight:600;'>"
+                              f"🔍 {label} {min(cnt[0], total)}/{total} · ✅ data OK {len(results)}</div>",
+                              unsafe_allow_html=True)
+                try:
+                    r = f.result(timeout=15)
+                    if r:
+                        results.append(r); got += 1
+                except Exception:
+                    pass
+        bar.empty(); stat.empty()
+        return got
+
+    ok = _pass(args, "Scanning")
+    # ── anti-throttle: if Yahoo didn't answer for many stocks, retry them ONCE
+    done_syms = {r["sym"] for r in results}
+    todo2 = [a for a in args if a[1] not in done_syms]
+    retried = 0
+    if todo2 and len(todo2) > max(5, int(total * 0.2)):
+        cnt[0] = total - len(todo2)
+        retried = _pass(todo2[:400], "Retrying failed (Yahoo throttle)")
+    if stats_out is not None:
+        stats_out["total"] = total
+        stats_out["ok"] = len({r["sym"] for r in results})
+        stats_out["fails"] = max(total - stats_out["ok"], 0)
     if stype == "BUY":
         results = [r for r in results if r['conf'] >= min_conf and r['bp'] > r['sp'] and r['sit'] not in ('SELL', 'GAP_DN')]
         results.sort(key=lambda x: (x['tr'] == 'UPTREND', x['bp'], x['conf']), reverse=True)
@@ -4312,12 +4330,21 @@ def main():
 
         if scan_btn:
             sm = {"📈 BUY": "BUY", "📉 SELL": "SELL", "🔍 ALL": "ALL"}[s_sig]
-            res = run_scan(scan_stocks, s_iv, "1mo", s_mc, sm, workers=18, cap_n=cap_n)
+            _st8 = {}
+            res = run_scan(scan_stocks, s_iv, "1mo", s_mc, sm, workers=18, cap_n=cap_n, stats_out=_st8)
             ss.scan_results = res
+            _ok, _tot = _st8.get("ok", 0), _st8.get("total", 0)
+            _fail = _st8.get("fails", 0)
             if res:
-                st.success(f"✅ Found {len(res)} stocks! Uptrend + strongest setups on top.")
+                st.success(f"✅ Found {len(res)} stocks! · data OK for {_ok}/{_tot} scanned · "
+                           f"uptrend + strongest setups on top.")
+            elif _fail > _ok:
+                st.warning(f"⚠️ Yahoo didn't answer for {_fail} of {_tot} stocks (server throttling — "
+                           f"NOT a scan problem). Press 🚀 START SCAN once more, or use the 🔴 Live Dashboard / "
+                           f"🎯 Combo tab (batched downloads — they throttle far less).")
             else:
-                st.warning("No stocks found. Lower confidence or change category.")
+                st.warning(f"No stocks matched your filters (scanned {_ok} OK). Lower Min Conf % "
+                           f"(try 55–60), switch Signal to 🔍 ALL, or pick a bigger category.")
 
         if ss.scan_results:
             total_found = len(ss.scan_results)
