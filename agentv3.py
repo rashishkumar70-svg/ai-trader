@@ -3089,6 +3089,7 @@ def live_movers_tab(ss, mst_s):
             ss["mv_watch"] = _rt["watch"]; ss["mv_names"] = _rt.get("names") or {}
             ss["mv"] = _rt.get("movers") or None
             ss["mv_last"] = _rt.get("last_scan", 0)
+            ss["mv_ts_str"] = _rt.get("ts_str") or "—"
             ss["mv_prev"] = _rt.get("prev") or []
             ss["mv_alerts"] = _rt.get("alerts") or []
             if _rt.get("src"):
@@ -3169,6 +3170,7 @@ def live_movers_tab(ss, mst_s):
         movers = compute_movers(got)
         ss["mv"] = movers
         ss["mv_last"] = time.time()
+        ss["mv_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
         # 🔔 alerts: stocks that JUST entered CLIMBING
         prev_climb = set(ss.get("mv_prev") or [])
         now_climb = {m["sym"] for m in movers if m["state"] == "CLIMBING"}
@@ -3187,7 +3189,7 @@ def live_movers_tab(ss, mst_s):
             except Exception:
                 pass
         rt_save("mv", on=True, watch=watch, names=names, movers=movers,
-                last_scan=ss["mv_last"], prev=ss.get("mv_prev") or [],
+                last_scan=ss["mv_last"], ts_str=ss.get("mv_ts_str"), prev=ss.get("mv_prev") or [],
                 alerts=ss.get("mv_alerts") or [], src=ss.get("mv_src"), n=ss.get("mv_n"))
 
     movers = ss.get("mv") or []
@@ -3211,6 +3213,15 @@ def live_movers_tab(ss, mst_s):
                     "color:#fde68a;font-size:12px;margin-bottom:10px;'>⚠️ Early session (before 9:45) — scores are "
                     "based on few candles. Opening spikes can fake a climb; wait for 9:45–10:00 for confirmations."
                     "</div>", unsafe_allow_html=True)
+
+    _mv_age = int((time.time() - ss.get("mv_last", 0)) / 60)
+    _mv_ts = ss.get("mv_ts_str") or "—"
+    _mvc = "#4ade80" if _mv_age <= 5 else ("#fbbf24" if _mv_age <= 12 else "#f87171")
+    st.markdown(f"<div style='background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:8px 14px;"
+                f"color:#94a3b8;font-size:12px;margin-bottom:10px;'>🕒 Last scan: <b style='color:#e2e8f0;'>{_mv_ts} IST</b>"
+                f" · <b style='color:{_mvc};'>{_mv_age} min ago</b>"
+                + (" — <b style='color:#f87171;'>data is old, climbs may have ended. Press 🔄 Scan now.</b>"
+                   if _mv_age > 12 and mst_s == "open" else "") + "</div>", unsafe_allow_html=True)
 
     climbing = [m for m in movers if m["state"] == "CLIMBING"]
     steady = [m for m in movers if m["steady"] and m["chg_day"] > 0]
@@ -3247,7 +3258,8 @@ def live_movers_tab(ss, mst_s):
                               "Symbol": m["sym"], "Price": m["last"], "Day%": m["chg_day"],
                               "GreenCandles%": m["green"], "Slope1h%": m["slope1h"],
                               "DayPosition%": m["pos"], "Vol×": m["vr"], "ClimbScore": m["climb"],
-                              "State": m["state"], "SlowSteady": "🐢" if m["steady"] else ""}
+                              "State": m["state"], "SlowSteady": "🐢" if m["steady"] else "",
+                              "ScanTime": _mv_ts}
                              for m in movers])
         try:
             st.dataframe(disp, use_container_width=True, height=420, hide_index=True)
@@ -3314,7 +3326,25 @@ def combo_scan(watch, names):
     return out
 
 
-def _combo_row(i, c):
+def _alive_html(c, now_map):
+    """🕒 NOW vs SCAN — is the climb still alive, fading, or already ENDED?"""
+    nowp = (now_map or {}).get(c["sym"])
+    if not nowp or not c.get("price"):
+        return ""
+    d = (nowp - c["price"]) / c["price"] * 100
+    if d >= -0.12:
+        b, col = "✅ STILL ON", "#22c55e"
+    elif d >= -0.35:
+        b, col = "⚠️ FADING", "#fbbf24"
+    else:
+        b, col = "❌ ENDED", "#ef4444"
+    return (f"<div style='min-width:108px;'><div style='color:#64748b;font-size:9px;'>🕒 NOW vs SCAN</div>"
+            f"<div style='color:{col};font-size:11px;font-family:monospace;font-weight:800;'>₹{nowp:,.2f}</div>"
+            f"<div style='color:{col};font-size:9.5px;font-weight:900;'>{d:+.2f}% · {b}</div></div>")
+
+
+def _combo_row(i, c, scan_ts="", now_map=None):
+    now_map = now_map or {}
     vc = {"🎯 PERFECT": "#22c55e", "✅ MATCH": "#4ade80",
           "⚠️ LIVE ONLY": "#fbbf24", "🧮 CALC ONLY": "#93c5fd"}.get(c["verdict"], "#64748b")
     cc = "#22c55e" if c["chg_day"] >= 0 else "#ef4444"
@@ -3324,7 +3354,8 @@ def _combo_row(i, c):
             f"border-left:3px solid {vc};border-radius:12px;padding:8px 14px;margin:5px 0;flex-wrap:wrap;'>"
             f"<div style='color:#475569;font-weight:900;font-size:15px;width:26px;font-family:monospace;'>{i}</div>"
             f"<div style='min-width:148px;'><div style='color:#f1f5f9;font-weight:800;font-size:14px;'>{c['name'][:19]}</div>"
-            f"<div style='color:#64748b;font-size:10px;'>{c['sym'].replace('.NS','')} · {c['sig'].title()} · {ema}</div></div>"
+            f"<div style='color:#64748b;font-size:10px;'>{c['sym'].replace('.NS','')} · {c['sig'].title()} · {ema}"
+            f"{' · 🕒 ' + scan_ts if scan_ts else ''}</div></div>"
             f"<div style='min-width:92px;color:#e2e8f0;font-weight:800;font-size:14px;font-family:monospace;'>₹{c['price']:,.2f}</div>"
             f"<div style='min-width:68px;color:{cc};font-weight:900;font-size:13px;font-family:monospace;'>{c['chg_day']:+.2f}%</div>"
             f"<div style='min-width:98px;'><div style='color:#64748b;font-size:9px;'>⚡ LIVE CLIMB</div>"
@@ -3333,6 +3364,7 @@ def _combo_row(i, c):
             f"<div style='min-width:98px;'><div style='color:#64748b;font-size:9px;'>🧮 CALCULATION</div>"
             f"<div style='background:#1e293b;width:66px;height:6px;border-radius:3px;'><div style='background:#3b82f6;width:{min(c['conf'] or 0,100):.0f}%;height:6px;border-radius:3px;'></div></div>"
             f"<div style='color:#94a3b8;font-size:9.5px;font-family:monospace;'>conf {c['conf']:.0f}% · {str(c.get('dtr') or '—')[:8].title()}</div></div>"
+            f"{_alive_html(c, now_map)}"
             f"<div style='min-width:98px;'><div style='color:#64748b;font-size:9px;'>🎯 COMBO SCORE</div>"
             f"<div style='background:#1e293b;width:66px;height:6px;border-radius:3px;'><div style='background:{vc};width:{cb}%;height:6px;border-radius:3px;'></div></div>"
             f"<div style='color:{vc};font-size:10px;font-family:monospace;font-weight:800;'>{c['combo']:.0f}/100</div></div>"
@@ -3351,6 +3383,7 @@ def combo_tab(ss, mst_s):
             ss["cb_watch"] = _rt["watch"]; ss["cb_names"] = _rt.get("names") or {}
             ss["cb"] = _rt.get("combos") or None
             ss["cb_last"] = _rt.get("last_scan", 0)
+            ss["cb_ts_str"] = _rt.get("ts_str") or "—"
             if _rt.get("src"):
                 ss["cb_src"] = _rt["src"]
             if _rt.get("n"):
@@ -3433,8 +3466,11 @@ def combo_tab(ss, mst_s):
         with st.spinner("🎯 Combo scan — live candles + calculation for the whole board…"):
             ss["cb"] = combo_scan(watch, names)
             ss["cb_last"] = time.time()
+            ss["cb_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
+            ss.pop("cb_recheck", None)
         rt_save("cb", on=True, watch=watch, names=names, combos=ss["cb"],
-                last_scan=ss["cb_last"], src=ss.get("cb_src"), n=ss.get("cb_n", 500))
+                last_scan=ss["cb_last"], ts_str=ss.get("cb_ts_str"),
+                src=ss.get("cb_src"), n=ss.get("cb_n", 500))
 
     combos = ss.get("cb") or []
     if not combos:
@@ -3445,6 +3481,33 @@ def combo_tab(ss, mst_s):
         st.markdown("<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:10px;padding:8px 14px;"
                     "color:#fde68a;font-size:12px;margin-bottom:10px;'>🔴 Market closed — this is today's FULL-SESSION "
                     "combo review: who had both live money AND calculation agreement today.</div>", unsafe_allow_html=True)
+
+    # 🕒 FRESHNESS — when was this scan made? (an old scan's uptrend may have ENDED)
+    _age = int((time.time() - ss.get("cb_last", 0)) / 60)
+    _ts = ss.get("cb_ts_str") or "—"
+    _agc = "#4ade80" if _age <= 6 else ("#fbbf24" if _age <= 15 else "#f87171")
+    st.markdown(f"<div style='background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:8px 14px;"
+                f"color:#94a3b8;font-size:12px;margin-bottom:10px;'>🕒 Last scan: <b style='color:#e2e8f0;'>{_ts} IST</b>"
+                f" · <b style='color:{_agc};'>{_age} min ago</b>"
+                + (" — <b style='color:#f87171;'>old scan: an uptrend may have ENDED. Press 🔄 Scan now.</b>"
+                   if _age > 15 and mst_s == "open" else "")
+                + " · every card below shows 🕒 <b>NOW vs SCAN</b> — still on / fading / ended.</div>",
+                unsafe_allow_html=True)
+
+    # 🔄 live re-check of the top picks (current price vs scan price)
+    _rc = ss.get("cb_recheck") or {}
+    if time.time() - _rc.get("ts", 0) > 90:
+        try:
+            _syms = [c["sym"] for c in combos[:30]]
+            _got = fetch_chunk(tuple(_syms), "5m", "1d")
+            ss["cb_recheck"] = {"ts": time.time(),
+                                "prices": {s: round(float(_got[s]["Close"].iloc[-1]), 2)
+                                           for s in _syms if s in _got and len(_got[s])}}
+        except Exception:
+            ss["cb_recheck"] = {"ts": time.time(), "prices": {}}
+        _rc = ss["cb_recheck"]
+    _now_map = _rc.get("prices") or {}   # useful live AND after close (review)
+    _scan_short = (_ts.split("·")[-1]).strip() if _ts != "—" else ""
 
     perfect = [c for c in combos if c["verdict"] == "🎯 PERFECT"]
     match = [c for c in combos if c["verdict"] == "✅ MATCH"]
@@ -3461,22 +3524,26 @@ def combo_tab(ss, mst_s):
     if top:
         st.markdown(f"<div style='color:#94a3b8;font-size:12px;font-weight:900;margin:10px 0 4px;'>"
                     f"🎯 THE PICKS — live climb + calculation agree ({len(top)})</div>", unsafe_allow_html=True)
-        st.markdown("".join(_combo_row(i + 1, c) for i, c in enumerate(top[:30])), unsafe_allow_html=True)
+        st.markdown("".join(_combo_row(i + 1, c, _scan_short, _now_map) for i, c in enumerate(top[:30])),
+                    unsafe_allow_html=True)
     else:
         st.info("No PERFECT/MATCH picks right now — the two engines don't agree on anything this moment. "
                 "That's the system protecting you (no trade is better than a bad trade). Re-scan later.")
     if liveonly:
         with st.expander(f"⚠️ LIVE ONLY — climbing but calculation neutral ({len(liveonly)}) · higher risk"):
-            st.markdown("".join(_combo_row(i + 1, c) for i, c in enumerate(liveonly[:20])), unsafe_allow_html=True)
+            st.markdown("".join(_combo_row(i + 1, c, _scan_short, _now_map) for i, c in enumerate(liveonly[:20])),
+                        unsafe_allow_html=True)
     if calconly:
         with st.expander(f"🧮 CALC ONLY — math likes them, money not moving yet ({len(calconly)}) · breakout watchlist"):
-            st.markdown("".join(_combo_row(i + 1, c) for i, c in enumerate(calconly[:20])), unsafe_allow_html=True)
+            st.markdown("".join(_combo_row(i + 1, c, _scan_short, _now_map) for i, c in enumerate(calconly[:20])),
+                        unsafe_allow_html=True)
     with st.expander("📋 Full combo board (sortable) + download"):
         disp = pd.DataFrame([{"Stock": c["name"], "Symbol": c["sym"], "Price": c["price"],
                               "Day%": c["chg_day"], "ClimbScore": c["climb"], "GreenCandles%": c["green"],
                               "Slope1h%": c["slope1h"], "Vol×": c["vr"], "Signal": c["sig"],
                               "Trend": c["dtr"], "Conf%": c["conf"], "200EMA": "Above" if c["above200"] else "Below",
                               "ComboScore": c["combo"], "Verdict": c["verdict"],
+                              "ScanTime": _ts,
                               "SlowSteady": "🐢" if c["steady"] else ""} for c in combos])
         try:
             st.dataframe(disp, use_container_width=True, height=420, hide_index=True)
