@@ -14,6 +14,16 @@
 # ============================================================
 
 import streamlit as st
+
+# ── cross-version layout kwarg ──────────────────────────────────────────────
+# New Streamlit (2026) REMOVED `use_container_width`; older versions don't know
+# `width="stretch"`. This picks the right one at startup, so the app runs on
+# BOTH old and new Streamlit (PC + Streamlit Cloud) without layout errors.
+try:
+    _sv = tuple(int(x) for x in st.__version__.split(".")[:2] if x.isdigit())
+    STRETCH = {"width": "stretch"} if _sv >= (1, 46) else {"use_container_width": True}
+except Exception:
+    STRETCH = {"use_container_width": True}
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -2430,17 +2440,17 @@ Indicators agreeing ≠ price will move that way.</div>
         with dcols[0]:
             st.download_button("📄 Download report (HTML)", data=html_report,
                                file_name=f"{fnbase}.html", mime="text/html",
-                               use_container_width=True)
+                               **STRETCH)
         with dcols[1]:
             st.download_button("📝 Download as text", data=_report_text(sym, name, res, plan, sr, nse, htf),
                                file_name=f"{fnbase}.txt", mime="text/plain",
-                               use_container_width=True)
+                               **STRETCH)
         if docx_bytes:
             with dcols[2]:
                 st.download_button("📘 Download Word (.docx)", data=docx_bytes,
                                    file_name=f"{fnbase}.docx",
                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                   use_container_width=True)
+                                   **STRETCH)
         st.markdown("<div style='color:#6b7280;font-size:12px;margin-top:4px;'>"
                     "Saves every detail — trend, signal, circuit, levels, all pivots, Fibonacci &amp; "
                     "all indicators. <b>For a PDF:</b> open the HTML file and press <b>Ctrl+P → Save as PDF</b>."
@@ -2451,7 +2461,7 @@ Indicators agreeing ≠ price will move that way.</div>
 
     jc1, jc2 = st.columns([1, 2])
     with jc1:
-        if st.button("📓 Save to Journal (verify tomorrow)", use_container_width=True, key="jrn_save"):
+        if st.button("📓 Save to Journal (verify tomorrow)", **STRETCH, key="jrn_save"):
             entry = {"saved": now_ist().strftime("%Y-%m-%d %H:%M"),
                      "sym": sym, "name": name, "price": res['price'],
                      "trend": res['trend'], "signal": res['sig'], "conf": res['conf'],
@@ -2625,7 +2635,7 @@ Indicators agreeing ≠ price will move that way.</div>
 
     st.markdown('<div class="sh">📈 ADVANCED PRICE CHART — 5 Panels</div>', unsafe_allow_html=True)
     try:
-        st.plotly_chart(make_chart(res['df'], name, plan, sr), use_container_width=True)
+        st.plotly_chart(make_chart(res['df'], name, plan, sr), **STRETCH)
     except Exception:
         st.info("Chart couldn't render for this data — the numbers above are still valid.")
 
@@ -2642,7 +2652,7 @@ Indicators agreeing ≠ price will move that way.</div>
                 st.markdown(f"<div class='{css}'><span style='color:{'#16a34a' if s['b'] else '#dc2626'};font-weight:700;'>{icon} {s['n']}</span> <code style='background:{'#dcfce7' if s['b'] else '#fee2e2'};color:{'#166534' if s['b'] else '#991b1b'};font-size:11px;padding:2px 8px;border-radius:4px;'>{s['v']}</code><div style='color:#4b5563;font-size:11px;margin-top:4px;'>{s['t']}</div></div>", unsafe_allow_html=True)
 
     with st.expander("📊 Raw OHLCV Data (Last 50 candles)"):
-        st.dataframe(res['df'].tail(50), use_container_width=True)
+        st.dataframe(res['df'].tail(50), **STRETCH)
     st.markdown("<div style='text-align:center;color:#9ca3af;font-size:10px;padding:14px;border-top:1px solid #e0e7ff;margin-top:20px;'>⚠️ EDUCATIONAL PURPOSE ONLY · NOT FINANCIAL ADVICE · ALWAYS USE STOP LOSS · TRADE AT YOUR OWN RISK</div>", unsafe_allow_html=True)
 
 
@@ -3122,11 +3132,11 @@ def live_movers_tab(ss, mst_s):
             st.caption("Each scan = one live sweep of the whole board (5-minute candles).")
         s1, s2, s3 = st.columns(3)
         with s1:
-            start_mv = st.button("⚡ START LIVE MOVERS", type="primary", use_container_width=True, key="mv_start")
+            start_mv = st.button("⚡ START LIVE MOVERS", type="primary", **STRETCH, key="mv_start")
         with s2:
-            rescan = st.button("🔄 Scan now", use_container_width=True, key="mv_rescan")
+            rescan = st.button("🔄 Scan now", **STRETCH, key="mv_rescan")
         with s3:
-            stop_mv = st.button("⏹ Stop", use_container_width=True, key="mv_stop")
+            stop_mv = st.button("⏹ Stop", **STRETCH, key="mv_stop")
 
     if stop_mv:
         ss["mv_on"] = False
@@ -3262,13 +3272,13 @@ def live_movers_tab(ss, mst_s):
                               "ScanTime": _mv_ts}
                              for m in movers])
         try:
-            st.dataframe(disp, use_container_width=True, height=420, hide_index=True)
+            st.dataframe(disp, **STRETCH, height=420, hide_index=True)
         except Exception:
-            st.dataframe(disp, use_container_width=True)
+            st.dataframe(disp, **STRETCH)
         try:
             st.download_button("⬇️ Download movers (CSV)", data=disp.to_csv(index=False).encode(),
                                file_name=f"live_movers_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                               mime="text/csv", use_container_width=True, key="mv_csv")
+                               mime="text/csv", **STRETCH, key="mv_csv")
         except Exception:
             pass
 
@@ -3299,6 +3309,18 @@ def combo_scan(watch, names):
         mv = movers.get(sym)
         if not mv:
             continue
+        sup = res = sup_dist = res_dist = None
+        try:
+            d = gotd.get(sym)
+            if d is not None and len(d) >= 30:
+                lo10 = float(d["Low"].tail(10).min()); lo20 = float(d["Low"].tail(20).min())
+                support = max(lo20 * 0.995, lo10)
+                hi20 = float(d["High"].tail(20).max())
+                sup, res = round(support, 2), round(hi20, 2)
+                sup_dist = round((mv["last"] - support) / support * 100, 2)
+                res_dist = round((hi20 - mv["last"]) / mv["last"] * 100, 2)
+        except Exception:
+            pass
         sig = (r.get("sig") or "").upper()
         live_pts = (2 if mv["climb"] >= 68 else 1 if mv["climb"] >= 58 else 0) \
                    + (0.5 if mv["steady"] else 0) + (0.5 if mv["vr"] >= 1.3 else 0)
@@ -3320,10 +3342,34 @@ def combo_scan(watch, names):
                     "green": mv["green"], "slope1h": mv["slope1h"], "vr": mv["vr"],
                     "steady": mv["steady"], "sig": r.get("sig"), "dtr": r.get("dtr"),
                     "conf": r.get("conf"), "above200": bool(r.get("above200")),
-                    "score": r.get("score"), "combo": combo, "verdict": verdict})
+                    "score": r.get("score"), "combo": combo, "verdict": verdict,
+                    "buy_at": r.get("buy_at"), "sl": r.get("sl"), "t1": r.get("t1"), "t2": r.get("t2"),
+                    "support": sup, "resistance": res, "sup_dist": sup_dist, "res_dist": res_dist,
+                    "from_support": sup_dist is not None and sup_dist <= 1.5,
+                    "at_resistance": res_dist is not None and res_dist <= 1.0})
     order = {"🎯 PERFECT": 0, "✅ MATCH": 1, "⚠️ LIVE ONLY": 2, "🧮 CALC ONLY": 3, "—": 4}
     out.sort(key=lambda x: (order.get(x["verdict"], 9), -x["combo"]))
     return out
+
+
+def _trade_html(c):
+    """💰 BUY / SL / SELL levels + resistance warning on combo cards."""
+    b, sl = c.get("buy_at"), c.get("sl")
+    t1, t2 = c.get("t1"), c.get("t2")
+    res, rd = c.get("resistance"), c.get("res_dist")
+    if not b or not sl:
+        return ""
+    res_line = ""
+    if res:
+        wr = (" · ⚠️ AT RESISTANCE — may reverse!" if (rd or 99) <= 1.0 else "")
+        res_line = (f"<div style='color:#94a3b8;font-size:9px;margin-top:2px;'>RES ₹{res:,.0f}"
+                    f" (+{rd:.1f}% above){wr}</div>")
+    return (f"<div style='min-width:150px;'><div style='color:#64748b;font-size:9px;'>💰 TRADE · BUY & SELL</div>"
+            f"<div style='font-size:10.5px;font-family:monospace;line-height:1.5;'>"
+            f"<span style='color:#4ade80;font-weight:900;'>BUY ₹{b:,.2f}</span> · "
+            f"<span style='color:#f87171;'>SL ₹{sl:,.2f}</span><br>"
+            f"<span style='color:#22c55e;font-weight:900;'>SELL T1 ₹{(t1 or b):,.2f}</span> · "
+            f"<span style='color:#16a34a;font-weight:900;'>T2 ₹{(t2 or b):,.2f}</span></div>{res_line}</div>")
 
 
 def _alive_html(c, now_map):
@@ -3365,13 +3411,284 @@ def _combo_row(i, c, scan_ts="", now_map=None):
             f"<div style='background:#1e293b;width:66px;height:6px;border-radius:3px;'><div style='background:#3b82f6;width:{min(c['conf'] or 0,100):.0f}%;height:6px;border-radius:3px;'></div></div>"
             f"<div style='color:#94a3b8;font-size:9.5px;font-family:monospace;'>conf {c['conf']:.0f}% · {str(c.get('dtr') or '—')[:8].title()}</div></div>"
             f"{_alive_html(c, now_map)}"
+            f"{_trade_html(c)}"
             f"<div style='min-width:98px;'><div style='color:#64748b;font-size:9px;'>🎯 COMBO SCORE</div>"
             f"<div style='background:#1e293b;width:66px;height:6px;border-radius:3px;'><div style='background:{vc};width:{cb}%;height:6px;border-radius:3px;'></div></div>"
             f"<div style='color:{vc};font-size:10px;font-family:monospace;font-weight:800;'>{c['combo']:.0f}/100</div></div>"
             f"<div style='min-width:120px;'><span style='background:{'rgba(34,197,94,.16)' if 'PERFECT' in c['verdict'] or 'MATCH' in c['verdict'] else 'rgba(59,130,246,.16)'};"
             f"color:{vc};font-size:10.5px;font-weight:900;padding:3px 10px;border-radius:8px;'>{c['verdict']}</span>"
             + (" <span style='background:rgba(245,158,11,.16);color:#fbbf24;font-size:9.5px;font-weight:900;padding:2px 7px;border-radius:8px;'>🐢</span>" if c["steady"] else "")
+            + (" <span style='background:rgba(59,130,246,.16);color:#93c5fd;font-size:9.5px;font-weight:900;padding:2px 7px;border-radius:8px;'>🛡️ FROM SUPPORT</span>" if c.get("from_support") else "")
+            + (" <span style='background:rgba(239,68,68,.14);color:#f87171;font-size:9.5px;font-weight:900;padding:2px 7px;border-radius:8px;'>⚠️ AT RESISTANCE</span>" if c.get("at_resistance") else "")
             + "</div></div>")
+
+
+# ============================================================
+# 🚀 UPTREND STARTING — the support-bounce radar.
+#   As per our calculation: which stock has REACHED its support
+#   point and is now slowly turning up? Buy at the bounce,
+#   sell into strength — levels shown on every card.
+# ============================================================
+def compute_bounces(got, gotd):
+    out = []
+    all_dates = set()
+    for _s, _df in got.items():
+        try:
+            if _df is not None and len(_df):
+                for _ix in _df.index:
+                    all_dates.add(_dist(_ix))
+        except Exception:
+            pass
+    today = now_ist().date()
+    sess = max((d for d in all_dates if d <= today), default=today)
+    for sym, df in got.items():
+        try:
+            if df is None or len(df) < 12:
+                continue
+            dates = [_dist(ix) for ix in df.index]
+            td = [i for i, d in enumerate(dates) if d == sess]
+            if len(td) < 3:
+                continue
+            d0 = td[0]
+            prev_close = float(df["Close"].iloc[d0 - 1]) if d0 > 0 else float(df["Open"].iloc[d0])
+            t = df.iloc[d0:td[-1] + 1]
+            last = float(t["Close"].iloc[-1]); hi = float(t["High"].max()); lo = float(t["Low"].min())
+            cl = t["Close"].values; op = t["Open"].values; vol = t["Volume"].values
+            chg_day = (last - prev_close) / prev_close * 100 if prev_close else 0.0
+            g, oo = cl[-24:], op[-24:]
+            green = (sum(1 for i in range(len(g)) if g[i] > oo[i]) / len(g)) if len(g) else 0.5
+            base = cl[-13] if len(cl) >= 13 else cl[0]
+            slope1h = (last - base) / base * 100 if base else 0.0
+            rec = (last - lo) / lo * 100 if lo else 0.0
+            vrec = vol[-6:]; vold = vol[:-6] if len(vol) > 6 else vol
+            vr = (vrec.mean() / vold.mean()) if (len(vold) and vold.mean() > 0) else 1.0
+            d = gotd.get(sym)
+            if d is None or len(d) < 30:
+                continue
+            lo10 = float(d["Low"].tail(10).min()); lo20 = float(d["Low"].tail(20).min())
+            support = max(lo20 * 0.995, lo10)
+            hi20 = float(d["High"].tail(20).max())
+            sup_dist = (last - support) / support * 100
+            res_dist = (hi20 - last) / last * 100
+            if not (-0.5 <= sup_dist <= 1.5):     # only stocks AT/ON support
+                continue
+            turning = (rec >= 0.25 and slope1h > -0.05) or slope1h > 0.15 or green >= 0.65
+            starting = turning and chg_day <= 4.0
+            score = (40 * max(0.0, (1.5 - sup_dist)) / 1.5 + 30 * min(rec, 1.5) / 1.5
+                     + 15.0 * green + 15.0 * min(vr, 2.0) / 2.0)
+            sl = round(support * 0.985, 2)
+            r_ = max(last - sl, last * 0.004)
+            buy = round(min(last, support * 1.01), 2)
+            out.append({"sym": sym, "last": round(last, 2), "chg_day": round(chg_day, 2),
+                        "support": round(support, 2), "resistance": round(hi20, 2),
+                        "sup_dist": round(sup_dist, 2), "res_dist": round(res_dist, 2),
+                        "rec": round(rec, 2), "green": int(round(green * 100)),
+                        "slope1h": round(float(slope1h), 2), "vr": round(float(vr), 2),
+                        "score": round(score, 1),
+                        "state": "🚀 UPTREND STARTING" if starting else "🛡️ AT SUPPORT",
+                        "starting": starting, "buy": buy, "sl": sl,
+                        "t1": round(last + 1.5 * r_, 2), "t2": round(last + 2.5 * r_, 2)})
+        except Exception:
+            continue
+    out.sort(key=lambda b: (not b["starting"], -b["score"]))
+    return out
+
+
+def _bc_row(i, b, name):
+    st_ = "#22c55e" if b["starting"] else "#3b82f6"
+    cc = "#22c55e" if b["chg_day"] >= 0 else "#ef4444"
+    badge = (f"<span style='background:rgba(34,197,94,.16);color:#4ade80;font-size:10px;font-weight:900;"
+             f"padding:3px 10px;border-radius:8px;'>🚀 UPTREND STARTING</span>" if b["starting"] else
+             f"<span style='background:rgba(59,130,246,.16);color:#93c5fd;font-size:10px;font-weight:900;"
+             f"padding:3px 10px;border-radius:8px;'>🛡️ AT SUPPORT · waiting for turn</span>")
+    return (f"<div style='display:flex;align-items:center;gap:12px;background:#0f172a;border:1px solid #1e293b;"
+            f"border-left:3px solid {st_};border-radius:12px;padding:8px 14px;margin:5px 0;flex-wrap:wrap;'>"
+            f"<div style='color:#475569;font-weight:900;font-size:15px;width:26px;font-family:monospace;'>{i}</div>"
+            f"<div style='min-width:140px;'><div style='color:#f1f5f9;font-weight:800;font-size:14px;'>{name[:19]}</div>"
+            f"<div style='color:#64748b;font-size:10px;'>{b['sym'].replace('.NS','')} · +{b['rec']:.2f}% off day's low</div></div>"
+            f"<div style='min-width:88px;color:#e2e8f0;font-weight:800;font-size:14px;font-family:monospace;'>₹{b['last']:,.2f}</div>"
+            f"<div style='min-width:64px;color:{cc};font-weight:900;font-size:13px;font-family:monospace;'>{b['chg_day']:+.2f}%</div>"
+            f"<div style='min-width:118px;'><div style='color:#64748b;font-size:9px;'>🛡️ SUPPORT (BUY ZONE)</div>"
+            f"<div style='color:#4ade80;font-size:11.5px;font-family:monospace;font-weight:800;'>₹{b['support']:,.2f}</div>"
+            f"<div style='color:#94a3b8;font-size:9.5px;font-family:monospace;'>{b['sup_dist']:+.2f}% away</div></div>"
+            f"<div style='min-width:118px;'><div style='color:#64748b;font-size:9px;'>💰 TRADE LEVELS</div>"
+            f"<div style='font-size:10.5px;font-family:monospace;line-height:1.5;'>"
+            f"<span style='color:#4ade80;font-weight:900;'>BUY ₹{b['buy']:,.2f}</span> · "
+            f"<span style='color:#f87171;'>SL ₹{b['sl']:,.2f}</span><br>"
+            f"<span style='color:#22c55e;font-weight:900;'>SELL T1 ₹{b['t1']:,.2f}</span> · "
+            f"<span style='color:#16a34a;font-weight:900;'>T2 ₹{b['t2']:,.2f}</span></div></div>"
+            f"<div style='min-width:104px;'><div style='color:#64748b;font-size:9px;'>🎯 RESISTANCE (SELL ZONE)</div>"
+            f"<div style='color:#fbbf24;font-size:11.5px;font-family:monospace;font-weight:800;'>₹{b['resistance']:,.2f}</div>"
+            f"<div style='color:#94a3b8;font-size:9.5px;font-family:monospace;'>+{b['res_dist']:.2f}% above"
+            + (" · ⚠️ NEAR" if b["res_dist"] <= 1.0 else "") + "</div></div>"
+            f"<div style='min-width:98px;'><div style='color:#64748b;font-size:9px;'>BOUNCE SCORE</div>"
+            f"<div style='background:#1e293b;width:70px;height:6px;border-radius:3px;'><div style='background:{st_};width:{min(b['score'],100):.0f}%;height:6px;border-radius:3px;'></div></div>"
+            f"<div style='color:#94a3b8;font-size:9.5px;font-family:monospace;'>{b['score']:.0f}/100 · {b['green']}% green</div></div>"
+            f"<div style='min-width:150px;'>{badge}</div></div>")
+
+
+def bounce_tab(ss, mst_s):
+    # ♾️ AUTO-RESUME
+    if not ss.get("bc_on"):
+        _rt = rt_load().get("bc") or {}
+        if _rt.get("on") and _rt.get("watch"):
+            ss["bc_on"] = True
+            ss["bc_watch"] = _rt["watch"]; ss["bc_names"] = _rt.get("names") or {}
+            ss["bc"] = _rt.get("bounces") or None
+            ss["bc_last"] = _rt.get("last_scan", 0)
+            ss["bc_ts_str"] = _rt.get("ts_str") or "—"
+            ss["bc_prev"] = _rt.get("prev") or []
+            ss["bc_alerts"] = _rt.get("alerts") or []
+            ss["_bc_resumed"] = True
+
+    st.markdown("""<div style='background:linear-gradient(135deg,#0f2b1e,#1e3a8a);border-radius:18px;
+    padding:18px 22px;margin-bottom:12px;'>
+    <div style='color:white;font-size:20px;font-weight:900;'>🚀 UPTREND STARTING — support-bounce radar</div>
+    <div style='color:#bbf7d0;font-size:12.5px;margin-top:6px;line-height:1.7;'>As per our calculation: which stocks
+    have <b>REACHED their SUPPORT point</b> and are <b>slowly starting to turn up</b>? 🚀 UPTREND STARTING = at
+    support + bouncing now — the safest buy zone (buy at support, stop just below, sell into T1/T2).
+    🛡️ AT SUPPORT = sitting on support, turn not confirmed yet — watchlist it. Every card shows the exact
+    <b>BUY, STOP-LOSS and SELL</b> values, plus the resistance where the rally may stall.</div></div>""",
+                unsafe_allow_html=True)
+
+    with st.expander("⚙️ UNIVERSE · REFRESH", expanded=not ss.get("bc_watch")):
+        k1, k2 = st.columns(2)
+        with k1:
+            _keys = list(DASH_SRC.keys())
+            _def = _keys.index("🌐 Full NSE (auto-fill to your count)") if "🌐 Full NSE (auto-fill to your count)" in _keys else 0
+            st.selectbox("Universe", _keys, index=_def, key="bc_src")
+            st.slider("How many stocks", 100, 500, 500, 50, key="bc_n")
+        with k2:
+            st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=2, key="bc_int")
+            st.caption("One scan = live 5-min candles + daily history (support/resistance) for the whole board.")
+        s1, s2, s3 = st.columns(3)
+        with s1:
+            start_bc = st.button("🚀 START BOUNCE RADAR", type="primary", use_container_width=True, key="bc_start")
+        with s2:
+            rescan_bc = st.button("🔄 Scan now", use_container_width=True, key="bc_rescan")
+        with s3:
+            stop_bc = st.button("⏹ Stop", use_container_width=True, key="bc_stop")
+
+    if stop_bc:
+        ss["bc_on"] = False
+        rt_clear("bc")
+    if start_bc:
+        watch, names = build_watchlist(ss.get("bc_src"), ss.get("bc_n", 500))
+        ss["bc_watch"] = watch; ss["bc_names"] = names
+        ss["bc_on"] = True; ss["bc"] = None; ss["bc_last"] = 0; ss["bc_alerts"] = []; ss["bc_prev"] = []
+        rt_save("bc", on=True, src=ss.get("bc_src"), n=ss.get("bc_n", 500), watch=watch, names=names)
+
+    if not ss.get("bc_on"):
+        st.markdown("<div style='background:#0b1220;border-radius:20px;padding:44px;text-align:center;'>"
+                    "<div style='font-size:44px;'>🚀</div>"
+                    "<div style='font-size:20px;font-weight:900;color:#f1f5f9;margin-top:10px;'>SUPPORT-BOUNCE RADAR</div>"
+                    "<div style='color:#64748b;font-size:13px;margin-top:8px;'>All-India board · who just reached support "
+                    "and started turning up · exact BUY / SL / SELL levels · 🔔 alerts</div>"
+                    "<div style='color:#94a3b8;font-size:12px;margin-top:12px;'>↑ Press "
+                    "<b style='color:#22c55e;'>🚀 START BOUNCE RADAR</b></div></div>", unsafe_allow_html=True)
+        return
+
+    if ss.get("_bc_resumed"):
+        ss["_bc_resumed"] = False
+        st.info("♾️ Bounce radar resumed automatically — a page refresh does NOT stop it. Press ⏹ Stop to end it.")
+
+    try:
+        from streamlit_autorefresh import st_autorefresh
+        _sec = int(ss.get("bc_int", "3 min").split()[0]) * 60
+        st_autorefresh(interval=_sec * 1000, key="bc_tick")
+    except Exception:
+        pass
+
+    watch = ss.get("bc_watch") or []
+    names = ss.get("bc_names") or {}
+    _sec = int(ss.get("bc_int", "3 min").split()[0]) * 60
+    due = time.time() - ss.get("bc_last", 0) > (_sec - 10)
+    if rescan_bc or due or not ss.get("bc"):
+        with st.spinner("🚀 Scanning for support bounces (live candles + support levels)…"):
+            got, gotd = _sweep(watch, "5m", "2d", with_daily=True, progress=True)
+            bounces = compute_bounces(got, gotd)
+            ss["bc"] = bounces
+            ss["bc_last"] = time.time()
+            ss["bc_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
+            prev_start = set(ss.get("bc_prev") or [])
+            now_start = {b["sym"] for b in bounces if b["starting"]}
+            alerts = ss.get("bc_alerts") or []
+            for b in [x for x in bounces if x["sym"] in (now_start - prev_start)]:
+                alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": b["sym"],
+                                  "name": names.get(b["sym"], b["sym"].replace(".NS", "")),
+                                  "txt": (f"reached support ₹{b['support']:,.2f} and TURNING UP · now ₹{b['last']:,.2f} "
+                                          f"(+{b['rec']:.2f}% off low) · BUY ₹{b['buy']:,.2f} · SL ₹{b['sl']:,.2f} "
+                                          f"· SELL T1 ₹{b['t1']:,.2f}")})
+            ss["bc_alerts"] = alerts[:40]
+            ss["bc_prev"] = sorted(now_start)
+            for a in ss["bc_alerts"][:3]:
+                try:
+                    st.toast(f"🚀 {a['name']} — {a['txt'][:70]}")
+                except Exception:
+                    pass
+            rt_save("bc", on=True, watch=watch, names=names, bounces=bounces,
+                    last_scan=ss["bc_last"], ts_str=ss["bc_ts_str"],
+                    prev=ss["bc_prev"], alerts=ss["bc_alerts"],
+                    src=ss.get("bc_src"), n=ss.get("bc_n"))
+
+    bounces = ss.get("bc") or []
+    if not bounces:
+        st.info("No stocks are sitting at support right now — that's fine (cash is a position). "
+                "Re-scan later; 🔔 alerts fire the moment one turns up.")
+        return
+
+    _age = int((time.time() - ss.get("bc_last", 0)) / 60)
+    _ts = ss.get("bc_ts_str") or "—"
+    _agc = "#4ade80" if _age <= 7 else ("#fbbf24" if _age <= 15 else "#f87171")
+    st.markdown(f"<div style='background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:8px 14px;"
+                f"color:#94a3b8;font-size:12px;margin-bottom:10px;'>🕒 Last scan: <b style='color:#e2e8f0;'>{_ts} IST</b>"
+                f" · <b style='color:{_agc};'>{_age} min ago</b>"
+                + (" — <b style='color:#f87171;'>old scan. Press 🔄 Scan now.</b>" if _age > 15 and mst_s == "open" else "")
+                + "</div>", unsafe_allow_html=True)
+
+    starting = [b for b in bounces if b["starting"]]
+    waiting = [b for b in bounces if not b["starting"]]
+    a1, a2, a3 = st.columns(3)
+    with a1: st.metric("🚀 Uptrend starting", len(starting), "at support + turning up")
+    with a2: st.metric("🛡️ At support", len(waiting), "waiting for confirmation")
+    with a3: st.metric("Scanned", ss.get("bc_n", 500))
+
+    alerts = ss.get("bc_alerts") or []
+    if alerts:
+        with st.expander(f"🔔 BOUNCE ALERTS — this session ({len(alerts)})", expanded=True):
+            for a in alerts[:12]:
+                st.markdown(f"<div style='background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.35);"
+                            f"border-radius:10px;padding:8px 14px;margin:4px 0;color:#d1fae5;font-size:12px;'>"
+                            f"<b style='color:#4ade80;'>🚀 {a['name']}</b> · <span style='color:#64748b;'>{a['ts']}</span>"
+                            f" · {a['txt']}</div>", unsafe_allow_html=True)
+
+    if starting:
+        st.markdown(f"<div style='color:#94a3b8;font-size:12px;font-weight:900;margin:10px 0 4px;'>"
+                    f"🚀 UPTREND STARTING — reached support & turning up ({len(starting)})</div>", unsafe_allow_html=True)
+        st.markdown("".join(_bc_row(i + 1, b, names.get(b["sym"], b["sym"].replace(".NS", "")))
+                            for i, b in enumerate(starting[:25])), unsafe_allow_html=True)
+    if waiting:
+        with st.expander(f"🛡️ AT SUPPORT — waiting for the turn ({len(waiting)})"):
+            st.markdown("".join(_bc_row(i + 1, b, names.get(b["sym"], b["sym"].replace(".NS", "")))
+                                for i, b in enumerate(waiting[:25])), unsafe_allow_html=True)
+    with st.expander("📋 Full bounce board + download"):
+        disp = pd.DataFrame([{"Stock": names.get(b["sym"], b["sym"].replace(".NS", "")), "Symbol": b["sym"],
+                              "Price": b["last"], "Day%": b["chg_day"], "Support": b["support"],
+                              "SupDist%": b["sup_dist"], "BUY@": b["buy"], "SL": b["sl"],
+                              "SellT1": b["t1"], "SellT2": b["t2"], "Resistance": b["resistance"],
+                              "ResDist%": b["res_dist"], "OffLow%": b["rec"], "GreenCandles%": b["green"],
+                              "Slope1h%": b["slope1h"], "Vol×": b["vr"], "BounceScore": b["score"],
+                              "State": b["state"], "ScanTime": _ts} for b in bounces])
+        try:
+            st.dataframe(disp, use_container_width=True, height=420, hide_index=True)
+        except Exception:
+            st.dataframe(disp, use_container_width=True)
+        try:
+            st.download_button("⬇️ Download bounce board (CSV)", data=disp.to_csv(index=False).encode(),
+                               file_name=f"support_bounces_{now_ist().strftime('%Y%m%d_%H%M')}.csv",
+                               mime="text/csv", use_container_width=True, key="bc_csv")
+        except Exception:
+            pass
 
 
 def combo_tab(ss, mst_s):
@@ -3421,11 +3738,11 @@ def combo_tab(ss, mst_s):
             st.caption("One scan = live 5-minute candles + daily history for the whole board (~1–2 min).")
         s1, s2, s3 = st.columns(3)
         with s1:
-            start_cb = st.button("🎯 START COMBO SCAN", type="primary", use_container_width=True, key="cb_start")
+            start_cb = st.button("🎯 START COMBO SCAN", type="primary", **STRETCH, key="cb_start")
         with s2:
-            rescan_cb = st.button("🔄 Scan now", use_container_width=True, key="cb_rescan")
+            rescan_cb = st.button("🔄 Scan now", **STRETCH, key="cb_rescan")
         with s3:
-            stop_cb = st.button("⏹ Stop", use_container_width=True, key="cb_stop")
+            stop_cb = st.button("⏹ Stop", **STRETCH, key="cb_stop")
 
     if stop_cb:
         ss["cb_on"] = False
@@ -3543,16 +3860,19 @@ def combo_tab(ss, mst_s):
                               "Slope1h%": c["slope1h"], "Vol×": c["vr"], "Signal": c["sig"],
                               "Trend": c["dtr"], "Conf%": c["conf"], "200EMA": "Above" if c["above200"] else "Below",
                               "ComboScore": c["combo"], "Verdict": c["verdict"],
-                              "ScanTime": _ts,
+                              "ScanTime": _ts, "Buy@": c.get("buy_at"), "SL": c.get("sl"),
+                              "SellT1": c.get("t1"), "SellT2": c.get("t2"),
+                              "Support": c.get("support"), "Resist": c.get("resistance"),
+                              "ResDist%": c.get("res_dist"),
                               "SlowSteady": "🐢" if c["steady"] else ""} for c in combos])
         try:
-            st.dataframe(disp, use_container_width=True, height=420, hide_index=True)
+            st.dataframe(disp, **STRETCH, height=420, hide_index=True)
         except Exception:
-            st.dataframe(disp, use_container_width=True)
+            st.dataframe(disp, **STRETCH)
         try:
             st.download_button("⬇️ Download combo board (CSV)", data=disp.to_csv(index=False).encode(),
                                file_name=f"combo_picks_{now_ist().strftime('%Y%m%d_%H%M')}.csv",
-                               mime="text/csv", use_container_width=True, key="cb_csv")
+                               mime="text/csv", **STRETCH, key="cb_csv")
         except Exception:
             pass
 
@@ -3602,11 +3922,11 @@ def dashboard_tab(ss, mst_s, ml, mm):
                            "so it stays live without hammering Yahoo.")
         b1, b2, b3 = st.columns(3)
         with b1:
-            start = st.button("🚀 START TERMINAL", type="primary", use_container_width=True, key="dash_start")
+            start = st.button("🚀 START TERMINAL", type="primary", **STRETCH, key="dash_start")
         with b2:
-            refresh_now = st.button("🔄 Refresh a batch now", use_container_width=True, key="dash_refresh_btn")
+            refresh_now = st.button("🔄 Refresh a batch now", **STRETCH, key="dash_refresh_btn")
         with b3:
-            wipe = st.button("🧹 Clear board", use_container_width=True, key="dash_wipe")
+            wipe = st.button("🧹 Clear board", **STRETCH, key="dash_wipe")
 
     if wipe:
         ss["dash_watch"] = None; ss["dash"] = None
@@ -3723,7 +4043,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
                     f"today's board last saved {datetime.fromtimestamp(_ls, TZ_IST).strftime('%d %b %H:%M') if _ls else '— (saves automatically once the board is live)'}"
                     f" · 1 snapshot per day · memory: {_ukey()} · verify next day in the 🌙 EOD Review tab</div>", unsafe_allow_html=True)
     with mc2:
-        if st.button("📸 Snapshot now", key="dash_snap", use_container_width=True):
+        if st.button("📸 Snapshot now", key="dash_snap", **STRETCH):
             if snaps_save(rows):
                 ss["dash"]["last_snap"] = time.time()
                 st.success("✅ Today's calculation saved — verify it tomorrow in 🌙 EOD Review.")
@@ -3793,7 +4113,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
             cols = st.columns(4)
             for cc_, r in zip(cols, show_btn[rr:rr + 4]):
                 with cc_:
-                    if st.button(f"📊 {r['name'][:14]}", key=f"dg_{r['sym']}", use_container_width=True):
+                    if st.button(f"📊 {r['name'][:14]}", key=f"dg_{r['sym']}", **STRETCH):
                         ss["sym"] = r["sym"]; ss["stock_name"] = r["name"]; ss["analyzed"] = True
                         st.success(f"✅ {r['name']} loaded — open the '📊 Analyze Stock' tab.")
 
@@ -3852,7 +4172,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
                 with k4: st.metric("200 EMA", "Above ⬆" if r["above200"] else "Below ⬇",
                                    (f"₹{r['ema200']:,.2f}" if r.get("ema200") else "—"))
                 try:
-                    st.plotly_chart(spark_fig(r), use_container_width=True)
+                    st.plotly_chart(spark_fig(r), **STRETCH)
                 except Exception:
                     pass
                 st.markdown(f"<div class='sc-r'><b style='color:{r['sc']};'>{r['act']}</b><div style='color:#374151;"
@@ -3862,7 +4182,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
                             f"<div style='color:#9ca3af;font-size:11px;margin-top:4px;'>Quick plan from the live board — the full "
                             f"Analyze tab adds pivots, Fibonacci, circuits, news & ML.</div></div>", unsafe_allow_html=True)
                 if st.button(f"📊 Open FULL analysis → {r['name'][:14]}", key=f"dt_{r['sym']}",
-                             use_container_width=True, type="primary"):
+                             **STRETCH, type="primary"):
                     ss["sym"] = r["sym"]; ss["stock_name"] = r["name"]; ss["analyzed"] = True
                     st.success("Loaded — open the '📊 Analyze Stock' tab.")
 
@@ -3884,16 +4204,16 @@ def dashboard_tab(ss, mst_s, ml, mm):
         } for r in sorted(data, key=lambda x: -x["score"])]
         disp = pd.DataFrame(disp_rows)
         try:
-            st.dataframe(disp, use_container_width=True, height=440, hide_index=True)
+            st.dataframe(disp, **STRETCH, height=440, hide_index=True)
         except Exception:
-            st.dataframe(disp, use_container_width=True)
+            st.dataframe(disp, **STRETCH)
         lc1, lc2 = st.columns([2, 1])
         with lc1:
             pick = st.text_input("Load any board stock into the Analyze tab — type its exact name (e.g. HAL)",
                                  placeholder="Exact name from the table…", key="dash_pick")
         with lc2:
             st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
-            if st.button("📊 Load into Analyze tab", key="dash_load", use_container_width=True):
+            if st.button("📊 Load into Analyze tab", key="dash_load", **STRETCH):
                 hit = [r for r in data if r["name"].upper() == (pick or "").strip().upper()]
                 if hit:
                     ss["sym"] = hit[0]["sym"]; ss["stock_name"] = hit[0]["name"]; ss["analyzed"] = True
@@ -3903,7 +4223,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
         try:
             st.download_button("⬇️ Download board as CSV", data=disp.to_csv(index=False).encode(),
                                file_name=f"live_board_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                               mime="text/csv", use_container_width=True)
+                               mime="text/csv", **STRETCH)
         except Exception:
             pass
 
@@ -3963,7 +4283,7 @@ def eod_review_tab(ss):
                             label_visibility="collapsed")
     with uc3:
         st.markdown("<div style='height:2px;'></div>", unsafe_allow_html=True)
-        if st.button("🔗 Use this name", key="mu_go", use_container_width=True):
+        if st.button("🔗 Use this name", key="mu_go", **STRETCH):
             _clean = "".join(ch for ch in _nm.strip().lower() if ch.isalnum() or ch in "_-")[:16]
             if _clean:
                 st.query_params["u"] = _clean
@@ -3986,7 +4306,7 @@ def eod_review_tab(ss):
                "exported": datetime.now().strftime("%Y-%m-%d %H:%M")}
         st.download_button("⬇️ Backup memory (download .json)", data=_json.dumps(_bk).encode(),
                            file_name=f"ai_trader_memory_{_ukey()}_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
-                           mime="application/json", use_container_width=True, key="eod_backup_dl")
+                           mime="application/json", **STRETCH, key="eod_backup_dl")
         _up = st.file_uploader("⬆️ Restore memory (.json backup)", type=["json"], key="eod_restore")
         if _up is not None:
             try:
@@ -4029,7 +4349,7 @@ def eod_review_tab(ss):
         si = st.selectbox("WHICH DAY'S calculation (the ‘before’) should I verify?", labels, index=_defi, key="eod_snap")
     with c2:
         st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
-        go = st.button("▶ VERIFY NOW (the ‘after’)", type="primary", use_container_width=True, key="eod_go")
+        go = st.button("▶ VERIFY NOW (the ‘after’)", type="primary", **STRETCH, key="eod_go")
     snap = snaps[labels.index(si)]
     st.caption("How it works: pick YESTERDAY'S calculation → VERIFY → the app itself fetches today's real market "
                "prices (Yahoo) and scores every call — direction accuracy, T1/T2 hits, stops. No manual file work: "
@@ -4111,13 +4431,13 @@ def eod_review_tab(ss):
             "Outcome": x.get("outcome"), "Score@snap": x.get("score"),
         } for x in res])
         try:
-            st.dataframe(disp, use_container_width=True, height=420, hide_index=True)
+            st.dataframe(disp, **STRETCH, height=420, hide_index=True)
         except Exception:
-            st.dataframe(disp, use_container_width=True)
+            st.dataframe(disp, **STRETCH)
         try:
             st.download_button("⬇️ Download EOD review (CSV)", data=disp.to_csv(index=False).encode(),
                                file_name=f"eod_review_{snap['id']}.csv", mime="text/csv",
-                               use_container_width=True)
+                               **STRETCH)
         except Exception:
             pass
     hist = eod_load()
@@ -4129,9 +4449,9 @@ def eod_review_tab(ss):
                                "SLosses": d.get("n_sl"), "BuyWinRate%": d.get("buy_wr")}
                               for d in sorted(hist, key=lambda x: x.get("date", ""), reverse=True)])
             try:
-                st.dataframe(h, use_container_width=True, hide_index=True)
+                st.dataframe(h, **STRETCH, hide_index=True)
             except Exception:
-                st.dataframe(h, use_container_width=True)
+                st.dataframe(h, **STRETCH)
             st.caption("Memory files live next to the app, one set per person (memory name) — "
                        "on your PC they persist forever; on Streamlit Cloud they survive until the app redeploys.")
 
@@ -4254,9 +4574,9 @@ def main():
     <div style='color:#fbbf24;font-weight:700;font-size:12px;'>Focus</div><div style='color:white;font-weight:900;font-size:16px;'>Uptrend + Levels</div></div>
     </div></div></div>""", unsafe_allow_html=True)
 
-    tab_dash, tab_mv, tab_cb, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
-        ["🔴 Live Dashboard (500)", "⚡ Live Movers (Now)", "🎯 Combo Picks", "📊 Analyze Stock", "🔍 Scanner",
-         "🔎 Search Any Stock", "📓 Journal", "🌙 EOD Review", "📚 Trading Guide"])
+    tab_dash, tab_mv, tab_bnc, tab_cb, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
+        ["🔴 Live Dashboard (500)", "⚡ Live Movers (Now)", "🚀 Uptrend Starting", "🎯 Combo Picks",
+         "📊 Analyze Stock", "🔍 Scanner", "🔎 Search Any Stock", "📓 Journal", "🌙 EOD Review", "📚 Trading Guide"])
 
     # ── TAB 0: LIVE DASHBOARD (the common board) ──
     with tab_dash:
@@ -4275,6 +4595,13 @@ def main():
             live_movers_tab(ss, mst_s)
         except Exception as e:
             st.warning(f"⚠️ Live Movers problem: {type(e).__name__}: {e}")
+
+    # ── TAB: UPTREND STARTING (support bounces) ──
+    with tab_bnc:
+        try:
+            bounce_tab(ss, mst_s)
+        except Exception as e:
+            st.warning(f"⚠️ Bounce radar problem: {type(e).__name__}: {e}")
 
     # ── TAB: COMBO (live climb + calculation agreement) ──
     with tab_cb:
@@ -4310,7 +4637,7 @@ def main():
                 st.warning("No match"); sel = None
         with r8:
             st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
-            analyze_btn = st.button("🚀 ANALYZE NOW", use_container_width=True, type="primary", key="analyze_btn")
+            analyze_btn = st.button("🚀 ANALYZE NOW", **STRETCH, type="primary", key="analyze_btn")
 
         lr1, lr2, lr3 = st.columns([1, 1, 2])
         with lr1:
@@ -4388,7 +4715,7 @@ def main():
             cap_n = None
         b1, b2 = st.columns([1, 3])
         with b1:
-            scan_btn = st.button("🚀 START SCAN", use_container_width=True, type="primary", key="scan_btn")
+            scan_btn = st.button("🚀 START SCAN", **STRETCH, type="primary", key="scan_btn")
         with b2:
             n_scan = cap_n if cap_n else total_n
             eta = max(1, int(n_scan / 160))
@@ -4440,7 +4767,7 @@ def main():
                 up = r['tr'] == 'UPTREND'
                 with st.expander(f"{'📈' if up else '•'} #{i+1} · {r['name'][:26]} · ₹{r['price']:.2f} · {r['sig']} · {r['conf']:.0f}% · {r['tr'].title()} · Gap {r['gap']:+.1f}%", expanded=i < 3):
                     st.markdown(f"<div class='sc-r'><div style='font-size:15px;font-weight:800;color:{r['ac']};margin-bottom:12px;'>{r['act']}</div><div style='display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center;'><div style='background:#eff6ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>TREND</div><div style='color:{'#16a34a' if up else '#6b7280'};font-weight:900;font-size:14px;'>{r['tr'].title()}</div></div><div style='background:white;border:1px solid #e0e7ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>BUY AT</div><div style='color:{r['ac']};font-weight:800;font-size:15px;'>₹{r['buy_at']:.2f}</div></div><div style='background:#fff1f2;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>STOP</div><div style='color:#dc2626;font-weight:800;font-size:15px;'>₹{r['sl']:.2f}</div></div><div style='background:#f0fdf4;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>TARGET 2</div><div style='color:#16a34a;font-weight:800;font-size:15px;'>₹{r['t2']:.2f}</div><div style='color:#6b7280;font-size:9px;'>+{r['t2p']:.1f}%</div></div><div style='background:#eff6ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>RISK:REWARD</div><div style='color:#1d4ed8;font-weight:900;font-size:16px;'>1:{r['rr']}</div></div></div><div style='color:#6b7280;font-size:11px;margin-top:10px;'>Conf {r['conf']:.0f}% · Vol {r['vr']:.1f}x · Buy strength {r['bp']:.0f}%</div></div>", unsafe_allow_html=True)
-                    if st.button(f"📊 Full Analysis → {r['name'][:20]}", key=f"scf_{i}_{r['sym']}", use_container_width=True, type="primary"):
+                    if st.button(f"📊 Full Analysis → {r['name'][:20]}", key=f"scf_{i}_{r['sym']}", **STRETCH, type="primary"):
                         ss.sym = r['sym']; ss.stock_name = r['name']; ss.analyzed = True
                         st.info("✅ Open the '📊 Analyze Stock' tab — it's loaded with this stock.")
 
@@ -4455,13 +4782,13 @@ def main():
                 "BuyStr%": round(r["bp"], 1),
             } for i, r in enumerate(results)])
             try:
-                st.dataframe(disp, use_container_width=True, height=430, hide_index=True)
+                st.dataframe(disp, **STRETCH, height=430, hide_index=True)
             except Exception:
-                st.dataframe(disp, use_container_width=True)
+                st.dataframe(disp, **STRETCH)
             try:
                 st.download_button("⬇️ Download ALL results (CSV)", data=disp.to_csv(index=False).encode(),
                                    file_name=f"scan_results_{now_ist().strftime('%Y%m%d_%H%M')}.csv",
-                                   mime="text/csv", use_container_width=True, key="sc_csv")
+                                   mime="text/csv", **STRETCH, key="sc_csv")
             except Exception:
                 pass
 
@@ -4473,7 +4800,7 @@ def main():
         with q1:
             sq = st.text_input("Search", placeholder="Zensar Technologies, Oil India, Vedanta, Suzlon, SBIN...", key="sq_in", label_visibility="collapsed")
         with q2:
-            sb = st.button("🔍 SEARCH", use_container_width=True, key="sq_btn")
+            sb = st.button("🔍 SEARCH", **STRETCH, key="sq_btn")
         st.markdown('</div>', unsafe_allow_html=True)
         if sb and sq:
             with st.spinner(f"Searching '{sq}'..."):
@@ -4486,7 +4813,7 @@ def main():
                     with cols[i % 3]:
                         p = data['price']
                         st.markdown(f"<div style='background:white;border:1px solid #e0e7ff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06);margin:4px 0;'><div style='font-weight:800;color:#1a1f36;font-size:14px;'>{data['name']}</div><div style='font-size:30px;font-weight:900;color:#1d4ed8;margin:10px 0;'>₹{p:,.2f}</div><div style='color:#9ca3af;font-size:11px;'>{data['sym']}</div></div>", unsafe_allow_html=True)
-                        if st.button("📊 Analyze", key=f"sr_{i}", use_container_width=True):
+                        if st.button("📊 Analyze", key=f"sr_{i}", **STRETCH):
                             ss.sym = data['sym']; ss.stock_name = data['name']; ss.analyzed = True
                             st.success("✅ Open the '📊 Analyze Stock' tab.")
             elif sq:
@@ -4499,7 +4826,7 @@ def main():
         pc = st.columns(4)
         for i, (nm, sym) in enumerate(popular.items()):
             with pc[i % 4]:
-                if st.button(nm, key=f"pop_{nm}", use_container_width=True):
+                if st.button(nm, key=f"pop_{nm}", **STRETCH):
                     ss.sym = sym; ss.stock_name = nm; ss.analyzed = True
                     st.success(f"✅ Open '📊 Analyze Stock' tab for {nm}")
 
