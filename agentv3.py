@@ -348,12 +348,19 @@ def universe_search(query, limit=40):
 def mkt_status():
     n = now_ist()
     if n.weekday() >= 5:
-        return "closed", "🔴 CLOSED", "Monday 9:15 AM"
+        _d = n.date() + _dtd(days=1)
+        while _d.weekday() >= 5:
+            _d += _dtd(days=1)
+        return "closed", "🔴 CLOSED", f"Opens {_d.strftime('%A')} 9:15 AM"
     t = n.time()
-    if t < dtime(9, 0):    return "pre",  "🌅 PRE-MARKET", "Opens 9:15 AM"
+    if t < dtime(9, 0):    return "pre",  "🌅 PRE-MARKET", "Opens today 9:15 AM"
     if t < dtime(9, 15):   return "pre",  "🌅 PRE-OPEN",   "Opens very soon!"
     if t <= dtime(15, 30): return "open", "🟢 MARKET LIVE","Closes 3:30 PM"
-    return "closed", "🔴 CLOSED", "Opens 9:15 AM tomorrow"
+    # after close → the NEXT TRADING day (skips Sat/Sun, always shows the day name)
+    _d = n.date() + _dtd(days=1)
+    while _d.weekday() >= 5:
+        _d += _dtd(days=1)
+    return "closed", "🔴 CLOSED", f"Opens {_d.strftime('%A')} 9:15 AM"
 
 
 def session_time_context():
