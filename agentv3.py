@@ -24,6 +24,9 @@ try:
     STRETCH = {"width": "stretch"} if _sv >= (1, 46) else {"use_container_width": True}
 except Exception:
     STRETCH = {"use_container_width": True}
+
+# ── price floor: stocks below this are EXCLUDED from all boards/scans ──
+MIN_PRICE = 80.0
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -2678,6 +2681,74 @@ SECTORS_FOR_BREADTH = {"💻 IT": IT_S, "🏦 Bank": BANK_S, "⚡ Power": POWER_
                         "🛡️ Defence": DEF_S, "🚗 Auto": AUTO_S, "💊 Pharma": PHARMA_S}
 
 
+def rank_universe(n):
+    """🌐 FIRST SCAN OF THE DAY — rank the ENTIRE NSE (2,000+ stocks) by
+    uptrend strength and keep the TOP n. Result is cached to disk for the
+    day, so this heavy scan runs once per morning — then every engine
+    (dashboard · movers · bounces · combo) uses the best 500 board."""
+    key = f"universe_rank_{_ukey()}_{now_ist().strftime('%Y-%m-%d')}.json"
+    try:
+        if _os.path.exists(key):
+            d = _json.load(open(key, encoding="utf-8"))
+            if isinstance(d, dict) and d.get("watch") and d.get("n") == n:
+                return d["watch"], d.get("names") or {}
+    except Exception:
+        pass
+    uni = fetch_universe()["sym_map"]
+    items = sorted(uni.items())
+    all_syms = [y for _, y in items]
+    got = {}
+    prog = None
+    try:
+        prog = st.progress(0.0, text=f"🌐 Full-market scan — ranking ALL {len(all_syms):,} NSE stocks…")
+    except Exception:
+        pass
+    for i in range(0, len(all_syms), 50):
+        got.update(fetch_chunk(tuple(all_syms[i:i + 50]), "1d", "6mo"))
+        if prog:
+            try:
+                prog.progress(min((i + 50) / len(all_syms), 1.0),
+                              text=f"🌐 Ranking ALL NSE · {min(i + 50, len(all_syms)):,}/{len(all_syms):,}")
+            except Exception:
+                pass
+        time.sleep(0.08)
+    if prog:
+        try:
+            prog.empty()
+        except Exception:
+            pass
+
+    def _c01(x):
+        return max(-1.0, min(1.0, x))
+
+    scored = []
+    for s, y in items:
+        df = got.get(y)
+        try:
+            if df is None or len(df) < 60:
+                continue
+            cl = df["Close"].values
+            price = float(cl[-1])
+            if price < MIN_PRICE:          # ₹80 floor — no penny stocks
+                continue
+            chg5 = (price / float(cl[-6]) - 1) * 100 if len(cl) >= 6 else 0.0
+            chg20 = (price / float(cl[-21]) - 1) * 100 if len(cl) >= 21 else 0.0
+            base = float(cl[-200:].mean()) if len(cl) >= 200 else float(cl.mean())
+            score = (45 * _c01(chg5 / 6.0) + 35 * _c01(chg20 / 12.0)
+                     + (20.0 if price > base else 0.0))
+            scored.append((round(score, 2), y, s))
+        except Exception:
+            continue
+    scored.sort(key=lambda x: -x[0])
+    watch = [y for _, y, _ in scored[:n]]
+    names = {y: s for _, y, s in scored[:n]}
+    try:
+        _json.dump({"n": n, "watch": watch, "names": names}, open(key, "w", encoding="utf-8"))
+    except Exception:
+        pass
+    return watch, names
+
+
 def build_watchlist(src_key, n, custom_txt=""):
     """Watchlist of yahoo symbols (+ pretty names) for the dashboard."""
     d = DASH_SRC.get(src_key)
@@ -2696,11 +2767,19 @@ def build_watchlist(src_key, n, custom_txt=""):
                 t += ".NS"
             add(t, t.replace(".NS", ""))
         return out[:500], nm
-    if d is None:  # full NSE: curated first, then live-universe fill
+    if d is None:  # full NSE: RANK the whole market once per morning, keep TOP n
+        try:
+            uni = fetch_universe()["sym_map"]
+        except Exception:
+            uni = {}
+        if uni and n < len(uni):
+            try:
+                return rank_universe(n)
+            except Exception:
+                pass
         for k, v in ALL_STOCKS.items():
             add(v, k)
         try:
-            uni = fetch_universe()["sym_map"]
             for s, yh in sorted(uni.items()):
                 if len(out) >= n:
                     break
@@ -2827,7 +2906,7 @@ def _ingest(syms, got, got_d, names, rows, prev, alerts):
         if intra is None:
             continue
         r = dash_row(names.get(sym, sym.replace(".NS", "")), sym, intra, got_d.get(sym))
-        if not r:
+        if not r or (r.get("price") or 0) < MIN_PRICE:
             continue
         old = prev.get(sym)
         if old and (old.get("sig") != r["sig"] or old.get("dtr") != r["dtr"]):
@@ -3028,6 +3107,8 @@ def compute_movers(got):
             t = df.iloc[d0:td[-1] + 1]
             o = float(t["Open"].iloc[0]); last = float(t["Close"].iloc[-1])
             hi = float(t["High"].max()); lo = float(t["Low"].min())
+            if last < MIN_PRICE:      # ₹80 floor — skip cheap stocks
+                continue
             cl = t["Close"].values; op = t["Open"].values; vol = t["Volume"].values
             n = len(cl)
             chg_day = (last - prev_close) / prev_close * 100 if prev_close else 0.0
@@ -3453,6 +3534,8 @@ def compute_bounces(got, gotd):
             prev_close = float(df["Close"].iloc[d0 - 1]) if d0 > 0 else float(df["Open"].iloc[d0])
             t = df.iloc[d0:td[-1] + 1]
             last = float(t["Close"].iloc[-1]); hi = float(t["High"].max()); lo = float(t["Low"].min())
+            if last < MIN_PRICE:      # ₹80 floor — skip cheap stocks
+                continue
             cl = t["Close"].values; op = t["Open"].values; vol = t["Volume"].values
             chg_day = (last - prev_close) / prev_close * 100 if prev_close else 0.0
             g, oo = cl[-24:], op[-24:]
@@ -4526,6 +4609,7 @@ def run_scan(stocks, iv, per, min_conf, stype, workers=10, cap_n=None, stats_out
         stats_out["total"] = total
         stats_out["ok"] = len({r["sym"] for r in results})
         stats_out["fails"] = max(total - stats_out["ok"], 0)
+    results = [r for r in results if (r.get("price") or 0) >= MIN_PRICE]
     if stype == "BUY":
         results = [r for r in results if r['conf'] >= min_conf and r['bp'] > r['sp'] and r['sit'] not in ('SELL', 'GAP_DN')]
         results.sort(key=lambda x: (x['tr'] == 'UPTREND', x['bp'], x['conf']), reverse=True)
