@@ -27,6 +27,16 @@ except Exception:
 
 # ── price floor: stocks below this are EXCLUDED from all boards/scans ──
 MIN_PRICE = 80.0
+
+
+def _H(html):
+    """Normalize HTML for st.markdown: newer Streamlit renders 4-space-indented
+    lines as CODE BLOCKS (raw tags as text!). Collapse all whitespace so the
+    whole markup stays ONE html block on every Streamlit version."""
+    try:
+        return " ".join(str(html).split())
+    except Exception:
+        return html
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -69,7 +79,7 @@ st.set_page_config(page_title="AI Trader Pro v13.6 Pro Terminal", page_icon="�
 # ============================================================
 # CSS — PREMIUM LIGHT THEME (+ dashboard components)
 # ============================================================
-st.markdown("""
+st.markdown(_H("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 *{font-family:'Inter',sans-serif;box-sizing:border-box;}
@@ -147,7 +157,7 @@ div[data-testid="stTextInput"]>div>div>input{background:white !important;border:
 .dashhead{background:linear-gradient(135deg,#7c2d12,#b45309,#d97706);border-radius:18px;padding:18px 24px;
   margin-bottom:16px;box-shadow:0 8px 28px rgba(180,83,9,0.25);}
 </style>
-""", unsafe_allow_html=True)
+"""), unsafe_allow_html=True)
 
 # ============================================================
 # CURATED STOCK DATABASE + LIVE FULL NSE UNIVERSE
@@ -2190,10 +2200,10 @@ def show_analysis(sym, name, iv, per):
     with st.spinner(f"⏳ Loading {name}..."):
         res = run_analysis(sym, iv, per)
     if res is None:
-        st.markdown(f"""<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:16px;padding:24px;'>
+        st.markdown(_H(f"""<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:16px;padding:24px;'>
         <div style='font-size:18px;font-weight:800;color:#dc2626;'>❌ Cannot Load {sym}</div>
         <div style='color:#374151;font-size:13px;margin-top:8px;'>Try exact NSE symbol · check internet ·
-        best combo: 15m timeframe + 1mo period</div></div>""", unsafe_allow_html=True)
+        best combo: 15m timeframe + 1mo period</div></div>"""), unsafe_allow_html=True)
         return
     mst_s, ml, mm = mkt_status()
     with st.spinner("🧠 Computing SR, Fibonacci, Pivots, Plan, Circuit, HTF..."):
@@ -2229,7 +2239,7 @@ def show_analysis(sym, name, iv, per):
         gg = sr['gap_pct']; gclr = "#16a34a" if gg > 0 else "#dc2626" if gg < 0 else "#6b7280"
         gap_text = f"<span style='color:{gclr};font-weight:700;font-size:13px;'> {gg:+.1f}% gap</span>"
     mclr = "#16a34a" if mst_s == "open" else "#f59e0b" if mst_s == "pre" else "#dc2626"
-    st.markdown(f"""<div style='background:white;border:1px solid #e0e7ff;border-radius:18px;padding:18px 24px;
+    st.markdown(_H(f"""<div style='background:white;border:1px solid #e0e7ff;border-radius:18px;padding:18px 24px;
     margin-bottom:18px;box-shadow:0 4px 20px rgba(0,0,0,0.06);display:flex;justify-content:space-between;
     align-items:center;flex-wrap:wrap;gap:10px;'><div>
     <div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>
@@ -2242,7 +2252,7 @@ def show_analysis(sym, name, iv, per):
      ·  Vol: <b>{res["vr"]:.1f}x</b></div></div>
     <div style='text-align:right;'><div style='font-size:40px;font-weight:900;color:#1d4ed8;'>₹{price:,.2f}</div>
     <div style='font-size:10px;font-weight:700;color:{"#16a34a" if price_src=="NSE live" else "#b45309"};'>{"🟢 NSE LIVE" if price_src=="NSE live" else "⚠️ "+price_src.upper()+" · CHECK BROKER FOR EXACT LTP"}</div>
-    <div style='color:#6b7280;font-size:12px;'>52W H: ₹{res["hi52"]:.2f} | L: ₹{res["lo52"]:.2f}</div></div></div>""",
+    <div style='color:#6b7280;font-size:12px;'>52W H: ₹{res["hi52"]:.2f} | L: ₹{res["lo52"]:.2f}</div></div></div>"""),
                 unsafe_allow_html=True)
 
     st.markdown("<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:10px;"
@@ -2258,12 +2268,12 @@ def show_analysis(sym, name, iv, per):
         pcol = {"early": "#16a34a", "mid": "#2563eb", "late": "#ea580c",
                 "closing": "#dc2626", "done": "#dc2626"}[stc['phase']]
         pemoji = {"early": "🟢", "mid": "🔵", "late": "🟠", "closing": "🔴", "done": "🔴"}[stc['phase']]
-        st.markdown(f"""<div style='background:{pcol}12;border:2px solid {pcol};border-radius:14px;
+        st.markdown(_H(f"""<div style='background:{pcol}12;border:2px solid {pcol};border-radius:14px;
         padding:14px 20px;margin-bottom:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;'>
         <div style='font-size:28px;'>{pemoji}</div>
         <div style='flex:1;min-width:220px;'>
         <div style='font-size:13px;font-weight:900;color:{pcol};'>⏰ {stc['left_txt'].upper()} · {stc['phase'].upper()} SESSION</div>
-        <div style='color:#374151;font-size:13px;margin-top:2px;'>{stc['note']}</div></div></div>""",
+        <div style='color:#374151;font-size:13px;margin-top:2px;'>{stc['note']}</div></div></div>"""),
                     unsafe_allow_html=True)
 
     buy_c = sum(1 for s in res['sigs'] if s['b']); sell_c = len(res['sigs']) - buy_c
@@ -2280,7 +2290,7 @@ def show_analysis(sym, name, iv, per):
             title = "📊 CANDLE ANALYSIS (last session)"
             live_tag = ("<span style='background:#6b7280;color:white;border-radius:6px;padding:2px 8px;"
                         "font-size:11px;font-weight:700;'>market closed — updates live once it opens</span>")
-        st.markdown(f"""<div style='background:white;border:2px solid {lc['vc']};border-radius:16px;
+        st.markdown(_H(f"""<div style='background:white;border:2px solid {lc['vc']};border-radius:16px;
         padding:16px 20px;margin-bottom:14px;'>
         <div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;'>
         <div style='font-size:14px;font-weight:900;color:{lc['vc']};'>{lc['vico']} {title} · {lc['verdict']}</div>
@@ -2288,9 +2298,9 @@ def show_analysis(sym, name, iv, per):
         <div style='display:flex;align-items:flex-end;gap:4px;height:52px;margin:12px 0 8px;'>{lc['blocks']}</div>
         <div style='color:#374151;font-size:12px;'>Latest candle: <b style='color:{"#16a34a" if lc['last_up'] else "#dc2626"};'>{'UP' if lc['last_up'] else 'DOWN'} {lc['chgp']:+.2f}%</b>
         · {lc['streak']} in a row · last 14: {lc['greens']}🟢 / {lc['reds']}🔴 · {lc['vwtxt']}</div>
-        <div style='color:#9ca3af;font-size:11px;margin-top:2px;'>{lc['oc']}</div></div>""",
+        <div style='color:#9ca3af;font-size:11px;margin-top:2px;'>{lc['oc']}</div></div>"""),
                     unsafe_allow_html=True)
-    st.markdown(f"""<div class='{res["bg"]}'><div style='display:flex;justify-content:space-between;
+    st.markdown(_H(f"""<div class='{res["bg"]}'><div style='display:flex;justify-content:space-between;
     align-items:flex-start;flex-wrap:wrap;gap:16px;'><div style='flex:1;min-width:260px;'>
     <div style='font-size:11px;color:#6b7280;font-weight:700;letter-spacing:2px;text-transform:uppercase;'>AI Signal · {res["n_sigs"]} Indicators</div>
     <div style='font-size:46px;font-weight:900;color:{sc};line-height:1.1;margin-top:8px;'>{res["sig"]}</div>
@@ -2311,7 +2321,7 @@ Indicators agreeing ≠ price will move that way.</div>
     <div style='background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);border-radius:12px;padding:12px;'>
     <div style='display:flex;justify-content:space-between;'><span style='color:#374151;font-size:13px;font-weight:600;'>SELL STRENGTH</span>
     <span style='color:#dc2626;font-weight:900;font-size:22px;'>{res["sp"]:.0f}%</span></div>
-    <div class='pbar-container' style='margin-top:8px;'><div class='pbar-sell' style='width:{res["sp"]}%;'></div></div></div></div></div>""",
+    <div class='pbar-container' style='margin-top:8px;'><div class='pbar-sell' style='width:{res["sp"]}%;'></div></div></div></div></div>"""),
                 unsafe_allow_html=True)
 
     tr = res['trend']; is_buy = 'BUY' in res['sig']; is_sell = 'SELL' in res['sig']
@@ -2353,12 +2363,12 @@ Indicators agreeing ≠ price will move that way.</div>
         htf_chip = (f"<span style='background:{hclr}18;color:{hclr};border:1px solid {hclr}44;"
                     f"font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-left:8px;'>"
                     f"{htf['label']} trend: {ht.title()} · {mark}</span>")
-    st.markdown(f"""<div style='background:{tv_bg};border:3px solid {tv_clr};border-radius:18px;
+    st.markdown(_H(f"""<div style='background:{tv_bg};border:3px solid {tv_clr};border-radius:18px;
     padding:20px 26px;margin:16px 0;display:flex;align-items:center;gap:18px;flex-wrap:wrap;'>
     <div style='font-size:46px;'>{tv_ico}</div><div style='flex:1;min-width:220px;'>
     <div style='font-size:12px;color:#6b7280;font-weight:700;letter-spacing:1px;'>TREND VERDICT{adx_txt}</div>
     <div style='font-size:30px;font-weight:900;color:{tv_clr};line-height:1.1;'>{tv_txt}</div>
-    <div style='color:#374151;font-size:13px;margin-top:6px;'>{tv_sub} {htf_chip}</div></div></div>""",
+    <div style='color:#374151;font-size:13px;margin-top:6px;'>{tv_sub} {htf_chip}</div></div></div>"""),
                 unsafe_allow_html=True)
 
     stage_clr = {"GOOD": "#16a34a", "CAUTION": "#b45309", "POOR": "#ea580c",
@@ -2370,11 +2380,11 @@ Indicators agreeing ≠ price will move that way.</div>
     if tim['goods']:
         reasons += "<div style='margin-top:4px;'><b style='color:#16a34a;'>✓ In favour:</b> " + \
                    " · ".join(tim['goods']) + "</div>"
-    st.markdown(f"""<div style='background:white;border:1px solid #e0e7ff;border-left:5px solid {stage_clr};
+    st.markdown(_H(f"""<div style='background:white;border:1px solid #e0e7ff;border-left:5px solid {stage_clr};
     border-radius:0 12px 12px 0;padding:12px 18px;margin:-6px 0 14px;'>
     <span style='background:{stage_clr}18;color:{stage_clr};font-weight:800;font-size:12px;
     padding:3px 12px;border-radius:20px;'>ENTRY TIMING: {tim['stage']} · {tim['quality']}</span>
-    <span style='color:#374151;font-size:13px;margin-left:8px;'>{tim['msg']}</span>{reasons}</div>""",
+    <span style='color:#374151;font-size:13px;margin-left:8px;'>{tim['msg']}</span>{reasons}</div>"""),
                 unsafe_allow_html=True)
 
     if ema2:
@@ -2384,7 +2394,7 @@ Indicators agreeing ≠ price will move that way.</div>
         approx = " (approx — <200 daily bars)" if ema2.get('approx') else ""
         near_txt = (" · <b>price is AT the 200 EMA — major support/resistance, watch for bounce or rejection</b>"
                     if ema2['near'] else "")
-        st.markdown(f"""<div style='background:{ema2['vc']}10;border:2px solid {ema2['vc']};
+        st.markdown(_H(f"""<div style='background:{ema2['vc']}10;border:2px solid {ema2['vc']};
         border-radius:14px;padding:14px 20px;margin-bottom:14px;'>
         <div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
         <div><span style='font-size:13px;font-weight:900;color:{ema2['vc']};'>{ico} 200 EMA METHOD · {ema2['verdict']}</span>
@@ -2392,7 +2402,7 @@ Indicators agreeing ≠ price will move that way.</div>
         price is <b>{abs(ema2['dist']):.1f}% {'above' if ema2['above'] else 'below'}</b> it ·
         <span style='color:{gclr};font-weight:700;'>{gc}</span>{near_txt}</div></div></div>
         <div style='color:#6b7280;font-size:11px;margin-top:6px;'>Rule of the 200 EMA method: only take longs when price is
-        <b>above</b> the daily 200 EMA. Below it = bear structure, where 'uptrend' bounces usually fail.</div></div>""",
+        <b>above</b> the daily 200 EMA. Below it = bear structure, where 'uptrend' bounces usually fail.</div></div>"""),
                     unsafe_allow_html=True)
 
     if news:
@@ -2407,10 +2417,10 @@ Indicators agreeing ≠ price will move that way.</div>
                      f"<span style='background:{sc_}18;color:{sc_};font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;'>{tag}</span> "
                      f"<span style='font-size:13px;color:#1a1f36;'>{link}</span> "
                      f"<span style='color:#9ca3af;font-size:11px;'>· {it['pub']}</span></div>")
-        st.markdown(f"""<div style='background:white;border:2px solid {news['vc']};border-radius:14px;
+        st.markdown(_H(f"""<div style='background:white;border:2px solid {news['vc']};border-radius:14px;
         padding:14px 20px;margin-bottom:14px;'>{head}{rows}
         <div style='color:#9ca3af;font-size:11px;margin-top:8px;'>Headlines are a rough keyword read — open a link to verify.
-        News can override the chart, so if something big broke, trust the news over the levels.</div></div>""",
+        News can override the chart, so if something big broke, trust the news over the levels.</div></div>"""),
                     unsafe_allow_html=True)
 
     if nse:
@@ -3189,14 +3199,14 @@ def live_movers_tab(ss, mst_s):
                 ss["mv_n"] = _rt["n"]
             ss["_mv_resumed"] = True
 
-    st.markdown("""<div style='background:linear-gradient(135deg,#052e16,#14532d);border-radius:18px;
+    st.markdown(_H("""<div style='background:linear-gradient(135deg,#052e16,#14532d);border-radius:18px;
     padding:18px 22px;margin-bottom:14px;'>
     <div style='color:white;font-size:20px;font-weight:900;'>⚡ LIVE MOVERS — follow the money, not the math</div>
     <div style='color:#bbf7d0;font-size:12.5px;margin-top:6px;line-height:1.7;'>This tab makes <b>NO predictions</b>.
     It watches live 5-minute candles of the whole board and shows who is <b>actually going up NOW</b>: steady green
     candles · rising in the last hour · holding near the day's high · volume confirming. When a stock starts
     climbing you get a 🔔 alert below. 🐢 SLOW-STEADY = the "slowly going up" ones you asked for (up 0.2–4.5%
-    without spiking) — usually the safest to ride.</div></div>""", unsafe_allow_html=True)
+    without spiking) — usually the safest to ride.</div></div>"""), unsafe_allow_html=True)
 
     # ── settings ──
     with st.expander("⚙️ UNIVERSE · REFRESH", expanded=not ss.get("mv_watch")):
@@ -3624,14 +3634,14 @@ def bounce_tab(ss, mst_s):
             ss["bc_alerts"] = _rt.get("alerts") or []
             ss["_bc_resumed"] = True
 
-    st.markdown("""<div style='background:linear-gradient(135deg,#0f2b1e,#1e3a8a);border-radius:18px;
+    st.markdown(_H("""<div style='background:linear-gradient(135deg,#0f2b1e,#1e3a8a);border-radius:18px;
     padding:18px 22px;margin-bottom:12px;'>
     <div style='color:white;font-size:20px;font-weight:900;'>🚀 UPTREND STARTING — support-bounce radar</div>
     <div style='color:#bbf7d0;font-size:12.5px;margin-top:6px;line-height:1.7;'>As per our calculation: which stocks
     have <b>REACHED their SUPPORT point</b> and are <b>slowly starting to turn up</b>? 🚀 UPTREND STARTING = at
     support + bouncing now — the safest buy zone (buy at support, stop just below, sell into T1/T2).
     🛡️ AT SUPPORT = sitting on support, turn not confirmed yet — watchlist it. Every card shows the exact
-    <b>BUY, STOP-LOSS and SELL</b> values, plus the resistance where the rally may stall.</div></div>""",
+    <b>BUY, STOP-LOSS and SELL</b> values, plus the resistance where the rally may stall.</div></div>"""),
                 unsafe_allow_html=True)
 
     with st.expander("⚙️ UNIVERSE · REFRESH", expanded=not ss.get("bc_watch")):
@@ -3790,20 +3800,20 @@ def combo_tab(ss, mst_s):
                 ss["cb_n"] = _rt["n"]
             ss["_cb_resumed"] = True
 
-    st.markdown("""<div style='background:linear-gradient(135deg,#1e1b4b,#0f3d2e);border-radius:18px;
+    st.markdown(_H("""<div style='background:linear-gradient(135deg,#1e1b4b,#0f3d2e);border-radius:18px;
     padding:18px 22px;margin-bottom:12px;'>
     <div style='color:white;font-size:20px;font-weight:900;'>🎯 COMBO — live money ∩ calculation</div>
     <div style='color:#c7d2fe;font-size:12.5px;margin-top:6px;line-height:1.7;'>The accuracy booster you asked for:
     a stock appears here only when <b> BOTH </b> agree — ⚡ it is <b>actually climbing right now</b> (live candles)
     <b>AND</b> 🧮 the <b>calculation</b> says uptrend/BUY/above-200EMA. 🎯 PERFECT = strongest possible agreement.
     ⚠️ LIVE ONLY = money moving but math neutral (risky momentum). 🧮 CALC ONLY = math likes it, money not yet
-    (breakout watchlist).</div></div>""", unsafe_allow_html=True)
-    st.markdown("""<div style='background:#0b1220;border:1px dashed #1e293b;border-radius:12px;padding:10px 16px;
+    (breakout watchlist).</div></div>"""), unsafe_allow_html=True)
+    st.markdown(_H("""<div style='background:#0b1220;border:1px dashed #1e293b;border-radius:12px;padding:10px 16px;
     color:#94a3b8;font-size:12px;margin-bottom:10px;line-height:1.8;'>⏰ <b style='color:#e2e8f0;">Best time to run this
     (IST):</b> 🥇 <b style='color:#4ade80;'>9:45 – 11:00 AM</b> (opening noise settles, real trend confirms) ·
     🥈 1:30 – 2:30 PM (afternoon build) · 🥉 2:45 – 3:10 PM (closing strength). <b style='color:#f87171;">Avoid
     9:15–9:35</b> — opening fake spikes. One clean scan at ~9:45 + one re-scan at ~2:45 is the professional routine.
-    </div>""", unsafe_allow_html=True)
+    </div>"""), unsafe_allow_html=True)
     if mst_s == "open" and now_ist().time() < dtime(9, 45):
         st.markdown("<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:10px;padding:8px 14px;"
                     "color:#fde68a;font-size:12px;margin-bottom:10px;'>⚠️ It's before 9:45 AM — you CAN scan now, but "
@@ -4080,7 +4090,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
                 f"<div style='color:#f1f5f9;font-weight:900;font-size:15px;font-family:{MONO};'>{d['price']:,.1f}</div>"
                 f"<div style='color:{c};font-size:11px;font-weight:800;font-family:{MONO};'>{d['chg']:+.2f}%</div></div>")
     live_c = "#22c55e" if len(rows) >= min(200, len(watch)) else "#f59e0b"
-    st.markdown(f"""
+    st.markdown(_H(f"""
     <div style='background:linear-gradient(135deg,#0b1220,#0f172a);border:1px solid #1e293b;border-radius:18px;
     padding:16px 22px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;'>
       <div><div style='display:flex;align-items:center;gap:9px;'>
@@ -4097,7 +4107,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
         <div style='color:{live_c};font-size:13px;font-weight:900;font-family:{MONO};'>
         {'✓ 200+ GUARANTEED' if len(rows)>=200 else f'{len(rows)} live' + (' · filling…' if holes>0 else '')}</div>
         <div style='color:#64748b;font-size:10px;'>{ml}</div></div>
-      </div></div>""", unsafe_allow_html=True)
+      </div></div>"""), unsafe_allow_html=True)
 
     if not data:
         st.info("No data yet — press 🔄 Refresh a batch now.")
@@ -4148,14 +4158,14 @@ def dashboard_tab(ss, mst_s, ml, mm):
             + _kpi("🟢 BUY SIGNALS", sbuy, f"strong: {sum(1 for r in data if r['sig']=='STRONG BUY')}", "#4ade80")
             + _kpi("🔴 SELL SIGNALS", ssell, f"strong: {sum(1 for r in data if r['sig']=='STRONG SELL')}", "#f87171"))
     st.markdown(f"<div style='display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;'>{kpis}</div>", unsafe_allow_html=True)
-    st.markdown(f"""<div style='background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:12px 16px;margin-bottom:12px;'>
+    st.markdown(_H(f"""<div style='background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:12px 16px;margin-bottom:12px;'>
     <div style='display:flex;height:14px;border-radius:7px;overflow:hidden;'>
     <div style='background:#16a34a;width:{pu:.1f}%;'></div><div style='background:#334155;width:{pf:.1f}%;'></div>
     <div style='background:#dc2626;width:{pd_:.1f}%;'></div></div>
     <div style='display:flex;justify-content:space-between;color:#64748b;font-size:11px;font-weight:700;margin-top:6px;font-family:{MONO};'>
     <span style='color:#22c55e;'>▲ {adv} advancing ({pu:.0f}%)</span>
     <span>MARKET BREADTH — TODAY</span>
-    <span style='color:#ef4444;'>▼ {dec} declining ({pd_:.0f}%)</span></div></div>""", unsafe_allow_html=True)
+    <span style='color:#ef4444;'>▼ {dec} declining ({pd_:.0f}%)</span></div></div>"""), unsafe_allow_html=True)
 
     # ================= PANEL 3 — FLIP ALERTS =================
     alerts = state.get("alerts", [])
@@ -4169,11 +4179,11 @@ def dashboard_tab(ss, mst_s, ml, mm):
 
     # ================= PANEL 4 — UPTREND LEADERBOARD =================
     ups = sorted([r for r in data if r["dtr"] == "UPTREND"], key=lambda x: -x["score"])
-    st.markdown(f"""<div style='background:#0b1220;border:1px solid #14532d;border-radius:18px;padding:16px 18px;margin-bottom:12px;'>
+    st.markdown(_H(f"""<div style='background:#0b1220;border:1px solid #14532d;border-radius:18px;padding:16px 18px;margin-bottom:12px;'>
     <div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;'>
     <div style='color:#4ade80;font-size:15px;font-weight:900;letter-spacing:.5px;'>🚀 UPTREND LEADERBOARD
     <span style='color:#64748b;font-size:12px;font-weight:600;'>· {len(ups)} stocks rising now · ranked by score</span></div>
-    <div style='color:#64748b;font-size:10px;font-family:{MONO};'>CONF bar · SCORE bar · 15m sparkline</div></div></div>""",
+    <div style='color:#64748b;font-size:10px;font-family:{MONO};'>CONF bar · SCORE bar · 15m sparkline</div></div></div>"""),
                 unsafe_allow_html=True)
     if not ups:
         st.markdown("<div style='background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:18px;color:#94a3b8;"
@@ -4219,9 +4229,9 @@ def dashboard_tab(ss, mst_s, ml, mm):
         chips = "".join(f"<span style='background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);color:#f87171;"
                         f"font-size:11px;font-weight:700;padding:3px 10px;border-radius:14px;margin:2px 3px 2px 0;display:inline-block;'>"
                         f"{r['name']} {r['chg']:+.1f}%</span>" for r in dns[:40])
-        st.markdown(f"""<div style='background:#0b1220;border:1px solid #7f1d1d;border-radius:16px;padding:14px 16px;margin-bottom:12px;'>
+        st.markdown(_H(f"""<div style='background:#0b1220;border:1px solid #7f1d1d;border-radius:16px;padding:14px 16px;margin-bottom:12px;'>
         <div style='color:#f87171;font-size:13px;font-weight:900;margin-bottom:6px;'>📉 DOWNTREND — {len(dns)} stocks
-        <span style='color:#64748b;font-size:11px;font-weight:600;'>· avoid longs · top 40 shown</span></div>{chips}</div>""",
+        <span style='color:#64748b;font-size:11px;font-weight:600;'>· avoid longs · top 40 shown</span></div>{chips}</div>"""),
                     unsafe_allow_html=True)
 
     # ================= PANEL 7 — SECTOR BREADTH =================
@@ -4342,13 +4352,13 @@ def dashboard_tab(ss, mst_s, ml, mm):
 # 🌙 EOD REVIEW TAB — before vs after (did the board get it right?)
 # ============================================================
 def eod_review_tab(ss):
-    st.markdown("""<div style='background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:18px;
+    st.markdown(_H("""<div style='background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:18px;
     padding:20px 24px;margin-bottom:16px;'>
     <div style='color:white;font-size:20px;font-weight:900;'>🌙 EOD REVIEW — before vs after</div>
     <div style='color:#c7d2fe;font-size:13px;margin-top:6px;'>The 🔴 dashboard saves a <b>memory snapshot</b>
     automatically — ONE snapshot per day (that day's calculation) — exactly what it showed you. Pick a day below and press
     VERIFY: the app fetches what prices <b>ACTUALLY did afterwards</b> and scores every call — how many stocks went
-    as per the calculation, how many hit T1/T2, how many hit the stop. This is your real accuracy record.</div></div>""",
+    as per the calculation, how many hit T1/T2, how many hit the stop. This is your real accuracy record.</div></div>"""),
                 unsafe_allow_html=True)
     _uk = _ukey()
     _shared = _uk == "main"
@@ -4375,7 +4385,7 @@ def eod_review_tab(ss):
                 st.error("Type a name first (letters/numbers).")
 
     with st.expander("💾 Where is my data saved? · Backup & Restore (Streamlit Cloud)"):
-        st.markdown("""<div style='background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px 16px;
+        st.markdown(_H("""<div style='background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px 16px;
         color:#94a3b8;font-size:12px;line-height:1.8;'>
         ● <b style='color:#e2e8f0;'>On your own PC:</b> memory saves automatically in the same folder as this app —
         one set of files <b>per person</b> (<code>board_snapshots_NAME.json</code>, <code>eod_results_NAME.json</code>,
@@ -4383,7 +4393,7 @@ def eod_review_tab(ss):
         ● <b style='color:#e2e8f0;'>On Streamlit Cloud:</b> the files live inside the app's private cloud container —
         they survive while the app runs/sleeps, but are <b style='color:#f87171;'>wiped whenever the app redeploys</b>
         (each GitHub update). VERIFY always works (it fetches live market prices by itself) — only past days' memory
-        needs restoring: press ⬇️ Backup before you update the app, and ⬆️ Restore after.</div>""",
+        needs restoring: press ⬇️ Backup before you update the app, and ⬆️ Restore after.</div>"""),
                     unsafe_allow_html=True)
         _bk = {"snapshots": snaps_load(), "eod": eod_load(),
                "exported": datetime.now().strftime("%Y-%m-%d %H:%M")}
@@ -4455,7 +4465,7 @@ def eod_review_tab(ss):
                     f"margin-bottom:12px;color:#94a3b8;font-size:12px;'>🔎 Verified snapshot <b>{s['snap']}</b> "
                     f"· {s['checked']} stocks checked against real prices after that time</div>", unsafe_allow_html=True)
         if s.get("n_valid", 0) == 0:
-            st.markdown(f"""<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:12px;
+            st.markdown(_H(f"""<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:12px;
             padding:14px 18px;margin-bottom:12px;color:#fde68a;font-size:13px;line-height:1.8;'>
             <b style='color:#fbbf24;font-size:15px;'>⚠️ Nothing could be verified yet — this is NOT 0% accuracy.</b><br>
             Every stock came back <b>NO DATA</b>: the app could not download any prices after this snapshot
@@ -4468,7 +4478,7 @@ def eod_review_tab(ss):
             <b>press VERIFY again</b>.<br>
             Latest market candle the app can see right now:
             <b>{s.get('last_candle') or 'unknown — Yahoo not answering, press VERIFY again'}</b>.
-            Nothing was saved to the scorecard for this attempt.</div>""", unsafe_allow_html=True)
+            Nothing was saved to the scorecard for this attempt.</div>"""), unsafe_allow_html=True)
         elif s.get("n_valid", 0) < s["checked"] * 0.5:
             st.warning(f"⚠️ Only {s['n_valid']}/{s['checked']} stocks could be verified — Yahoo throttling. "
                        "Press VERIFY again to fill in the rest before trusting these numbers.")
@@ -4483,14 +4493,14 @@ def eod_review_tab(ss):
         with m6: st.metric("Buy win-rate", _wr_txt, "of resolved (T1 vs SL)")
         acc = max(0.0, min(100.0, s["up_acc"])) if s.get("up_acc") is not None else None
         if acc is not None:
-            st.markdown(f"""<div style='background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px 16px;margin-bottom:12px;'>
+            st.markdown(_H(f"""<div style='background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px 16px;margin-bottom:12px;'>
             <div style='display:flex;height:14px;border-radius:7px;overflow:hidden;'>
             <div style='background:#16a34a;width:{acc:.1f}%;'></div>
             <div style='background:#334155;width:{100-acc:.1f}%;'></div></div>
             <div style='display:flex;justify-content:space-between;color:#64748b;font-size:11px;font-weight:700;margin-top:6px;'>
             <span style='color:#22c55e;'>▲ {s['up_ok']} calls right</span>
             <span>BOARD DIRECTION ACCURACY</span>
-            <span style='color:#ef4444;'>▼ {s['n_up'] - s['up_ok']} calls wrong</span></div></div>""",
+            <span style='color:#ef4444;'>▼ {s['n_up'] - s['up_ok']} calls wrong</span></div></div>"""),
                         unsafe_allow_html=True)
         okr = sorted([x for x in res if isinstance(x.get("moved"), (int, float))], key=lambda x: -x["moved"])
         if okr:
@@ -4647,7 +4657,7 @@ def main():
                          f"<div style='color:#fbbf24;font-weight:700;font-size:12px;'>🔴 Live board</div>"
                          f"<div style='color:white;font-weight:900;font-size:16px;'>📈{up} · 📉{dn} · {len(drows)} watched</div></div>")
 
-    st.markdown(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
+    st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
     <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.6 · PRO TERMINAL · 500 LIVE</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
@@ -4656,7 +4666,7 @@ def main():
     {breadth_badge}
     <div style='background:rgba(255,255,255,0.12);border-radius:10px;padding:8px 16px;'>
     <div style='color:#fbbf24;font-weight:700;font-size:12px;'>Focus</div><div style='color:white;font-weight:900;font-size:16px;'>Uptrend + Levels</div></div>
-    </div></div></div>""", unsafe_allow_html=True)
+    </div></div></div>"""), unsafe_allow_html=True)
 
     tab_dash, tab_mv, tab_bnc, tab_cb, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
         ["🔴 Live Dashboard (500)", "⚡ Live Movers (Now)", "🚀 Uptrend Starting", "🎯 Combo Picks",
@@ -4974,7 +4984,7 @@ def main():
     # ── TAB 6: GUIDE ──
     with tab_guide:
         st.markdown("## 📚 Quick Trading Guide")
-        st.markdown("""
+        st.markdown(_H("""
         <div class='tr-g'><b style='color:#16a34a;'>Rule 1 — Target price hit = book &amp; stop.</b> Price reached your target? Take profit, don't get greedy.</div>
         <div class='tr-b'><b style='color:#dc2626;'>Rule 2 — Always use the stop loss.</b> No SL = no trade.</div>
         <div class='tr-b'><b style='color:#dc2626;'>Rule 3 — Never average down.</b> SL hit → exit, don't buy more.</div>
@@ -4990,7 +5000,7 @@ def main():
         (it carries <code>?u=ravi</code>). Snapshots, EOD scorecard and 📓 Journal are then kept completely separate —
         your friend can never see or overwrite your data, and live screens are always separate anyway.</div>
         <div class='tr-g'><b style='color:#16a34a;'>Honest truth:</b> no tool predicts price. These stack the odds and define your risk — they don't remove it. The stop loss is what actually protects your capital.</div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
     st.markdown("<div style='text-align:center;color:#9ca3af;font-size:10px;padding:16px;border-top:2px solid #e0e7ff;margin-top:20px;'>⚠️ EDUCATIONAL PURPOSE ONLY · NOT FINANCIAL ADVICE · ALWAYS USE STOP LOSS · TRADE AT YOUR OWN RISK · Past performance ≠ future results</div>", unsafe_allow_html=True)
 
