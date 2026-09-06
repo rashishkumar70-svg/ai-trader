@@ -30,7 +30,7 @@ MIN_PRICE = 80.0
 
 # ── 🔔 Telegram (owner's bot — preconfigured; can be overridden in the app) ──
 TG_DEFAULT_TOKEN = "8725365776:AAENJn_QG8qYEyWE7sUu_DiaH_qgsAA_JLY"
-TG_DEFAULT_CHAT = "8585402983"
+TG_DEFAULT_CHAT = "8585402983,1996619549"   # Ashish + brother
 
 
 def _H(html):
@@ -1579,20 +1579,24 @@ def tg_save(token, chat):
 
 
 def tg_send(text):
-    """Send one message. Silently skips if not configured; never crashes a scan."""
+    """Send one message to EVERY configured chat — comma-separated IDs let you share
+    alerts with brother/family. Silently skips if not configured; never crashes a scan."""
     cfg = tg_load()
     if not cfg.get("token") or not cfg.get("chat"):
         return False
-    try:
-        req = urllib.request.Request(
-            f"https://api.telegram.org/bot{cfg['token']}/sendMessage",
-            data=_json.dumps({"chat_id": cfg["chat"], "text": text[:1000],
-                              "disable_web_page_preview": True}).encode("utf-8"),
-            headers={"Content-Type": "application/json"})
-        urllib.request.urlopen(req, timeout=6).read()
-        return True
-    except Exception:
-        return False
+    sent_any = False
+    for cid in [c.strip() for c in str(cfg["chat"]).split(",") if c.strip()]:
+        try:
+            req = urllib.request.Request(
+                f"https://api.telegram.org/bot{cfg['token']}/sendMessage",
+                data=_json.dumps({"chat_id": cid, "text": text[:1000],
+                                  "disable_web_page_preview": True}).encode("utf-8"),
+                headers={"Content-Type": "application/json"})
+            urllib.request.urlopen(req, timeout=6).read()
+            sent_any = True
+        except Exception:
+            continue   # one person failing (e.g. hasn't pressed START) never blocks the others
+    return sent_any
 
 
 def tg_online_ping():
@@ -1621,13 +1625,14 @@ def tg_settings_ui(tag=""):
             tok = st.text_input("Bot token (@BotFather)", value=cfg.get("token", ""),
                                 type="password", key=f"tg_tok{tag}")
         with c2:
-            chat = st.text_input("Your Chat ID (@userinfobot)", value=cfg.get("chat", ""), key=f"tg_chat{tag}")
+            chat = st.text_input("Chat ID(s) — comma-separate for brother/family",
+                                 value=cfg.get("chat", ""), key=f"tg_chat{tag}")
         b1, b2 = st.columns(2)
         with b1:
             if st.button("💾 Save Telegram settings", key=f"tg_save{tag}", **STRETCH):
                 if tok.strip() and chat.strip():
                     tg_save(tok.strip(), chat.strip())
-                    st.success("Saved ✓ — alerts will now reach your phone (keep this app running).")
+                    st.success("Saved ✓ — alerts will now reach every chat ID above (keep this app running).")
                 else:
                     st.error("Paste both the token and your chat ID first.")
         with b2:
@@ -1637,9 +1642,9 @@ def tg_settings_ui(tag=""):
                     st.success("Sent! Check your Telegram app. 🎉")
                 else:
                     st.error("Couldn't send — press 💾 Save first, and double-check token & chat ID.")
-        st.caption("Setup: Telegram → @BotFather → /newbot → copy token · Telegram → @userinfobot → copy Id · "
-                   "paste both here. Stored ONLY inside your app instance — never share publicly, "
-                   "and no need to send it to anyone (including me).")
+        st.caption("Each person who wants alerts: open the bot link (t.me/…), press START, then get their Id "
+                   "from @userinfobot. Paste IDs separated by commas — e.g. 123456789,987654321 — and everyone "
+                   "gets every alert. Stored ONLY inside your app instance — never share publicly.")
 
 
 def rt_clear(engine):
