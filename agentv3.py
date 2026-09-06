@@ -28,6 +28,10 @@ except Exception:
 # ── price floor: stocks below this are EXCLUDED from all boards/scans ──
 MIN_PRICE = 80.0
 
+# ── 🔔 Telegram (owner's bot — preconfigured; can be overridden in the app) ──
+TG_DEFAULT_TOKEN = "8725365776:AAENJn_QG8qYEyWE7sUu_DiaH_qgsAA_JLY"
+TG_DEFAULT_CHAT = "8585402983"
+
 
 def _H(html):
     """Normalize HTML for st.markdown: newer Streamlit renders 4-space-indented
@@ -1548,6 +1552,94 @@ def rt_save(engine, **kw):
         return True
     except Exception:
         return False
+
+
+# ── 🔔 TELEGRAM ALERTS — free phone push for climb/bounce alerts ──
+def tg_file():
+    return f"tg_{_ukey()}.json"
+
+
+def tg_load():
+    try:
+        if _os.path.exists(tg_file()):
+            d = _json.load(open(tg_file(), encoding="utf-8"))
+            if isinstance(d, dict) and d.get("token") and d.get("chat"):
+                return d
+    except Exception:
+        pass
+    return {"token": TG_DEFAULT_TOKEN, "chat": TG_DEFAULT_CHAT}
+
+
+def tg_save(token, chat):
+    try:
+        _json.dump({"token": token, "chat": chat}, open(tg_file(), "w", encoding="utf-8"))
+        return True
+    except Exception:
+        return False
+
+
+def tg_send(text):
+    """Send one message. Silently skips if not configured; never crashes a scan."""
+    cfg = tg_load()
+    if not cfg.get("token") or not cfg.get("chat"):
+        return False
+    try:
+        req = urllib.request.Request(
+            f"https://api.telegram.org/bot{cfg['token']}/sendMessage",
+            data=_json.dumps({"chat_id": cfg["chat"], "text": text[:1000],
+                              "disable_web_page_preview": True}).encode("utf-8"),
+            headers={"Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=6).read()
+        return True
+    except Exception:
+        return False
+
+
+def tg_online_ping():
+    """🟢 Tell the owner the app just came online (redeploy / cloud wake-up).
+    Max one message per 30 minutes — page refreshes stay silent."""
+    try:
+        fn = f"tg_online_{_ukey()}.json"
+        last = 0
+        if _os.path.exists(fn):
+            last = _json.load(open(fn, encoding="utf-8")).get("ts", 0)
+        if time.time() - last > 1800:
+            if tg_send(f"\U0001F7E2 AI Trader Pro is ONLINE\n"
+                       f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
+                       f"App just started (redeploy or wake-up) and is ready.\n"
+                       f"Open \u26A1 Live Movers or \U0001F680 Uptrend Starting to begin today's scans."):
+                _json.dump({"ts": time.time()}, open(fn, "w", encoding="utf-8"))
+    except Exception:
+        pass
+
+
+def tg_settings_ui(tag=""):
+    with st.expander("🔔 TELEGRAM ALERTS (optional — get alerts on your phone)"):
+        cfg = tg_load()
+        c1, c2 = st.columns(2)
+        with c1:
+            tok = st.text_input("Bot token (@BotFather)", value=cfg.get("token", ""),
+                                type="password", key=f"tg_tok{tag}")
+        with c2:
+            chat = st.text_input("Your Chat ID (@userinfobot)", value=cfg.get("chat", ""), key=f"tg_chat{tag}")
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button("💾 Save Telegram settings", key=f"tg_save{tag}", **STRETCH):
+                if tok.strip() and chat.strip():
+                    tg_save(tok.strip(), chat.strip())
+                    st.success("Saved ✓ — alerts will now reach your phone (keep this app running).")
+                else:
+                    st.error("Paste both the token and your chat ID first.")
+        with b2:
+            if st.button("📨 Send test message", key=f"tg_test{tag}", **STRETCH):
+                if tg_send("✅ AI Trader Pro — Telegram alerts are working! "
+                           "You will get ⚡ climb and 🚀 support-bounce alerts here."):
+                    st.success("Sent! Check your Telegram app. 🎉")
+                else:
+                    st.error("Couldn't send — press 💾 Save first, and double-check token & chat ID.")
+        st.caption("Setup: Telegram → @BotFather → /newbot → copy token · Telegram → @userinfobot → copy Id · "
+                   "paste both here. Stored ONLY inside your app instance — never share publicly, "
+                   "and no need to send it to anyone (including me).")
 
 
 def rt_clear(engine):
@@ -3245,6 +3337,8 @@ def live_movers_tab(ss, mst_s):
         ss["mv_on"] = True; ss["mv"] = None; ss["mv_last"] = 0
         rt_save("mv", on=True, src=mv_src, n=mv_n, watch=watch, names=names)
 
+    tg_settings_ui("_mv")
+
     if not ss.get("mv_on"):
         st.markdown("<div style='background:#0b1220;border-radius:20px;padding:48px;text-align:center;'>"
                     "<div style='font-size:48px;'>⚡</div>"
@@ -3291,6 +3385,12 @@ def live_movers_tab(ss, mst_s):
                                       + (" · 🐢 slow-steady" if m["steady"] else ""))})
         ss["mv_alerts"] = alerts[:40]
         ss["mv_prev"] = sorted(now_climb)
+        for _m in [x for x in movers if x["sym"] in (now_climb - prev_climb)][:5]:
+            tg_send(f"⚡ {names.get(_m['sym'], _m['sym'].replace('.NS',''))} STARTED CLIMBING\n"
+                    f"{_m['chg_day']:+.2f}% today · {_m['green']}% green candles · "
+                    f"1h {_m['slope1h']:+.2f}% · vol {_m['vr']:.1f}x\n"
+                    f"Price ₹{_m['last']:,.2f}"
+                    + (" · 🐢 slow-steady" if _m["steady"] else ""))
         for a in ss["mv_alerts"][:3]:
             try:
                 st.toast(f"🔔 {a['name']} — {a['txt'][:70]}")
@@ -3521,6 +3621,37 @@ def _combo_row(i, c, scan_ts="", now_map=None):
             + "</div></div>")
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def market_regime():
+    """🟢🟡🔴 Today's NIFTY regime — bounce/combo odds change with it.
+    Friday proved it: on a weak afternoon only 22% of 'starting' calls held."""
+    try:
+        df = fetch_chunk(("^NSEI", "RELIANCE.NS"), "1d", "6mo").get("^NSEI")
+        if df is None or len(df) < 2:
+            return None
+        cl = df["Close"].values
+        chg = (float(cl[-1]) / float(cl[-2]) - 1) * 100
+        if chg > 0.3:
+            return {"chg": round(chg, 2), "lab": "🟢 TREND DAY UP", "col": "#16a34a",
+                    "tip": "Bounces & breakouts favoured — trade the picks normally."}
+        if chg >= -0.3:
+            return {"chg": round(chg, 2), "lab": "🟡 MIXED DAY", "col": "#f59e0b",
+                    "tip": "Choppy — be selective: half size, book T1, don't wait for T2."}
+        return {"chg": round(chg, 2), "lab": "🔴 WEAK DAY", "col": "#ef4444",
+                "tip": "Bounce failures common — watch 🛡️ AT SUPPORT only, skip chasing 🚀 STARTING."}
+    except Exception:
+        return None
+
+
+def _regime_banner():
+    rg = market_regime()
+    if not rg:
+        return
+    st.markdown(f"<div style='background:#0f172a;border:1px solid {rg['col']};border-radius:10px;padding:8px 14px;"
+                f"color:#cbd5e1;font-size:12px;margin-bottom:10px;'>MARKET TODAY: <b style='color:{rg['col']};'>"
+                f"{rg['lab']}</b> · NIFTY {rg['chg']:+.2f}% · {rg['tip']}</div>", unsafe_allow_html=True)
+
+
 # ============================================================
 # 🚀 UPTREND STARTING — the support-bounce radar.
 #   As per our calculation: which stock has REACHED its support
@@ -3572,13 +3703,27 @@ def compute_bounces(got, gotd):
             res_dist = (hi20 - last) / last * 100
             if not (-0.5 <= sup_dist <= 1.5):     # only stocks AT/ON support
                 continue
-            turning = (rec >= 0.25 and slope1h > -0.05) or slope1h > 0.15 or green >= 0.65
+            # strict turn confirmation (loose version won only 22% on a soft day):
+            # real bounce = clearly off the low + rising last hour + green candles + volume interest
+            turning = (((rec >= 0.40 and slope1h > 0.0 and green >= 0.55) or
+                        (slope1h >= 0.20 and green >= 0.60))
+                       and (vr >= 1.05 or rec >= 0.60))
             starting = turning and chg_day <= 4.0
             score = (40 * max(0.0, (1.5 - sup_dist)) / 1.5 + 30 * min(rec, 1.5) / 1.5
                      + 15.0 * green + 15.0 * min(vr, 2.0) / 2.0)
-            sl = round(support * 0.985, 2)
-            r_ = max(last - sl, last * 0.004)
-            buy = round(min(last, support * 1.01), 2)
+            # ── realistic bounce targets: tight stop just below support,
+            #    modest T1, and T2 CAPPED AT RESISTANCE (that's where a
+            #    bounce normally stalls — old wide targets were unreachable)
+            sl = round(support * 0.99, 2)
+            buy = round(min(last, support * 1.005), 2)
+            r_ = max(buy - sl, buy * 0.004)
+            t1 = round(buy + 1.2 * r_, 2)
+            t2 = round(buy + 2.0 * r_, 2)
+            if hi20 and hi20 > buy:
+                t2 = round(min(t2, hi20), 2)
+                t1 = round(min(t1, round(hi20 - max((hi20 - buy) * 0.25, buy * 0.001), 2)), 2)
+                if t2 <= t1:
+                    t2 = t1
             out.append({"sym": sym, "last": round(last, 2), "chg_day": round(chg_day, 2),
                         "support": round(support, 2), "resistance": round(hi20, 2),
                         "sup_dist": round(sup_dist, 2), "res_dist": round(res_dist, 2),
@@ -3587,7 +3732,7 @@ def compute_bounces(got, gotd):
                         "score": round(score, 1),
                         "state": "🚀 UPTREND STARTING" if starting else "🛡️ AT SUPPORT",
                         "starting": starting, "buy": buy, "sl": sl,
-                        "t1": round(last + 1.5 * r_, 2), "t2": round(last + 2.5 * r_, 2)})
+                        "t1": t1, "t2": t2})
         except Exception:
             continue
     out.sort(key=lambda b: (not b["starting"], -b["score"]))
@@ -3651,6 +3796,7 @@ def bounce_tab(ss, mst_s):
     <b>BUY, STOP-LOSS and SELL</b> values, plus the resistance where the rally may stall.</div></div>"""),
                 unsafe_allow_html=True)
 
+    _regime_banner()
     with st.expander("⚙️ UNIVERSE · REFRESH", expanded=not ss.get("bc_watch")):
         k1, k2 = st.columns(2)
         with k1:
@@ -3677,6 +3823,8 @@ def bounce_tab(ss, mst_s):
         ss["bc_watch"] = watch; ss["bc_names"] = names
         ss["bc_on"] = True; ss["bc"] = None; ss["bc_last"] = 0; ss["bc_alerts"] = []; ss["bc_prev"] = []
         rt_save("bc", on=True, src=ss.get("bc_src"), n=ss.get("bc_n", 500), watch=watch, names=names)
+
+    tg_settings_ui("_bc")
 
     if not ss.get("bc_on"):
         st.markdown("<div style='background:#0b1220;border-radius:20px;padding:44px;text-align:center;'>"
@@ -3721,6 +3869,11 @@ def bounce_tab(ss, mst_s):
                                           f"· SELL T1 ₹{b['t1']:,.2f}")})
             ss["bc_alerts"] = alerts[:40]
             ss["bc_prev"] = sorted(now_start)
+            for _b in [x for x in bounces if x["sym"] in (now_start - prev_start)][:5]:
+                tg_send(f"🚀 {names.get(_b['sym'], _b['sym'].replace('.NS',''))} UPTREND STARTING\n"
+                        f"Reached support ₹{_b['support']:,.2f} and turning up · now ₹{_b['last']:,.2f}\n"
+                        f"BUY ₹{_b['buy']:,.2f} · SL ₹{_b['sl']:,.2f}\n"
+                        f"Sell T1 ₹{_b['t1']:,.2f} · T2 ₹{_b['t2']:,.2f} · resistance ₹{_b['resistance']:,.2f}")
             for a in ss["bc_alerts"][:3]:
                 try:
                     st.toast(f"🚀 {a['name']} — {a['txt'][:70]}")
@@ -3826,6 +3979,7 @@ def combo_tab(ss, mst_s):
                     "color:#fde68a;font-size:12px;margin-bottom:10px;'>⚠️ It's before 9:45 AM — you CAN scan now, but "
                     "scores settle after 9:45–10:00. A re-scan at 9:45+ is worth it.</div>", unsafe_allow_html=True)
 
+    _regime_banner()
     with st.expander("⚙️ UNIVERSE · REFRESH", expanded=not ss.get("cb_watch")):
         k1, k2 = st.columns(2)
         with k1:
@@ -4651,6 +4805,7 @@ def main():
         if k not in ss:
             ss[k] = v
     mst_s, ml, mm = mkt_status()
+    tg_online_ping()   # 🔔 "app is online" Telegram message (max 1 per 30 min)
     mclr = "#22c55e" if mst_s == "open" else "#f59e0b" if mst_s == "pre" else "#ef4444"
 
     # live breadth badge for the navbar once the dashboard has data
