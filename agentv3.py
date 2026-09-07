@@ -25,8 +25,10 @@ try:
 except Exception:
     STRETCH = {"use_container_width": True}
 
-# ── price floor: stocks below this are EXCLUDED from all boards/scans ──
-MIN_PRICE = 80.0
+# ── price range: owner trades affordable stocks only — every board/scan/
+#    ranking keeps ₹100–₹600 (manual Search/Analyze stays exempt, any price) ──
+MIN_PRICE = 100.0
+MAX_PRICE = 600.0
 
 # ── 🔔 Telegram (owner's bot — preconfigured; can be overridden in the app) ──
 TG_DEFAULT_TOKEN = "8725365776:AAENJn_QG8qYEyWE7sUu_DiaH_qgsAA_JLY"
@@ -2882,7 +2884,7 @@ def rank_universe(n):
                 continue
             cl = df["Close"].values
             price = float(cl[-1])
-            if price < MIN_PRICE:          # ₹80 floor — no penny stocks
+            if price < MIN_PRICE or price > MAX_PRICE:   # keep ₹100–₹600 only
                 continue
             chg5 = (price / float(cl[-6]) - 1) * 100 if len(cl) >= 6 else 0.0
             chg20 = (price / float(cl[-21]) - 1) * 100 if len(cl) >= 21 else 0.0
@@ -3060,7 +3062,7 @@ def _ingest(syms, got, got_d, names, rows, prev, alerts):
         if intra is None:
             continue
         r = dash_row(names.get(sym, sym.replace(".NS", "")), sym, intra, got_d.get(sym))
-        if not r or (r.get("price") or 0) < MIN_PRICE:
+        if not r or not (MIN_PRICE <= (r.get("price") or 0) <= MAX_PRICE):
             continue
         old = prev.get(sym)
         if old and (old.get("sig") != r["sig"] or old.get("dtr") != r["dtr"]):
@@ -3261,7 +3263,7 @@ def compute_movers(got):
             t = df.iloc[d0:td[-1] + 1]
             o = float(t["Open"].iloc[0]); last = float(t["Close"].iloc[-1])
             hi = float(t["High"].max()); lo = float(t["Low"].min())
-            if last < MIN_PRICE:      # ₹80 floor — skip cheap stocks
+            if last < MIN_PRICE or last > MAX_PRICE:   # keep ₹100–₹600 only
                 continue
             cl = t["Close"].values; op = t["Open"].values; vol = t["Volume"].values
             n = len(cl)
@@ -3282,6 +3284,7 @@ def compute_movers(got):
             climb = round(50 + s / 2, 1)
             steady = (0.2 <= chg_day <= 4.5) and green >= 0.55
             state = ("CLIMBING" if (climb >= 68 and chg_day > 0 and slope1h > 0)
+                     else "FORMING" if (climb >= 57 and chg_day > 0 and slope1h > -0.05)
                      else "WATCH" if climb >= 58 else "—")
             out.append({"sym": sym, "last": round(last, 2), "chg_day": round(chg_day, 2),
                         "green": int(round(green * 100)), "slope1h": round(float(slope1h), 2),
@@ -3294,21 +3297,28 @@ def compute_movers(got):
     return out
 
 
-def _mv_row(i, m, name):
+def _mv_row(i, m, name, delta=0):
     climbing = m["state"] == "CLIMBING"
-    border = "#22c55e" if climbing else ("#3b82f6" if m["state"] == "WATCH" else "#334155")
+    forming = m["state"] == "FORMING"
+    border = ("#22c55e" if climbing else "#a3e635" if forming
+              else "#3b82f6" if m["state"] == "WATCH" else "#334155")
     cc = "#22c55e" if m["chg_day"] >= 0 else "#ef4444"
     badge = ("<span style='background:rgba(34,197,94,.16);color:#4ade80;font-size:9.5px;"
              "font-weight:900;padding:2px 8px;border-radius:8px;'>⚡ CLIMBING</span>" if climbing else
+             ("<span style='background:rgba(163,230,53,.14);color:#bef264;font-size:9.5px;"
+               "font-weight:900;padding:2px 8px;border-radius:8px;'>🌱 FORMING</span>" if forming else
              ("<span style='background:rgba(59,130,246,.16);color:#93c5fd;font-size:9.5px;"
-               "font-weight:900;padding:2px 8px;border-radius:8px;'>👀 WATCH</span>" if m["state"] == "WATCH" else ""))
+               "font-weight:900;padding:2px 8px;border-radius:8px;'>👀 WATCH</span>" if m["state"] == "WATCH" else "")))
     if m["steady"]:
         badge += (" <span style='background:rgba(245,158,11,.16);color:#fbbf24;font-size:9.5px;"
                   "font-weight:900;padding:2px 8px;border-radius:8px;'>🐢 SLOW-STEADY</span>")
     sc = m["climb"]; scw = max(0, min(100, sc)); scc = "#22c55e" if sc >= 68 else ("#3b82f6" if sc >= 58 else "#64748b")
     return (f"<div style='display:flex;align-items:center;gap:12px;background:#0f172a;border:1px solid #1e293b;"
             f"border-left:3px solid {border};border-radius:12px;padding:8px 14px;margin:5px 0;flex-wrap:wrap;'>"
-            f"<div style='color:#475569;font-weight:900;font-size:15px;width:26px;font-family:monospace;'>{i}</div>"
+            f"<div style='width:34px;'><div style='color:#475569;font-weight:900;font-size:15px;font-family:monospace;'>{i}</div>"
+            f"<div style='font-size:9px;font-weight:900;font-family:monospace;color:"
+            f"{'#4ade80;' if delta > 0 else '#f87171;' if delta < 0 else '#334155;'}'>"
+            f"{('▲' + str(delta)) if delta > 0 else (('▼' + str(-delta)) if delta < 0 else '·')}</div></div>"
             f"<div style='min-width:150px;'><div style='color:#f1f5f9;font-weight:800;font-size:14px;'>{name[:20]}</div>"
             f"<div style='color:#64748b;font-size:10px;'>{m['sym'].replace('.NS','')} · hi ₹{m['hi']:,.2f} · lo ₹{m['lo']:,.2f}</div></div>"
             f"<div style='min-width:92px;color:#e2e8f0;font-weight:800;font-size:14px;font-family:monospace;'>₹{m['last']:,.2f}</div>"
@@ -3336,6 +3346,7 @@ def live_movers_tab(ss, mst_s):
             ss["mv_last"] = _rt.get("last_scan", 0)
             ss["mv_ts_str"] = _rt.get("ts_str") or "—"
             ss["mv_prev"] = _rt.get("prev") or []
+            ss["mv_prevform"] = _rt.get("prevform") or []
             ss["mv_alerts"] = _rt.get("alerts") or []
             if _rt.get("src"):
                 ss["mv_src"] = _rt["src"]
@@ -3418,10 +3429,20 @@ def live_movers_tab(ss, mst_s):
         ss["mv"] = movers
         ss["mv_last"] = time.time()
         ss["mv_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
-        # 🔔 alerts: stocks that JUST entered CLIMBING
+        # 🔔 alerts: JUST entered CLIMBING / 🌱 FORMING (early warning)
         prev_climb = set(ss.get("mv_prev") or [])
         now_climb = {m["sym"] for m in movers if m["state"] == "CLIMBING"}
+        prev_form = set(ss.get("mv_prevform") or [])
+        now_form = {m["sym"] for m in movers if m["state"] == "FORMING"}
+        ss["mv_ranks_prev"] = ss.get("mv_ranks") or {}
+        ss["mv_ranks"] = {mm["sym"]: r for r, mm in enumerate(movers, 1)}
         alerts = ss.get("mv_alerts") or []
+        for m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)][:6]:
+            alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": m["sym"],
+                              "name": names.get(m["sym"], m["sym"].replace(".NS", "")),
+                              "txt": (f"🌱 FORMING a climb (early) · {m['chg_day']:+.2f}% today · "
+                                      f"{m['green']}% green · 1h {m['slope1h']:+.2f}% · ₹{m['last']:,.2f} · "
+                                      f"🎯 buy the DIP ~₹{m['last'] * 0.99:,.2f}, don't chase up")})
         for m in [x for x in movers if x["sym"] in (now_climb - prev_climb)]:
             alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": m["sym"],
                               "name": names.get(m["sym"], m["sym"].replace(".NS", "")),
@@ -3430,12 +3451,21 @@ def live_movers_tab(ss, mst_s):
                                       + (" · 🐢 slow-steady" if m["steady"] else ""))})
         ss["mv_alerts"] = alerts[:40]
         ss["mv_prev"] = sorted(now_climb)
+        ss["mv_prevform"] = sorted(now_form | now_climb)
+        for _m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)][:3]:
+            tg_send(f"🌱 {names.get(_m['sym'], _m['sym'].replace('.NS',''))} FORMING A CLIMB (early)\n"
+                    f"{_m['chg_day']:+.2f}% today · {_m['green']}% green · 1h {_m['slope1h']:+.2f}% · "
+                    f"vol {_m['vr']:.1f}x\nNow ₹{_m['last']:,.2f}\n"
+                    f"🎯 WAIT for the dip ~₹{_m['last'] * 0.99:,.2f} (−1%) to buy — don't chase up\n"
+                    f"⚠️ Already jumped away? Let it go — the next one will come")
         for _m in [x for x in movers if x["sym"] in (now_climb - prev_climb)][:5]:
             tg_send(f"⚡ {names.get(_m['sym'], _m['sym'].replace('.NS',''))} STARTED CLIMBING\n"
                     f"{_m['chg_day']:+.2f}% today · {_m['green']}% green candles · "
                     f"1h {_m['slope1h']:+.2f}% · vol {_m['vr']:.1f}x\n"
                     f"Price ₹{_m['last']:,.2f}"
-                    + (" · 🐢 slow-steady" if _m["steady"] else ""))
+                    + (" · 🐢 slow-steady" if _m["steady"] else "")
+                    + f"\n🎯 Safer entry on a dip ~₹{_m['last'] * 0.99:,.2f} (−1%) — "
+                    f"if it already ran > 3% today, skip & wait for the next")
         for a in ss["mv_alerts"][:3]:
             try:
                 st.toast(f"🔔 {a['name']} — {a['txt'][:70]}")
@@ -3443,6 +3473,7 @@ def live_movers_tab(ss, mst_s):
                 pass
         rt_save("mv", on=True, watch=watch, names=names, movers=movers,
                 last_scan=ss["mv_last"], ts_str=ss.get("mv_ts_str"), prev=ss.get("mv_prev") or [],
+                prevform=ss.get("mv_prevform") or [],
                 alerts=ss.get("mv_alerts") or [], src=ss.get("mv_src"), n=ss.get("mv_n"))
 
     movers = ss.get("mv") or []
@@ -3478,7 +3509,7 @@ def live_movers_tab(ss, mst_s):
 
     climbing = [m for m in movers if m["state"] == "CLIMBING"]
     steady = [m for m in movers if m["steady"] and m["chg_day"] > 0]
-    watching = [m for m in movers if m["state"] == "WATCH"]
+    forming = [m for m in movers if m["state"] == "FORMING"]
     if mst_s == "closed":
         st.markdown("<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:10px;padding:8px 14px;"
                     "color:#fde68a;font-size:12px;margin-bottom:10px;'>🔴 Market closed — this is TODAY'S full-session "
@@ -3487,7 +3518,7 @@ def live_movers_tab(ss, mst_s):
     a1, a2, a3, a4 = st.columns(4)
     with a1: st.metric("⚡ Climbing now", len(climbing))
     with a2: st.metric("🐢 Slow-steady riders", len(steady))
-    with a3: st.metric("👀 Watch list", len(watching))
+    with a3: st.metric("🌱 Forming (early)", len(forming), "buy the dip, don't chase")
     with a4: st.metric("Scanned", len(movers),
                        f"avg move {sum(m['chg_day'] for m in movers)/max(len(movers),1):+.2f}%")
 
@@ -3501,9 +3532,12 @@ def live_movers_tab(ss, mst_s):
                             f" · {a['txt']}</div>", unsafe_allow_html=True)
 
     st.markdown("<div style='color:#94a3b8;font-size:12px;font-weight:900;margin:10px 0 4px;'>"
-                "⚡ TOP CLIMBERS — ranked by live climb score</div>", unsafe_allow_html=True)
-    rows_html = "".join(_mv_row(i + 1, m, names.get(m["sym"], m["sym"].replace(".NS", "")))
-                        for i, m in enumerate(movers[:30]))
+                f"⚡ TOP 100 CLIMBERS — all {len(movers)} scanned live in the background · "
+                "▲▼ = rank movement since last scan</div>", unsafe_allow_html=True)
+    _prk = ss.get("mv_ranks_prev") or {}
+    rows_html = "".join(_mv_row(i + 1, m, names.get(m["sym"], m["sym"].replace(".NS", "")),
+                                delta=(_prk[m["sym"]] - (i + 1)) if _prk.get(m["sym"]) else 0)
+                        for i, m in enumerate(movers[:100]))
     st.markdown(rows_html, unsafe_allow_html=True)
 
     with st.expander("📋 Full board — all scanned stocks (sortable)"):
@@ -3727,7 +3761,7 @@ def compute_bounces(got, gotd):
             prev_close = float(df["Close"].iloc[d0 - 1]) if d0 > 0 else float(df["Open"].iloc[d0])
             t = df.iloc[d0:td[-1] + 1]
             last = float(t["Close"].iloc[-1]); hi = float(t["High"].max()); lo = float(t["Low"].min())
-            if last < MIN_PRICE:      # ₹80 floor — skip cheap stocks
+            if last < MIN_PRICE or last > MAX_PRICE:   # keep ₹100–₹600 only
                 continue
             cl = t["Close"].values; op = t["Open"].values; vol = t["Volume"].values
             chg_day = (last - prev_close) / prev_close * 100 if prev_close else 0.0
@@ -3964,11 +3998,11 @@ def bounce_tab(ss, mst_s):
         st.markdown(f"<div style='color:#94a3b8;font-size:12px;font-weight:900;margin:10px 0 4px;'>"
                     f"🚀 UPTREND STARTING — reached support & turning up ({len(starting)})</div>", unsafe_allow_html=True)
         st.markdown("".join(_bc_row(i + 1, b, names.get(b["sym"], b["sym"].replace(".NS", "")))
-                            for i, b in enumerate(starting[:25])), unsafe_allow_html=True)
+                            for i, b in enumerate(starting[:100])), unsafe_allow_html=True)
     if waiting:
         with st.expander(f"🛡️ AT SUPPORT — waiting for the turn ({len(waiting)})"):
             st.markdown("".join(_bc_row(i + 1, b, names.get(b["sym"], b["sym"].replace(".NS", "")))
-                                for i, b in enumerate(waiting[:25])), unsafe_allow_html=True)
+                                for i, b in enumerate(waiting[:100])), unsafe_allow_html=True)
     with st.expander("📋 Full bounce board + download"):
         disp = pd.DataFrame([{"Stock": names.get(b["sym"], b["sym"].replace(".NS", "")), "Symbol": b["sym"],
                               "Price": b["last"], "Day%": b["chg_day"], "Support": b["support"],
@@ -4396,7 +4430,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
                     "font-size:13px;'>No clean daily uptrend on this board right now — that's information too. "
                     "Keep 🔴 LIVE on; the 🆕 panel below will flag the moment one turns.</div>", unsafe_allow_html=True)
     else:
-        top_show = ups[:40]
+        top_show = ups[:100]
         rows_html = "".join(_lb_row(i + 1, r, now) for i, r in enumerate(top_show))
         st.markdown(rows_html, unsafe_allow_html=True)
         if len(ups) > 40:
@@ -4825,7 +4859,7 @@ def run_scan(stocks, iv, per, min_conf, stype, workers=10, cap_n=None, stats_out
         stats_out["total"] = total
         stats_out["ok"] = len({r["sym"] for r in results})
         stats_out["fails"] = max(total - stats_out["ok"], 0)
-    results = [r for r in results if (r.get("price") or 0) >= MIN_PRICE]
+    results = [r for r in results if MIN_PRICE <= (r.get("price") or 0) <= MAX_PRICE]
     if stype == "BUY":
         results = [r for r in results if r['conf'] >= min_conf and r['bp'] > r['sp'] and r['sit'] not in ('SELL', 'GAP_DN')]
         results.sort(key=lambda x: (x['tr'] == 'UPTREND', x['bp'], x['conf']), reverse=True)
