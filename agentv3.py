@@ -1634,6 +1634,311 @@ def tg_online_ping():
         pass
 
 
+# ══════════════════════════════════════════════════════════════════
+# 🎯 TRADE COACH — the morning shortlist gets a personal trainer.
+#   9:20 → pick the FEW perfect stocks (₹100–₹600, ranked board,
+#   live-confirmed). Then the coach reads every 5-min candle and
+#   tells the owner EXACTLY: when to BUY (breakout / VWAP hold),
+#   when to SELL HALF (T1), when to SELL REST (T2), when to EXIT
+#   (stoploss / lost-VWAP / time exit / square-off). Every order
+#   instruction also goes to Telegram instantly.
+# ══════════════════════════════════════════════════════════════════
+COACH_N_DEFAULT = 8          # how many perfect stocks to coach
+COACH_CAP_DEFAULT = 10000    # ₹ capital per trade (for qty suggestion)
+
+
+def coach_ctx(sym, df, today=None):
+    """Live candle snapshot for one stock (VWAP, session ranges, triggers)."""
+    try:
+        today = today or now_ist().date()
+        dates = [_dist(ix) for ix in df.index]
+        td = [i for i, d in enumerate(dates) if d == today]
+        if not td:                      # pre-open / holiday → last session
+            td = [i for i, d in enumerate(dates) if d == max(dates)]
+        t = df.iloc[td[0]:td[-1] + 1]
+        prev_close = float(df["Close"].iloc[td[0] - 1]) if td[0] > 0 else float(t["Open"].iloc[0])
+        cl = t["Close"].values; op = t["Open"].values; v = t["Volume"].values
+        h = t["High"].values; l = t["Low"].values
+        n = len(cl)
+        vwap = float((cl * v).sum() / v.sum()) if v.sum() > 0 else float(cl[-1])
+        return {"sym": sym, "last": float(cl[-1]), "prev_close": prev_close,
+                "vwap": vwap, "hi_ses": float(h.max()), "lo_ses": float(l.min()),
+                "hi_prev": float(h[:-1].max()) if n > 1 else float(h[-1]),
+                "lows3": [float(x) for x in l[-3:]], "cl_last": float(cl[-1]),
+                "cl_prev": float(cl[-2]) if n > 1 else float(cl[-1]),
+                "green_last": bool(cl[-1] > op[-1]), "red_last": bool(cl[-1] < op[-1]),
+                "green_frac": float(sum(1 for i in range(n) if cl[i] > op[i]) / n) if n else 0.5,
+                "vr_last": float(v[-1] / v.mean()) if (n and v.mean() > 0) else 1.0,
+                "chg_day": (float(cl[-1]) / prev_close - 1) * 100 if prev_close else 0.0,
+                "n": n}
+    except Exception:
+        return None
+
+
+def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
+    """One decision pass for ONE stock — mutates pos, returns events
+    [(level, message)] · level: buy/t1/t2/sl/exit/time/eod."""
+    ev = []
+    if ctx is None:
+        return ev
+    last = ctx["last"]; vwap = ctx["vwap"]
+    t = mins if mins is not None else (now_ist().hour * 60 + now_ist().minute)
+    nm = pos.get("name") or ctx["sym"].replace(".NS", "")
+
+    if pos["stage"] == "WAIT":
+        if ctx["n"] < 3 or t < 9 * 60 + 25:          # 9:15–9:25 warm-up
+            return ev
+        if t >= 14 * 60 + 30:                         # no FRESH entries late
+            return ev
+        breakout = (ctx["green_last"] and last > ctx["hi_prev"] and ctx["vr_last"] >= 1.3
+                    and ctx["chg_day"] <= 4)
+        vwap_hold = (ctx["green_last"] and abs(last / vwap - 1) <= 0.0025
+                     and last >= vwap * 0.998 and ctx["cl_last"] > ctx["cl_prev"]
+                     and 0 <= ctx["chg_day"] <= 4)
+        if breakout or vwap_hold:
+            entry = round(last, 2)
+            sl = round(min(vwap, min(ctx["lows3"])) * 0.998, 2)
+            if entry - sl < entry * 0.004:
+                sl = round(entry * 0.996, 2)
+            R = entry - sl
+            t1 = round(entry + 1.0 * R, 2)
+            t2 = round(min(entry + 1.8 * R, entry * 1.035), 2)
+            qty = max(1, int(cap // entry)) if cap else 1
+            why = "session-high BREAKOUT with volume" if breakout else "pullback HELD VWAP and turned up"
+            pos.update(stage="HOLD", entry=entry, sl=sl, t1=t1, t2=t2, qty=qty,
+                       half=False, res=None, sig=why, hw=entry)
+            ev.append(("buy", f"{nm} · BUY NOW ₹{entry:,.2f} · qty≈{qty} (₹{cap:,})\n"
+                              f"🛑 SL ₹{sl:,.2f} · 🎯 T1 ₹{t1:,.2f} (+{(t1/entry-1)*100:.1f}%) sell HALF · "
+                              f"🎯 T2 ₹{t2:,.2f} (+{(t2/entry-1)*100:.1f}%) sell rest\n"
+                              f"Why: {why} — act fast, don't chase more than +0.3%"))
+        return ev
+
+    if pos["stage"] == "HOLD":
+        pos["hw"] = max(pos.get("hw") or pos["entry"], last)
+        pnl = (last / pos["entry"] - 1) * 100
+        if last <= pos["sl"]:
+            res = pnl if not pos["half"] else (pos["t1"] / pos["entry"] - 1) * 100 / 2
+            pos.update(stage="DONE", res=round(pnl, 2))
+            ev.append(("sl", f"{nm} · 🛑 STOPLOSS ₹{pos['sl']:,.2f} hit — EXIT ALL NOW. "
+                             f"Result {pnl:+.1f}% · small loss = capital saved"
+                             + (" (T1 half already booked ✔)" if pos["half"] else "")))
+        elif (not pos["half"]) and last >= pos["t1"]:
+            pos["half"] = True; pos["sl"] = pos["entry"]
+            ev.append(("t1", f"{nm} · 💰 T1 HIT ₹{pos['t1']:,.2f} — SELL HALF NOW · "
+                             f"SL moved to entry ₹{pos['entry']:,.2f} — profit locked ✔"))
+        elif pos["half"] and last >= pos["t2"]:
+            pos.update(stage="DONE", res=round(pnl, 2))
+            ev.append(("t2", f"{nm} · ✅ T2 HIT ₹{pos['t2']:,.2f} — SELL THE REST. "
+                             f"Trade complete {pnl:+.1f}% 🎉"))
+        elif t >= 15 * 60 + 5:
+            pos.update(stage="DONE", res=round(pnl, 2))
+            ev.append(("eod", f"{nm} · 🔚 SQUARE OFF NOW — market closing in minutes. {pnl:+.1f}%"))
+        elif last < vwap * 0.9975 and ctx["red_last"]:
+            pos.update(stage="DONE", res=round(pnl, 2))
+            ev.append(("exit", f"{nm} · ⚠️ EXIT ALL — fell below VWAP & momentum dead. {pnl:+.1f}%"))
+        elif t >= 11 * 60 + 30 and -0.3 < pnl < 0.4:
+            pos.update(stage="DONE", res=round(pnl, 2))
+            ev.append(("time", f"{nm} · ⏰ TIME EXIT — going nowhere ({pnl:+.1f}%). "
+                               f"Rotate the money to a live mover"))
+    return ev
+
+
+def coach_pick(n=COACH_N_DEFAULT):
+    """9:20 shortlist — take the ranked board (₹100–₹600), live-confirm the
+    top 60 with 5-min candles, keep the n most perfect setups."""
+    watch, names = rank_universe(500)
+    cands = []
+    got, _ = _sweep(watch[:60], "5m", "2d", with_daily=False, progress=False)
+    for r, sym in enumerate(watch[:60]):
+        ctx = coach_ctx(sym, got.get(sym)) if got.get(sym) is not None else None
+        if not ctx or ctx["n"] < 2:
+            continue
+        if not (0 <= ctx["chg_day"] <= 2.5):
+            continue
+        if not (MIN_PRICE <= ctx["last"] <= MAX_PRICE):
+            continue
+        score = ((60 - r) / 60) * 40 + min(ctx["chg_day"], 2.0) / 2.0 * 25 \
+                + ctx["green_frac"] * 20 + min(ctx["vr_last"], 2.0) / 2.0 * 15
+        cands.append((round(score, 1), sym))
+    cands.sort(reverse=True)
+    top = [s for _, s in cands[:n]]
+    return top, {s: names.get(s, s.replace(".NS", "")) for s in top}
+
+
+def coach_action_text(sym, pos, ctx):
+    """The one bold instruction line on each card."""
+    if pos["stage"] == "DONE":
+        r = pos.get("res")
+        return (f"✅ TRADE CLOSED · {r:+.1f}%", "#22c55e" if (r or 0) >= 0 else "#f87171")
+    if pos["stage"] == "HOLD":
+        if pos.get("half"):
+            return (f"💰 HALF SOLD ✔ — ride the rest · T2 ₹{pos['t2']:,.2f} · SL ₹{pos['sl']:,.2f} (entry)", "#fbbf24")
+        return (f"💰 HOLDING — T1 ₹{pos['t1']:,.2f} (sell half) · SL ₹{pos['sl']:,.2f}", "#fbbf24")
+    if ctx is None:
+        return ("⏳ WAITING for candles…", "#64748b")
+    if ctx["n"] < 3:
+        return ("⏳ WAIT — first candles forming (act from 9:25)", "#64748b")
+    return ("👀 WATCHING — coach will say BUY the moment the candle confirms", "#93c5fd")
+
+
+def render_coach_tab(ss, mst_s):
+    # ♾️ auto-resume
+    if not ss.get("co_on"):
+        _rt = rt_load().get("co") or {}
+        if _rt.get("on") and _rt.get("watch"):
+            ss["co_on"] = True
+            ss["co_watch"] = _rt["watch"]; ss["co_names"] = _rt.get("names") or {}
+            ss["co_pos"] = _rt.get("pos") or {}
+            ss["co_cap"] = _rt.get("cap") or COACH_CAP_DEFAULT
+            ss["co_feed"] = _rt.get("feed") or []
+            ss["co_last"] = _rt.get("last_scan") or 0
+            ss["co_ts"] = _rt.get("ts_str") or "—"
+            ss["_co_resumed"] = True
+
+    if not ss.get("co_on"):
+        st.markdown(_H("""<div style='background:linear-gradient(135deg,#0c4a6e,#164e63);border-radius:18px;
+        padding:18px 22px;margin-bottom:14px;'>
+        <div style='color:white;font-size:20px;font-weight:900;'>🎯 TRADE COACH — perfect stocks, perfect TIMING</div>
+        <div style='color:#cffafe;font-size:12.5px;margin-top:6px;line-height:1.8;'>
+        The coach picks the <b>few best stocks</b> from your ranked board (₹100–₹600) at <b>9:20</b>,
+        then watches every 5-minute candle and tells you <b>exactly when to BUY, SELL HALF, SELL REST or EXIT</b> —
+        here and on Telegram. No thinking needed: follow the instructions instantly.<br>
+        🟢 BUY when the candle confirms (breakout with volume / pullback holds VWAP) ·
+        💰 T1 sell half · ✅ T2 sell rest · 🛑 stoploss · ⏰ time exit · 🔚 3:05 square-off</div></div>"""),
+            unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            ss["co_cap"] = st.number_input("₹ Capital per trade (for qty suggestion)",
+                                           min_value=1000, max_value=100000, step=500,
+                                           value=int(ss.get("co_cap") or COACH_CAP_DEFAULT))
+        with c2:
+            ss["co_n"] = st.slider("How many perfect stocks to coach", 4, 10,
+                                   int(ss.get("co_n") or COACH_N_DEFAULT))
+        if st.button("🎯 START COACH (run after the morning scan)", key="co_start", **STRETCH):
+            if mst_s != "open":
+                st.info("🔕 Market is CLOSED right now — the coach runs live only during market hours "
+                        "(Mon–Fri 9:15–15:30 IST). After the next open: run the morning scan (⚡/🚀), "
+                        "then come back and press START.")
+                return
+            with st.spinner("🎯 Picking today's perfect stocks from the ranked board…"):
+                top, nm = coach_pick(int(ss.get("co_n") or COACH_N_DEFAULT))
+            if not top:
+                st.error("No perfect setups right now — press START again after the morning scan (⚡ or 🚀 tab).")
+                return
+            ss["co_on"] = True
+            ss["co_watch"] = top; ss["co_names"] = nm
+            ss["co_pos"] = {s: {"stage": "WAIT", "name": nm[s]} for s in top}
+            ss["co_feed"] = []; ss["co_last"] = 0
+            rt_save("co", on=True, watch=top, names=nm, pos=ss["co_pos"], cap=ss["co_cap"],
+                    feed=[], last_scan=0, ts_str="—")
+            st.rerun()
+        st.caption("Best routine: ~9:05 run the morning scan (⚡/🚀) → 9:20 come here and START. "
+                   "The coach does the watching — you do the clicking in your broker app.")
+        return
+
+    if ss.get("_co_resumed"):
+        ss["_co_resumed"] = False
+        st.info("♾️ Coach resumed automatically — a page refresh does NOT stop it. Press ⏹ Stop to end it.")
+    try:
+        from streamlit_autorefresh import st_autorefresh
+        st_autorefresh(interval=90 * 1000, key="co_tick")
+    except Exception:
+        pass
+
+    if st.button("⏹ Stop coach", key="co_stop"):
+        rt_clear("co")
+        ss["co_on"] = False
+        st.rerun()
+
+    due = time.time() - ss.get("co_last", 0) > 80
+    if due or not ss.get("co_ctx"):
+        with st.spinner("🎯 Coach is reading the candles…"):
+            got, _ = _sweep(ss["co_watch"], "5m", "2d", with_daily=False, progress=False)
+        ctxs = {s: coach_ctx(s, got.get(s)) for s in ss["co_watch"]}
+        ss["co_ctx"] = ctxs
+        feed = ss.get("co_feed") or []
+        for s in ss["co_watch"]:
+            try:
+                events = coach_cycle(ctxs.get(s), ss["co_pos"][s], cap=int(ss.get("co_cap") or COACH_CAP_DEFAULT))
+            except Exception:
+                events = []
+            for lvl, msg in events:
+                if mst_s == "open":   # 🔕 trade instructions only while the market is LIVE
+                    feed.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "lvl": lvl, "txt": msg})
+                    tg_send(msg)
+                    try:
+                        st.toast(msg.split("·")[1][:60] if "·" in msg else msg[:60])
+                    except Exception:
+                        pass
+        ss["co_feed"] = feed[:60]
+        ss["co_last"] = time.time()
+        ss["co_ts"] = now_ist().strftime("%d %b %Y · %H:%M")
+        rt_save("co", on=True, watch=ss["co_watch"], names=ss["co_names"], pos=ss["co_pos"],
+                cap=ss.get("co_cap"), feed=ss["co_feed"], last_scan=ss["co_last"], ts_str=ss["co_ts"])
+
+    ctxs = ss.get("co_ctx") or {}
+    posd = ss.get("co_pos") or {}
+    holding = [s for s, p in posd.items() if p["stage"] == "HOLD"]
+    done = [s for s, p in posd.items() if p["stage"] == "DONE"]
+    a1, a2, a3, a4 = st.columns(4)
+    with a1: st.metric("👀 Watching", len(ss["co_watch"]) - len(holding) - len(done))
+    with a2: st.metric("💰 In trade", len(holding))
+    with a3:
+        wins = [p.get("res") for p in posd.values() if p["stage"] == "DONE" and (p.get("res") or 0) > 0]
+        st.metric("✅ Closed", len(done), f"{len(wins)} green")
+    with a4: st.metric("🕒 Last read", ss.get("co_ts") or "—")
+
+    cards = list(ss["co_watch"])
+    for i in range(0, len(cards), 2):
+        cc = st.columns(2)
+        for j, s in enumerate(cards[i:i + 2]):
+            with cc[j]:
+                p = posd.get(s) or {"stage": "WAIT"}
+                ctx = ctxs.get(s)
+                act, actc = coach_action_text(s, p, ctx)
+                last = ctx["last"] if ctx else (p.get("entry") or 0)
+                chg = ctx["chg_day"] if ctx else 0.0
+                pnl = (last / p["entry"] - 1) * 100 if (p.get("entry") and p["stage"] == "HOLD") else None
+                lv = ""
+                if p["stage"] == "HOLD":
+                    lv = (f"<div style='color:#94a3b8;font-size:10.5px;font-family:monospace;margin-top:4px;'>"
+                          f"BUY ₹{p['entry']:,.2f} · SL ₹{p['sl']:,.2f} · T1 ₹{p['t1']:,.2f} · T2 ₹{p['t2']:,.2f}"
+                          + (f" · <b style='color:{'#4ade80' if (pnl or 0) >= 0 else '#f87171'};'>LIVE {pnl:+.1f}%</b>"
+                             if pnl is not None else "") + "</div>")
+                st.markdown(_H(
+                    f"<div style='background:#0f172a;border:1px solid #1e293b;border-left:3px solid "
+                    f"{'#fbbf24' if p['stage']=='HOLD' else '#22c55e' if p['stage']=='DONE' else '#334155'};"
+                    f"border-radius:12px;padding:10px 14px;margin:6px 0;'>"
+                    f"<div style='display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;'>"
+                    f"<b style='color:#f1f5f9;font-size:14px;'>{(ss.get('co_names') or {}).get(s, s.replace('.NS',''))}</b>"
+                    f"<span style='color:#e2e8f0;font-family:monospace;font-weight:800;'>₹{last:,.2f} "
+                    f"<span style='color:{'#22c55e' if chg >= 0 else '#ef4444'};font-size:11px;'>{chg:+.2f}%</span></span></div>"
+                    f"<div style='color:{actc};font-weight:900;font-size:12.5px;margin-top:4px;'>{act}</div>{lv}</div>"),
+                    unsafe_allow_html=True)
+
+    feed = ss.get("co_feed") or []
+    if feed:
+        with st.expander(f"📣 COACH INSTRUCTIONS — today ({len(feed)})", expanded=True):
+            for f in feed[:20]:
+                col = {"buy": "#4ade80", "t1": "#fbbf24", "t2": "#22c55e",
+                       "sl": "#f87171", "exit": "#f87171", "time": "#93c5fd", "eod": "#93c5fd"}.get(f["lvl"], "#94a3b8")
+                st.markdown(f"<div style='border-left:3px solid {col};background:#0b1220;border-radius:8px;"
+                            f"padding:6px 12px;margin:4px 0;color:#e2e8f0;font-size:12px;white-space:pre-line;'>"
+                            f"<span style='color:#64748b;'>{f['ts']}</span> · {f['txt']}</div>",
+                            unsafe_allow_html=True)
+    with st.expander("📖 How the coach decides"):
+        st.markdown("""<div style='color:#94a3b8;font-size:12.5px;line-height:1.9;'>
+        🟢 <b style='color:#4ade80;'>BUY</b> — only when a 5-min candle CONFIRMS: session-high breakout with 1.3× volume,
+        or a pullback that holds VWAP and turns up. Never chases: no fresh buys after 14:30 or if the stock already ran &gt; 4%.<br>
+        💰 <b style='color:#fbbf24;'>T1</b> = +1R → sell HALF, stoploss moves to entry (profit locked).<br>
+        ✅ <b style='color:#22c55e;'>T2</b> = +1.8R (max +3.5%) → sell the rest.<br>
+        🛑 <b style='color:#f87171;'>STOPLOSS</b> below VWAP/recent lows — exit all, small loss.<br>
+        ⚠️ <b style='color:#f87171;'>MOMENTUM EXIT</b> — falls below VWAP on a red candle.<br>
+        ⏰ <b style='color:#93c5fd;'>TIME EXIT</b> — after 11:30 the trade goes nowhere (−0.3%…+0.4%) → rotate.<br>
+        🔚 <b style='color:#93c5fd;'>SQUARE OFF</b> — 15:05, intraday isn't carried overnight.<br>
+        Refresh is ~90 s on free Yahoo data — good enough for 5-min candle timing.</div>""", unsafe_allow_html=True)
+
+
 def tg_settings_ui(tag=""):
     with st.expander("🔔 TELEGRAM ALERTS (optional — get alerts on your phone)"):
         cfg = tg_load()
@@ -3437,40 +3742,42 @@ def live_movers_tab(ss, mst_s):
         ss["mv_ranks_prev"] = ss.get("mv_ranks") or {}
         ss["mv_ranks"] = {mm["sym"]: r for r, mm in enumerate(movers, 1)}
         alerts = ss.get("mv_alerts") or []
-        for m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)][:6]:
-            alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": m["sym"],
-                              "name": names.get(m["sym"], m["sym"].replace(".NS", "")),
-                              "txt": (f"🌱 FORMING a climb (early) · {m['chg_day']:+.2f}% today · "
-                                      f"{m['green']}% green · 1h {m['slope1h']:+.2f}% · ₹{m['last']:,.2f} · "
-                                      f"🎯 buy the DIP ~₹{m['last'] * 0.99:,.2f}, don't chase up")})
-        for m in [x for x in movers if x["sym"] in (now_climb - prev_climb)]:
-            alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": m["sym"],
-                              "name": names.get(m["sym"], m["sym"].replace(".NS", "")),
-                              "txt": (f"started climbing · {m['chg_day']:+.2f}% today · {m['green']}% green candles · "
-                                      f"1h {m['slope1h']:+.2f}% · vol {m['vr']:.1f}× · ₹{m['last']:,.2f}"
-                                      + (" · 🐢 slow-steady" if m["steady"] else ""))})
+        if mst_s == "open":   # 🔕 after close: silent review — never re-announce old climbs
+            for m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)][:6]:
+                alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": m["sym"],
+                                  "name": names.get(m["sym"], m["sym"].replace(".NS", "")),
+                                  "txt": (f"🌱 FORMING a climb (early) · {m['chg_day']:+.2f}% today · "
+                                          f"{m['green']}% green · 1h {m['slope1h']:+.2f}% · ₹{m['last']:,.2f} · "
+                                          f"🎯 buy the DIP ~₹{m['last'] * 0.99:,.2f}, don't chase up")})
+            for m in [x for x in movers if x["sym"] in (now_climb - prev_climb)]:
+                alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": m["sym"],
+                                  "name": names.get(m["sym"], m["sym"].replace(".NS", "")),
+                                  "txt": (f"started climbing · {m['chg_day']:+.2f}% today · {m['green']}% green candles · "
+                                          f"1h {m['slope1h']:+.2f}% · vol {m['vr']:.1f}× · ₹{m['last']:,.2f}"
+                                          + (" · 🐢 slow-steady" if m["steady"] else ""))})
         ss["mv_alerts"] = alerts[:40]
         ss["mv_prev"] = sorted(now_climb)
         ss["mv_prevform"] = sorted(now_form | now_climb)
-        for _m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)][:3]:
-            tg_send(f"🌱 {names.get(_m['sym'], _m['sym'].replace('.NS',''))} FORMING A CLIMB (early)\n"
-                    f"{_m['chg_day']:+.2f}% today · {_m['green']}% green · 1h {_m['slope1h']:+.2f}% · "
-                    f"vol {_m['vr']:.1f}x\nNow ₹{_m['last']:,.2f}\n"
-                    f"🎯 WAIT for the dip ~₹{_m['last'] * 0.99:,.2f} (−1%) to buy — don't chase up\n"
-                    f"⚠️ Already jumped away? Let it go — the next one will come")
-        for _m in [x for x in movers if x["sym"] in (now_climb - prev_climb)][:5]:
-            tg_send(f"⚡ {names.get(_m['sym'], _m['sym'].replace('.NS',''))} STARTED CLIMBING\n"
-                    f"{_m['chg_day']:+.2f}% today · {_m['green']}% green candles · "
-                    f"1h {_m['slope1h']:+.2f}% · vol {_m['vr']:.1f}x\n"
-                    f"Price ₹{_m['last']:,.2f}"
-                    + (" · 🐢 slow-steady" if _m["steady"] else "")
-                    + f"\n🎯 Safer entry on a dip ~₹{_m['last'] * 0.99:,.2f} (−1%) — "
-                    f"if it already ran > 3% today, skip & wait for the next")
-        for a in ss["mv_alerts"][:3]:
-            try:
-                st.toast(f"🔔 {a['name']} — {a['txt'][:70]}")
-            except Exception:
-                pass
+        if mst_s == "open":   # 🔕 Telegram/toasts only while the market is LIVE
+            for _m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)][:3]:
+                tg_send(f"🌱 {names.get(_m['sym'], _m['sym'].replace('.NS',''))} FORMING A CLIMB (early)\n"
+                        f"{_m['chg_day']:+.2f}% today · {_m['green']}% green · 1h {_m['slope1h']:+.2f}% · "
+                        f"vol {_m['vr']:.1f}x\nNow ₹{_m['last']:,.2f}\n"
+                        f"🎯 WAIT for the dip ~₹{_m['last'] * 0.99:,.2f} (−1%) to buy — don't chase up\n"
+                        f"⚠️ Already jumped away? Let it go — the next one will come")
+            for _m in [x for x in movers if x["sym"] in (now_climb - prev_climb)][:5]:
+                tg_send(f"⚡ {names.get(_m['sym'], _m['sym'].replace('.NS',''))} STARTED CLIMBING\n"
+                        f"{_m['chg_day']:+.2f}% today · {_m['green']}% green candles · "
+                        f"1h {_m['slope1h']:+.2f}% · vol {_m['vr']:.1f}x\n"
+                        f"Price ₹{_m['last']:,.2f}"
+                        + (" · 🐢 slow-steady" if _m["steady"] else "")
+                        + f"\n🎯 Safer entry on a dip ~₹{_m['last'] * 0.99:,.2f} (−1%) — "
+                        f"if it already ran > 3% today, skip & wait for the next")
+            for a in ss["mv_alerts"][:3]:
+                try:
+                    st.toast(f"🔔 {a['name']} — {a['txt'][:70]}")
+                except Exception:
+                    pass
         rt_save("mv", on=True, watch=watch, names=names, movers=movers,
                 last_scan=ss["mv_last"], ts_str=ss.get("mv_ts_str"), prev=ss.get("mv_prev") or [],
                 prevform=ss.get("mv_prevform") or [],
@@ -3940,24 +4247,26 @@ def bounce_tab(ss, mst_s):
             prev_start = set(ss.get("bc_prev") or [])
             now_start = {b["sym"] for b in bounces if b["starting"]}
             alerts = ss.get("bc_alerts") or []
-            for b in [x for x in bounces if x["sym"] in (now_start - prev_start)]:
-                alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": b["sym"],
-                                  "name": names.get(b["sym"], b["sym"].replace(".NS", "")),
-                                  "txt": (f"reached support ₹{b['support']:,.2f} and TURNING UP · now ₹{b['last']:,.2f} "
-                                          f"(+{b['rec']:.2f}% off low) · BUY ₹{b['buy']:,.2f} · SL ₹{b['sl']:,.2f} "
-                                          f"· SELL T1 ₹{b['t1']:,.2f}")})
+            if mst_s == "open":   # 🔕 after close: silent review — no stale bounce alerts
+                for b in [x for x in bounces if x["sym"] in (now_start - prev_start)]:
+                    alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": b["sym"],
+                                      "name": names.get(b["sym"], b["sym"].replace(".NS", "")),
+                                      "txt": (f"reached support ₹{b['support']:,.2f} and TURNING UP · now ₹{b['last']:,.2f} "
+                                              f"(+{b['rec']:.2f}% off low) · BUY ₹{b['buy']:,.2f} · SL ₹{b['sl']:,.2f} "
+                                              f"· SELL T1 ₹{b['t1']:,.2f}")})
             ss["bc_alerts"] = alerts[:40]
             ss["bc_prev"] = sorted(now_start)
-            for _b in [x for x in bounces if x["sym"] in (now_start - prev_start)][:5]:
-                tg_send(f"🚀 {names.get(_b['sym'], _b['sym'].replace('.NS',''))} UPTREND STARTING\n"
-                        f"Reached support ₹{_b['support']:,.2f} and turning up · now ₹{_b['last']:,.2f}\n"
-                        f"BUY ₹{_b['buy']:,.2f} · SL ₹{_b['sl']:,.2f}\n"
-                        f"Sell T1 ₹{_b['t1']:,.2f} · T2 ₹{_b['t2']:,.2f} · resistance ₹{_b['resistance']:,.2f}")
-            for a in ss["bc_alerts"][:3]:
-                try:
-                    st.toast(f"🚀 {a['name']} — {a['txt'][:70]}")
-                except Exception:
-                    pass
+            if mst_s == "open":
+                for _b in [x for x in bounces if x["sym"] in (now_start - prev_start)][:5]:
+                    tg_send(f"🚀 {names.get(_b['sym'], _b['sym'].replace('.NS',''))} UPTREND STARTING\n"
+                            f"Reached support ₹{_b['support']:,.2f} and turning up · now ₹{_b['last']:,.2f}\n"
+                            f"BUY ₹{_b['buy']:,.2f} · SL ₹{_b['sl']:,.2f}\n"
+                            f"Sell T1 ₹{_b['t1']:,.2f} · T2 ₹{_b['t2']:,.2f} · resistance ₹{_b['resistance']:,.2f}")
+                for a in ss["bc_alerts"][:3]:
+                    try:
+                        st.toast(f"🚀 {a['name']} — {a['txt'][:70]}")
+                    except Exception:
+                        pass
             rt_save("bc", on=True, watch=watch, names=names, bounces=bounces,
                     last_scan=ss["bc_last"], ts_str=ss["bc_ts_str"],
                     prev=ss["bc_prev"], alerts=ss["bc_alerts"],
@@ -4909,9 +5218,9 @@ def main():
     <div style='color:#fbbf24;font-weight:700;font-size:12px;'>Focus</div><div style='color:white;font-weight:900;font-size:16px;'>Uptrend + Levels</div></div>
     </div></div></div>"""), unsafe_allow_html=True)
 
-    tab_dash, tab_mv, tab_bnc, tab_cb, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
-        ["🔴 Live Dashboard (500)", "⚡ Live Movers (Now)", "🚀 Uptrend Starting", "🎯 Combo Picks",
-         "📊 Analyze Stock", "🔍 Scanner", "🔎 Search Any Stock", "📓 Journal", "🌙 EOD Review", "📚 Trading Guide"])
+    tab_dash, tab_mv, tab_bnc, tab_co, tab_cb, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
+        ["🔴 Live Dashboard (500)", "⚡ Live Movers (Now)", "🚀 Uptrend Starting", "🎯 Trade Coach (Timing)",
+         "🎯 Combo Picks", "📊 Analyze Stock", "🔍 Scanner", "🔎 Search Any Stock", "📓 Journal", "🌙 EOD Review", "📚 Trading Guide"])
 
     # ── TAB 0: LIVE DASHBOARD (the common board) ──
     with tab_dash:
@@ -4937,6 +5246,13 @@ def main():
             bounce_tab(ss, mst_s)
         except Exception as e:
             st.warning(f"⚠️ Bounce radar problem: {type(e).__name__}: {e}")
+
+    # ── TAB: TRADE COACH (perfect stocks · perfect timing) ──
+    with tab_co:
+        try:
+            render_coach_tab(ss, mst_s)
+        except Exception as e:
+            st.warning(f"⚠️ Coach problem: {type(e).__name__}: {e}")
 
     # ── TAB: COMBO (live climb + calculation agreement) ──
     with tab_cb:
