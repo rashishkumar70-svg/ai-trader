@@ -1628,6 +1628,8 @@ def tg_online_ping():
 #   — never inside this GitHub file.
 # ══════════════════════════════════════════════════════════════════
 UP_REDIRECT_DEFAULT = "https://api.upstox.com"
+UP_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+         "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
 _UP_LTP = {}        # {sym: (price, ts)} in-memory live-price cache
 _UP_KEYS = {"d": None, "m": {}}   # daily instrument-key map, in memory
 
@@ -1696,12 +1698,15 @@ def up_activate(code):
     if not code:
         return False, "Paste the code from the browser address bar first."
     try:
+        import urllib.parse as _up
         req = urllib.request.Request(
             "https://api.upstox.com/v2/login/authorization/token",
-            data=_json.dumps({"code": code, "client_id": d["key"], "client_secret": d["secret"],
-                              "redirect_uri": d["redirect"],
-                              "grant_type": "authorization_code"}).encode("utf-8"),
-            headers={"Content-Type": "application/json", "Accept": "application/json"})
+            data=_up.urlencode({"code": code, "client_id": d["key"], "client_secret": d["secret"],
+                                "redirect_uri": d["redirect"],
+                                "grant_type": "authorization_code"}).encode("utf-8"),
+            headers={"Content-Type": "application/x-www-form-urlencoded",
+                     "Accept": "application/json", "User-Agent": UP_UA,
+                     "Accept-Language": "en-US,en;q=0.9"})
         r = _json.loads(urllib.request.urlopen(req, timeout=15).read().decode("utf-8"))
         tok = r.get("access_token") or (r.get("data") or {}).get("access_token") or ""
         exp_in = float(r.get("expires_in") or (r.get("data") or {}).get("expires_in") or 86400)
@@ -1712,11 +1717,24 @@ def up_activate(code):
         return True, "LIVE"
     except urllib.error.HTTPError as e:
         try:
-            msg = (_json.loads(e.read().decode()).get("errors") or [{}])[0].get("message", "")[:90]
+            body = e.read().decode()
+            msg = ""
+            if "cloudflare" in body.lower() or "error 1010" in body.lower():
+                return False, "Upstox firewall blocked the request — press Activate again."
+            try:
+                msg = (_json.loads(body).get("errors") or [{}])[0].get("message", "")[:110]
+            except Exception:
+                pass
         except Exception:
             msg = ""
-        extra = "Redirect URI must EXACTLY match the one in your Upstox app." if "redirect" in (msg or "").lower() else ""
-        return False, (f"Upstox rejected it: {msg or 'check the code'}. {extra} "
+        if "client_id" in (msg or "").lower() or "client_secret" in (msg or "").lower():
+            return False, ("Upstox says the API Key or SECRET is wrong. Go to "
+                           "account.upstox.com/developer/apps → use the COPY button on both "
+                           "(don't type by hand) → paste here → 💾 Save → fresh login code → Activate.")
+        if "redirect" in (msg or "").lower():
+            return False, ("Redirect URI mismatch — it must EXACTLY match the Redirect URI field "
+                           "of your Upstox app (check for missing 's' in https, trailing '/').")
+        return False, (f"Upstox rejected it: {msg or 'check the code'}. "
                        f"Codes expire in minutes — login again & paste a fresh one.")
     except Exception as e:
         return False, f"Network issue — try again ({type(e).__name__})."
@@ -1738,9 +1756,10 @@ def up_keys_map(syms):
     if not set(want).issubset(set(_UP_KEYS["m"])):     # refresh master once a day
         try:
             import gzip as _gz
-            raw = _gz.decompress(urllib.request.urlopen(
+            rq = urllib.request.Request(
                 "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz",
-                timeout=45).read())
+                headers={"User-Agent": UP_UA, "Accept": "*/*"})
+            raw = _gz.decompress(urllib.request.urlopen(rq, timeout=45).read())
             mm = {}
             for r in _json.loads(raw):
                 if r.get("segment") == "NSE_EQ" and r.get("trading_symbol"):
@@ -1772,7 +1791,7 @@ def up_prefetch(syms):
             req = urllib.request.Request(
                 "https://api.upstox.com/v2/market-quote/ltp?instrument_key="
                 + ",".join(vals[i:i + 250]),
-                headers={"Accept": "application/json",
+                headers={"Accept": "application/json", "User-Agent": UP_UA,
                          "Authorization": f"Bearer {d['token']}"})
             data = (_json.loads(urllib.request.urlopen(req, timeout=8)
                                 .read().decode("utf-8")) or {}).get("data") or {}
