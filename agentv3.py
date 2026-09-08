@@ -1580,20 +1580,57 @@ def tg_save(token, chat):
         return False
 
 
-def tg_send_one(cid, text):
-    """Send to ONE chat id. Returns (ok, reason) — reason = Telegram's own words."""
+def _esc(s):
+    """HTML-escape dynamic text (M&M → M&amp;M) for Telegram HTML mode."""
+    return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+
+def _tg_post(token, cid, text, html, buttons=None):
+    """One raw Telegram post. html=True adds parse_mode HTML;
+    buttons = inline keyboard rows [[{text,url},…],…]."""
+    payload = {"chat_id": cid, "text": text[:1000], "disable_web_page_preview": True}
+    if html:
+        payload["parse_mode"] = "HTML"
+    if buttons:
+        payload["reply_markup"] = {"inline_keyboard": buttons}
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        data=_json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"})
+    urllib.request.urlopen(req, timeout=6).read()
+
+
+def stock_buttons(sym):
+    """One-tap open buttons under a stock message — chart shortcuts."""
+    s = str(sym).replace(".NS", "").strip()
+    return [[
+        {"text": "📈 Google", "url": f"https://www.google.com/finance/quote/{s}:NSE"},
+        {"text": "📊 TradingView", "url": f"https://www.tradingview.com/symbols/NSE-{s}/"},
+    ]]
+
+
+def tg_send_one(cid, text, _retry=True, buttons=None):
+    """Send to ONE chat id in RICH format (bold · boxed prices · italics,
+    optional one-tap buttons). If Telegram rejects the formatting,
+    auto-resends plain — alerts never die."""
     cfg = tg_load()
     if not cfg.get("token"):
         return False, "no token configured"
     try:
-        req = urllib.request.Request(
-            f"https://api.telegram.org/bot{cfg['token']}/sendMessage",
-            data=_json.dumps({"chat_id": cid, "text": text[:1000],
-                              "disable_web_page_preview": True}).encode("utf-8"),
-            headers={"Content-Type": "application/json"})
-        urllib.request.urlopen(req, timeout=6).read()
+        _tg_post(cfg["token"], cid, text, html=_retry, buttons=buttons)
         return True, ""
     except urllib.error.HTTPError as e:
+        if e.code == 400 and _retry:      # bad formatting → strip tags, plain resend
+            try:
+                e.read()
+            except Exception:
+                pass
+            try:
+                _tg_post(cfg["token"], cid, re.sub(r"<[^>]+>", "", text), html=False,
+                         buttons=buttons)
+                return True, ""
+            except Exception:
+                pass
         try:
             desc = _json.loads(e.read().decode()).get("description", "")
         except Exception:
@@ -1603,15 +1640,16 @@ def tg_send_one(cid, text):
         return False, f"{type(e).__name__}: {e}"[:110]
 
 
-def tg_send(text):
+def tg_send(text, buttons=None):
     """Send one message to EVERY configured chat — comma-separated IDs let you share
-    alerts with brother/family. Silently skips if not configured; never crashes a scan."""
+    alerts with brother/family. Optional one-tap buttons. Silently skips if not
+    configured; never crashes a scan."""
     cfg = tg_load()
     if not cfg.get("token") or not cfg.get("chat"):
         return False
     sent_any = False
     for cid in [c.strip() for c in str(cfg["chat"]).split(",") if c.strip()]:
-        ok, _r = tg_send_one(cid, text)
+        ok, _r = tg_send_one(cid, text, buttons=buttons)
         sent_any = sent_any or ok
     return sent_any
 
@@ -1625,10 +1663,10 @@ def tg_online_ping():
         if _os.path.exists(fn):
             last = _json.load(open(fn, encoding="utf-8")).get("ts", 0)
         if time.time() - last > 1800:
-            if tg_send(f"\U0001F7E2 AI Trader Pro is ONLINE\n"
+            if tg_send(f"\U0001F7E2 <b>AI Trader Pro is ONLINE</b>\n"
                        f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
-                       f"App just started (redeploy or wake-up) and is ready.\n"
-                       f"Open \u26A1 Live Movers or \U0001F680 Uptrend Starting to begin today's scans."):
+                       f"<i>App just started (redeploy or wake-up) and is ready.</i>\n"
+                       f"Open \u26A1 Movers or \U0001F3AF Coach to begin today's session."):
                 _json.dump({"ts": time.time()}, open(fn, "w", encoding="utf-8"))
     except Exception:
         pass
@@ -1661,7 +1699,15 @@ def coach_ctx(sym, df, today=None):
         h = t["High"].values; l = t["Low"].values
         n = len(cl)
         vwap = float((cl * v).sum() / v.sum()) if v.sum() > 0 else float(cl[-1])
+        try:      # afternoon support = the stronger of VWAP and the morning low
+            _mk = [ix.hour * 60 + ix.minute for ix in t.index]
+            _ml = [float(l[i]) for i, k in enumerate(_mk) if k < 720] or [float(l.min())]
+            lo_morn = min(_ml)
+        except Exception:
+            lo_morn = float(l.min())
+        sup_aft = max(vwap, lo_morn)
         return {"sym": sym, "last": float(cl[-1]), "prev_close": prev_close,
+                "lo_morn": round(float(lo_morn), 2), "sup_aft": round(float(sup_aft), 2),
                 "vwap": vwap, "hi_ses": float(h.max()), "lo_ses": float(l.min()),
                 "hi_prev": float(h[:-1].max()) if n > 1 else float(h[-1]),
                 "lows3": [float(x) for x in l[-3:]], "cl_last": float(cl[-1]),
@@ -1690,7 +1736,37 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
             return ev
         if t >= 14 * 60 + 30:                         # no FRESH entries late
             return ev
-        breakout = (ctx["green_last"] and last > ctx["hi_prev"] and ctx["vr_last"] >= 1.3
+        try:                                          # 🧠 regime-aware sizing
+            _rg = market_regime() or {}
+        except Exception:
+            _rg = {}
+        _rchg = float(_rg.get("chg") or 0)
+        weak_day = _rchg <= -0.3
+        mixed_day = -0.3 < _rchg <= 0.3
+        cap = (cap // 2) if (weak_day or mixed_day) else cap   # 🟡🔴 half size
+        if t >= 12 * 60:                              # ☀️ AFTERNOON: support bounces only
+            sup = ctx.get("sup_aft") or vwap
+            if (ctx["green_last"] and ctx["chg_day"] > -3.0
+                    and sup * 0.997 <= last <= sup * 1.004):
+                entry = round(last, 2)
+                sl = round(sup * 0.995, 2)
+                if entry - sl < entry * 0.004:
+                    sl = round(entry * 0.996, 2)
+                R = entry - sl
+                t1 = round(entry + 1.0 * R, 2)
+                t2 = round(min(entry + 1.6 * R, entry * 1.025), 2)
+                qty = max(1, int(cap // entry)) if cap else 1
+                why = f"afternoon pullback HELD support ₹{sup:,.2f} and stabilized"
+                pos.update(stage="HOLD", entry=entry, sl=sl, t1=t1, t2=t2, qty=qty,
+                           half=False, res=None, sig=why, hw=entry, ent_mins=t, vr_streak=0)
+                ev.append(("buy", f"\U0001F6E1\uFE0F <b>SUPPORT BOUNCE \u00b7 {_esc(nm)}</b>\n"
+                                  f"\U0001F4B0 <b>BUY NOW</b> <code>\u20B9{entry:,.2f}</code> \u00b7 qty\u2248{qty} (\u20B9{cap:,})\n"
+                                  f"\U0001F6D1 SL <code>\u20B9{sl:,.2f}</code> \u00b7 \U0001F3AF T1 <code>\u20B9{t1:,.2f}</code> sell HALF \u00b7 "
+                                  f"\U0001F3AF T2 <code>\u20B9{t2:,.2f}</code> sell rest\n"
+                                  f"<i>\U0001F4A1 {_esc(why)} \u2014 afternoon bounce, book quickly</i>"))
+            return ev
+        breakout = (ctx["green_last"] and last > ctx["hi_prev"]
+                    and ctx["vr_last"] >= (2.0 if weak_day else 1.3)   # 🔴 weak day needs proof
                     and ctx["chg_day"] <= 4)
         vwap_hold = (ctx["green_last"] and abs(last / vwap - 1) <= 0.0025
                      and last >= vwap * 0.998 and ctx["cl_last"] > ctx["cl_prev"]
@@ -1703,15 +1779,18 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
                 sl = round(entry * 0.995, 2)
             R = entry - sl
             t1 = round(entry + 1.0 * R, 2)
-            t2 = round(min(entry + 1.8 * R, entry * 1.035), 2)
+            t2 = round(min(entry + (1.2 if (weak_day or mixed_day) else 1.8) * R,
+                           entry * 1.035), 2)   # 🟡🔴 quicker target on soft days
             qty = max(1, int(cap // entry)) if cap else 1
             why = "session-high BREAKOUT with volume" if breakout else "pullback HELD VWAP and turned up"
             pos.update(stage="HOLD", entry=entry, sl=sl, t1=t1, t2=t2, qty=qty,
                        half=False, res=None, sig=why, hw=entry, ent_mins=t, vr_streak=0)
-            ev.append(("buy", f"{nm} · BUY NOW ₹{entry:,.2f} · qty≈{qty} (₹{cap:,})\n"
-                              f"🛑 SL ₹{sl:,.2f} · 🎯 T1 ₹{t1:,.2f} (+{(t1/entry-1)*100:.1f}%) sell HALF · "
-                              f"🎯 T2 ₹{t2:,.2f} (+{(t2/entry-1)*100:.1f}%) sell rest\n"
-                              f"Why: {why} — act fast, don't chase more than +0.3%"))
+            ev.append(("buy", f"\U0001F7E2 <b>BUY NOW \u00b7 {_esc(nm)}</b>\n"
+                              f"\U0001F4B0 Price <code>\u20B9{entry:,.2f}</code> \u00b7 qty\u2248{qty} (\u20B9{cap:,})\n"
+                              f"\U0001F6D1 SL <code>\u20B9{sl:,.2f}</code>\n"
+                              f"\U0001F3AF T1 <code>\u20B9{t1:,.2f}</code> (+{(t1/entry-1)*100:.1f}%) \u2014 sell HALF\n"
+                              f"\U0001F3AF T2 <code>\u20B9{t2:,.2f}</code> (+{(t2/entry-1)*100:.1f}%) \u2014 sell rest\n"
+                              f"<i>\U0001F4A1 {_esc(why)} \u2014 act fast, don't chase more than +0.3%</i>"))
         return ev
 
     if pos["stage"] == "HOLD":
@@ -1719,32 +1798,37 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
         pnl = (last / pos["entry"] - 1) * 100
         grace = (t - pos.get("ent_mins", t)) < 15          # first 15 min: give the trade air
         if last <= pos["sl"]:
-            pos.update(stage="DONE", res=round(pnl, 2))
-            ev.append(("sl", f"{nm} · 🛑 STOPLOSS ₹{pos['sl']:,.2f} hit — EXIT ALL NOW. "
-                             f"Result {pnl:+.1f}% · small loss = capital saved"
-                             + (" (T1 half already booked ✔)" if pos["half"] else "")))
+            pos.update(stage="DONE", res=round(pnl, 2), outcome="sl")
+            ev.append(("sl", f"\U0001F6D1 <b>STOPLOSS \u00b7 {_esc(nm)}</b>\n"
+                             f"\u26A0\uFE0F <b>EXIT ALL NOW</b> below <code>\u20B9{pos['sl']:,.2f}</code>\n"
+                             f"\U0001F4C9 Result <b>{pnl:+.1f}%</b> \u00b7 small loss = capital saved"
+                             + (" \u00b7 T1 half already booked \u2714" if pos["half"] else "")))
         elif (not pos["half"]) and last >= pos["t1"]:
             pos["half"] = True; pos["sl"] = pos["entry"]
-            ev.append(("t1", f"{nm} · 💰 T1 HIT ₹{pos['t1']:,.2f} — SELL HALF NOW · "
-                             f"SL moved to entry ₹{pos['entry']:,.2f} — profit locked ✔"))
+            ev.append(("t1", f"\U0001F4B0 <b>T1 HIT \u00b7 {_esc(nm)}</b>\n"
+                             f"\U0001F3AF Sell <b>HALF</b> now at <code>\u20B9{pos['t1']:,.2f}</code>\n"
+                             f"\U0001F6D1 SL moved to entry <code>\u20B9{pos['entry']:,.2f}</code> \u2014 <b>profit locked</b> \u2714"))
         elif pos["half"] and last >= pos["t2"]:
-            pos.update(stage="DONE", res=round(pnl, 2))
-            ev.append(("t2", f"{nm} · ✅ T2 HIT ₹{pos['t2']:,.2f} — SELL THE REST. "
-                             f"Trade complete {pnl:+.1f}% 🎉"))
+            pos.update(stage="DONE", res=round(pnl, 2), outcome="t2")
+            ev.append(("t2", f"\u2705 <b>T2 HIT \u00b7 {_esc(nm)}</b>\n"
+                             f"\U0001F3AF Sell the <b>REST</b> at <code>\u20B9{pos['t2']:,.2f}</code>\n"
+                             f"\U0001F3C6 Trade complete <b>{pnl:+.1f}%</b> \U0001F389"))
         elif t >= 15 * 60 + 5:
-            pos.update(stage="DONE", res=round(pnl, 2))
-            ev.append(("eod", f"{nm} · 🔚 SQUARE OFF NOW — market closing in minutes. {pnl:+.1f}%"))
+            pos.update(stage="DONE", res=round(pnl, 2), outcome="eod")
+            ev.append(("eod", f"\U0001F51A <b>SQUARE OFF \u00b7 {_esc(nm)}</b>\n"
+                              f"Market closing \u2014 exit now \u00b7 <b>{pnl:+.1f}%</b>"))
         else:
             weak = (last < vwap * 0.9975 and ctx["red_last"])
             pos["vr_streak"] = (pos.get("vr_streak", 0) + 1) if weak else 0
             deep = last < vwap * 0.995
             if (not grace) and (deep or pos["vr_streak"] >= 2):
-                pos.update(stage="DONE", res=round(pnl, 2))
-                ev.append(("exit", f"{nm} · ⚠️ EXIT ALL — fell below VWAP & momentum dead. {pnl:+.1f}%"))
+                pos.update(stage="DONE", res=round(pnl, 2), outcome="exit")
+                ev.append(("exit", f"\u26A0\uFE0F <b>EXIT ALL \u00b7 {_esc(nm)}</b>\n"
+                                   f"\U0001F4C9 Fell below VWAP, momentum dead \u00b7 <b>{pnl:+.1f}%</b>"))
             elif (not grace) and t >= 11 * 60 + 30 and -0.3 < pnl < 0.4:
-                pos.update(stage="DONE", res=round(pnl, 2))
-                ev.append(("time", f"{nm} · ⏰ TIME EXIT — going nowhere ({pnl:+.1f}%). "
-                                   f"Rotate the money to a live mover"))
+                pos.update(stage="DONE", res=round(pnl, 2), outcome="time")
+                ev.append(("time", f"\u23F0 <b>TIME EXIT \u00b7 {_esc(nm)}</b>\n"
+                                   f"Going nowhere ({pnl:+.1f}%) \u2014 rotate to a live mover"))
     return ev
 
 
@@ -1770,6 +1854,49 @@ def coach_pick(n=COACH_N_DEFAULT):
     return top, {s: names.get(s, s.replace(".NS", "")) for s in top}
 
 
+def coach_collect_log(posd):
+    """Pick up finished trades (once each) for the report card."""
+    out = []
+    for s, p in (posd or {}).items():
+        try:
+            if p.get("stage") == "DONE" and not p.get("logged") and p.get("outcome"):
+                p["logged"] = True
+                out.append({"sym": s, "name": p.get("name") or s.replace(".NS", ""),
+                            "entry": p.get("entry"), "res": p.get("res"),
+                            "outcome": p.get("outcome"), "sig": p.get("sig"),
+                            "ts": now_ist().strftime("%H:%M")})
+        except Exception:
+            continue
+    return out
+
+
+def coach_eod_summary(log, cap):
+    n = len(log)
+    if not n:
+        return ""
+    wins = [t for t in log if (t.get("res") or 0) > 0]
+    avg = sum(t.get("res") or 0 for t in log) / n
+    rupees = sum((t.get("res") or 0) * cap / 100 for t in log)
+    best = max(log, key=lambda t: t.get("res") or 0)
+    head = (f"\U0001F4CA <b>COACH REPORT CARD \u00b7 {now_ist().strftime('%a %d %b')}</b>\n"
+            f"\U0001F4DD Trades <b>{n}</b> \u00b7 Wins <b>{len(wins)}</b> ({len(wins) * 100 // n}% win rate)\n"
+            f"\U0001F4C8 Avg <b>{avg:+.2f}%</b> \u00b7 Est P&L <code>\u20B9{rupees:,.0f}</code> (on \u20B9{cap:,}/trade)\n"
+            f"\U0001F3C6 Best: <b>{_esc(best['name'])} {best['res']:+.1f}%</b>")
+    tail = " \u00b7 ".join(f"{_esc(t['name'])} {t['res']:+.1f}% ({t['outcome']})" for t in log[:6])
+    return head + ("\n" + tail if tail else "")
+
+
+def coach_phase(t=None):
+    """The coach's day-plan: morning momentum → afternoon support → late manage."""
+    t = t if t is not None else (now_ist().hour * 60 + now_ist().minute)
+    if t < 12 * 60:
+        return "morning", "🌅 MORNING MOMENTUM — fresh BUYs allowed · coach watching every candle"
+    if t < 14 * 60 + 30:
+        return "afternoon", ("☀️ AFTERNOON SUPPORT MODE — no new momentum buys (afternoon climbs fade) · "
+                             "bounce plays at support only")
+    return "late", "🌗 LATE DAY — no fresh entries · manage holds & square off 15:05"
+
+
 def coach_action_text(sym, pos, ctx):
     """The one bold instruction line on each card."""
     if pos["stage"] == "DONE":
@@ -1783,6 +1910,12 @@ def coach_action_text(sym, pos, ctx):
         return ("⏳ WAITING for candles…", "#64748b")
     if ctx["n"] < 3:
         return ("⏳ WAIT — first candles forming (act from 9:25)", "#64748b")
+    ph, _p = coach_phase()
+    if ph == "afternoon":
+        sup = ctx.get("sup_aft") or ctx["vwap"]
+        return (f"🛡️ SUPPORT MODE — buy zone ₹{sup*0.997:,.2f}–₹{sup*1.004:,.2f} once it stabilizes", "#fbbf24")
+    if ph == "late":
+        return ("🌗 window closed — managing holds only (square-off 15:05)", "#818cf8")
     return ("👀 WATCHING — coach will say BUY the moment the candle confirms", "#93c5fd")
 
 
@@ -1857,9 +1990,29 @@ def render_coach_tab(ss, mst_s):
             ss["co_pos"] = _rt.get("pos") or {}
             ss["co_cap"] = _rt.get("cap") or COACH_CAP_DEFAULT
             ss["co_feed"] = _rt.get("feed") or []
+            ss["co_log"] = _rt.get("log") or []
             ss["co_last"] = _rt.get("last_scan") or 0
             ss["co_ts"] = _rt.get("ts_str") or "—"
             ss["_co_resumed"] = True
+
+    # 🚀 AUTO-START — the coach begins by itself after 9:20 on market days
+    if (not ss.get("co_on") and mst_s == "open"
+            and now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20
+            and ss.get("co_auto", True)):
+        try:
+            _top, _nm = coach_pick(int(ss.get("co_n") or COACH_N_DEFAULT))
+        except Exception:
+            _top, _nm = [], {}
+        if _top:
+            ss["co_on"] = True
+            ss["co_watch"] = _top; ss["co_names"] = _nm
+            ss["co_pos"] = {s: {"stage": "WAIT", "name": _nm[s]} for s in _top}
+            ss["co_feed"] = []; ss["co_last"] = 0; ss["co_log"] = []
+            rt_save("co", on=True, watch=_top, names=_nm, pos=ss["co_pos"],
+                    cap=ss.get("co_cap") or COACH_CAP_DEFAULT, feed=[], last_scan=0,
+                    ts_str="—", log=[])
+            ss["_co_autostarted"] = True
+            st.rerun()
 
     if not ss.get("co_on"):
         st.markdown(_H("""<div style='background:linear-gradient(135deg,#0c4a6e,#164e63);border-radius:18px;
@@ -1880,6 +2033,8 @@ def render_coach_tab(ss, mst_s):
         with c2:
             ss["co_n"] = st.slider("How many perfect stocks to coach", 4, 10,
                                    int(ss.get("co_n") or COACH_N_DEFAULT))
+            ss["co_auto"] = st.checkbox("🚀 Auto-start at 9:20 (coach begins by itself when the app is open)",
+                                        value=bool(ss.get("co_auto", True)), key="co_auto_ck")
         if st.button("🎯 START COACH (run after the morning scan)", key="co_start", **STRETCH):
             if mst_s != "open":
                 st.info("🔕 Market is CLOSED right now — the coach runs live only during market hours "
@@ -1906,6 +2061,10 @@ def render_coach_tab(ss, mst_s):
     if ss.get("_co_resumed"):
         ss["_co_resumed"] = False
         st.info("♾️ Coach resumed automatically — a page refresh does NOT stop it. Press ⏹ Stop to end it.")
+    if ss.get("_co_autostarted"):
+        ss["_co_autostarted"] = False
+        st.success("🚀 Coach AUTO-STARTED (market is open) — watching today's perfect stocks. "
+                   "Instructions arrive here + on Telegram.")
     try:
         from streamlit_autorefresh import st_autorefresh
         if mst_s == "open":          # 🛌 after close: NO auto-refresh (free-CPU saver)
@@ -1917,6 +2076,23 @@ def render_coach_tab(ss, mst_s):
         rt_clear("co")
         ss["co_on"] = False
         st.rerun()
+
+    _ph, _pht = coach_phase()
+    _phc = {"morning": ("#052e16", "#22c55e"),
+            "afternoon": ("#422006", "#f59e0b"),
+            "late": ("#1e1b4b", "#818cf8")}[_ph]
+    st.markdown(_H(f"<div style='background:{_phc[0]};border:1px solid {_phc[1]};border-radius:10px;"
+                   f"padding:8px 14px;color:#e2e8f0;font-size:12.5px;font-weight:700;'>{_pht}</div>"),
+                unsafe_allow_html=True)
+    try:
+        _rg = market_regime()
+    except Exception:
+        _rg = None
+    if _rg:
+        st.markdown(_H(f"<div style='background:#0b1220;border:1px solid {_rg['col']};border-radius:10px;"
+                       f"padding:7px 14px;margin-top:4px;color:#e2e8f0;font-size:12px;'>"
+                       f"{_rg['lab']} · NIFTY {_rg['chg']:+.2f}% — {_rg['tip']} "
+                       f"<b>Position size auto-adjusted.</b></div>"), unsafe_allow_html=True)
 
     due = mst_s == "open" and time.time() - ss.get("co_last", 0) > 80
     if due or not ss.get("co_ctx"):
@@ -1938,11 +2114,37 @@ def render_coach_tab(ss, mst_s):
                         st.toast(msg.split("·")[1][:60] if "·" in msg else msg[:60])
                     except Exception:
                         pass
+        new_logs = coach_collect_log(ss.get("co_pos") or {})
+        if new_logs:
+            ss["co_log"] = (ss.get("co_log") or []) + new_logs
+        _co_rt = rt_load().get("co") or {}
+        _today = now_ist().strftime("%Y-%m-%d")
+        _t_now = now_ist().hour * 60 + now_ist().minute
+        if (mst_s == "open" and coach_phase(_t_now)[0] == "morning"
+                and _co_rt.get("plan_day") != _today and ss.get("co_watch")):
+            try:
+                _rg = market_regime()
+                _rgt = f"{_rg['lab']} ({_rg['chg']:+.2f}%)" if _rg else "regime n/a"
+            except Exception:
+                _rgt = "regime n/a"
+            _nm = ", ".join((ss.get("co_names") or {}).get(s, s.replace(".NS", ""))
+                            for s in ss["co_watch"][:8])
+            if tg_send(f"\U0001F305 <b>MORNING PLAN \u00b7 {now_ist().strftime('%H:%M')}</b>\n"
+                       f"\U0001F440 Watching: <b>{_esc(_nm)}</b>\n{_esc(_rgt)}\n"
+                       f"\U0001F4B0 Capital <code>\u20B9{int(ss.get('co_cap') or COACH_CAP_DEFAULT):,}</code>/trade "
+                       f"(auto-halved on soft days)\n"
+                       f"<i>\u26A1 Momentum till 12:00 \u2192 \U0001F6E1\uFE0F support 12:00\u201314:30 \u2192 \U0001F51A square-off 15:05</i>"):
+                rt_save("co", plan_day=_today)
+        if (mst_s == "open" and 15 * 60 + 10 <= _t_now <= 15 * 60 + 30
+                and _co_rt.get("eod_day") != _today and ss.get("co_log")):
+            if tg_send(coach_eod_summary(ss["co_log"], int(ss.get("co_cap") or COACH_CAP_DEFAULT))):
+                rt_save("co", eod_day=_today)
         ss["co_feed"] = feed[:60]
         ss["co_last"] = time.time()
         ss["co_ts"] = now_ist().strftime("%d %b %Y · %H:%M")
         rt_save("co", on=True, watch=ss["co_watch"], names=ss["co_names"], pos=ss["co_pos"],
-                cap=ss.get("co_cap"), feed=ss["co_feed"], last_scan=ss["co_last"], ts_str=ss["co_ts"])
+                cap=ss.get("co_cap"), feed=ss["co_feed"], last_scan=ss["co_last"], ts_str=ss["co_ts"],
+                log=ss.get("co_log") or [])
 
     ctxs = ss.get("co_ctx") or {}
     posd = ss.get("co_pos") or {}
@@ -1994,10 +2196,38 @@ def render_coach_tab(ss, mst_s):
                             f"padding:6px 12px;margin:4px 0;color:#e2e8f0;font-size:12px;white-space:pre-line;'>"
                             f"<span style='color:#64748b;'>{f['ts']}</span> · {f['txt']}</div>",
                             unsafe_allow_html=True)
+    _log = ss.get("co_log") or []
+    if _log:
+        with st.expander(f"📊 COACH REPORT CARD — today ({len(_log)} trades)", expanded=True):
+            _n = len(_log); _wins = [t for t in _log if (t.get("res") or 0) > 0]
+            _avg = sum(t.get("res") or 0 for t in _log) / _n
+            _capu = int(ss.get("co_cap") or COACH_CAP_DEFAULT)
+            _r1, _r2, _r3, _r4 = st.columns(4)
+            with _r1: st.metric("Trades", _n)
+            with _r2: st.metric("Win rate", f"{len(_wins) * 100 // _n}%")
+            with _r3: st.metric("Avg result", f"{_avg:+.2f}%")
+            with _r4: st.metric("Est P&L", f"₹{sum((t.get('res') or 0) * _capu / 100 for t in _log):,.0f}",
+                                f"on ₹{_capu:,}/trade")
+            try:
+                st.dataframe(pd.DataFrame([{"Stock": t["name"], "Entry": t.get("entry"),
+                                            "Result%": t.get("res"),
+                                            "Outcome": {"sl": "🛑 SL", "t1": "💰 T1+SL", "t2": "✅ T2",
+                                                        "exit": "⚠️ exit", "time": "⏰ time",
+                                                        "eod": "🔚 EOD"}.get(t.get("outcome"), t.get("outcome")),
+                                            "Setup": (t.get("sig") or "")[:44], "Closed": t.get("ts")}
+                                           for t in _log]),
+                             use_container_width=True, hide_index=True)
+            except Exception:
+                for t in _log:
+                    st.markdown(f"- **{t['name']}** {t.get('res'):+.1f}% ({t.get('outcome')})")
+
     with st.expander("📖 How the coach decides"):
         st.markdown("""<div style='color:#94a3b8;font-size:12.5px;line-height:1.9;'>
-        🟢 <b style='color:#4ade80;'>BUY</b> — only when a 5-min candle CONFIRMS: session-high breakout with 1.3× volume,
-        or a pullback that holds VWAP and turns up. Never chases: no fresh buys after 14:30 or if the stock already ran &gt; 4%.<br>
+        🟢 <b style='color:#4ade80;'>BUY (morning, till 12:00)</b> — only when a 5-min candle CONFIRMS: session-high breakout
+        with 1.3× volume, or a pullback that holds VWAP and turns up. Never chases spikes, never if already ran &gt; 4%.<br>
+        ☀️ <b style='color:#fbbf24;'>AFTERNOON SUPPORT MODE (12:00–14:30)</b> — fresh climbs tend to fade after noon, so the
+        coach takes no new momentum buys. It only takes <b>support bounces</b>: a pullback that holds its support
+        (VWAP / morning low — the buy zone is on each card) and stabilizes with a green candle. Book fast, tight SL.<br>
         💰 <b style='color:#fbbf24;'>T1</b> = +1R → sell HALF, stoploss moves to entry (profit locked).<br>
         ✅ <b style='color:#22c55e;'>T2</b> = +1.8R (max +3.5%) → sell the rest.<br>
         🛑 <b style='color:#f87171;'>STOPLOSS</b> below VWAP/recent lows — exit all, small loss.<br>
@@ -2293,8 +2523,8 @@ def tg_settings_ui(tag=""):
                     st.error("Paste both the token and your chat ID first.")
         with b2:
             if st.button("📨 Send test message", key=f"tg_test{tag}", **STRETCH):
-                if tg_send("✅ AI Trader Pro — Telegram alerts are working! "
-                           "You will get ⚡ climb and 🚀 support-bounce alerts here."):
+                if tg_send("\u2705 <b>AI Trader Pro \u2014 Telegram alerts are working!</b>\n"
+                           "You will get \u26A1 climb and \U0001F680 support-bounce alerts here."):
                     st.success("Sent! Check your Telegram app. 🎉")
                 else:
                     st.error("Couldn't send — press 💾 Save first, and double-check token & chat ID.")
@@ -4110,20 +4340,23 @@ def live_movers_tab(ss, mst_s):
         if mst_s == "open":   # 🔕 Telegram/toasts only while the market is LIVE
             for _m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)
                        and mv_room_ok(x)][:3]:
-                tg_send(f"🌱 {names.get(_m['sym'], _m['sym'].replace('.NS',''))} FORMING A CLIMB (early)\n"
-                        f"{_m['chg_day']:+.2f}% today · {_m['green']}% green · 1h {_m['slope1h']:+.2f}% · "
-                        f"vol {_m['vr']:.1f}x\nNow ₹{_m['last']:,.2f}\n"
-                        f"🎯 WAIT for the dip ~₹{_m['last'] * 0.99:,.2f} (−1%) to buy — don't chase up\n"
-                        f"⚠️ Already jumped away? Let it go — the next one will come")
+                _nmm = _esc(names.get(_m['sym'], _m['sym'].replace('.NS', '')))
+                tg_send(f"\U0001F331 <b>{_nmm} \u00b7 FORMING A CLIMB (early)</b>\n"
+                        f"\U0001F4C8 {_m['chg_day']:+.2f}% today \u00b7 {_m['green']}% green \u00b7 1h {_m['slope1h']:+.2f}% \u00b7 "
+                        f"vol {_m['vr']:.1f}x\n"
+                        f"\U0001F4B0 Now <code>\u20B9{_m['last']:,.2f}</code>\n"
+                        f"\U0001F3AF WAIT for the dip ~<code>\u20B9{_m['last'] * 0.99:,.2f}</code> (\u22121%) to buy \u2014 don't chase up\n"
+                        f"<i>\u26A0\uFE0F Already jumped away? Let it go \u2014 the next one will come</i>")
             for _m in [x for x in movers if x["sym"] in (now_climb - prev_climb)
                        and mv_room_ok(x)][:5]:
-                tg_send(f"⚡ {names.get(_m['sym'], _m['sym'].replace('.NS',''))} STARTED CLIMBING\n"
-                        f"{_m['chg_day']:+.2f}% today · {_m['green']}% green candles · "
-                        f"1h {_m['slope1h']:+.2f}% · vol {_m['vr']:.1f}x\n"
-                        f"Price ₹{_m['last']:,.2f}"
-                        + (" · 🐢 slow-steady" if _m["steady"] else "")
-                        + f"\n🎯 Safer entry on a dip ~₹{_m['last'] * 0.99:,.2f} (−1%) — "
-                        f"if it already ran > 3% today, skip & wait for the next")
+                _nmm = _esc(names.get(_m['sym'], _m['sym'].replace('.NS', '')))
+                tg_send(f"\u26A1 <b>{_nmm} \u00b7 STARTED CLIMBING</b>\n"
+                        f"\U0001F4C8 {_m['chg_day']:+.2f}% today \u00b7 {_m['green']}% green candles \u00b7 "
+                        f"1h {_m['slope1h']:+.2f}% \u00b7 vol {_m['vr']:.1f}x\n"
+                        f"\U0001F4B0 Price <code>\u20B9{_m['last']:,.2f}</code>"
+                        + (" \u00b7 \U0001F422 slow-steady" if _m["steady"] else "")
+                        + f"\n\U0001F3AF Safer entry on a dip ~<code>\u20B9{_m['last'] * 0.99:,.2f}</code> (\u22121%)\n"
+                        f"<i>Already ran &gt; 3% today? Skip \u2014 wait for the next one</i>")
             for a in ss["mv_alerts"][:3]:
                 try:
                     st.toast(f"🔔 {a['name']} — {a['txt'][:70]}")
@@ -4611,10 +4844,12 @@ def bounce_tab(ss, mst_s):
             ss["bc_prev"] = sorted(now_start)
             if mst_s == "open":
                 for _b in [x for x in bounces if x["sym"] in (now_start - prev_start)][:5]:
-                    tg_send(f"🚀 {names.get(_b['sym'], _b['sym'].replace('.NS',''))} UPTREND STARTING\n"
-                            f"Reached support ₹{_b['support']:,.2f} and turning up · now ₹{_b['last']:,.2f}\n"
-                            f"BUY ₹{_b['buy']:,.2f} · SL ₹{_b['sl']:,.2f}\n"
-                            f"Sell T1 ₹{_b['t1']:,.2f} · T2 ₹{_b['t2']:,.2f} · resistance ₹{_b['resistance']:,.2f}")
+                    _nmb = _esc(names.get(_b['sym'], _b['sym'].replace('.NS', '')))
+                    tg_send(f"\U0001F680 <b>{_nmb} \u00b7 UPTREND STARTING</b>\n"
+                            f"\U0001F4CD Reached support <code>\u20B9{_b['support']:,.2f}</code> and turning up\n"
+                            f"\U0001F4B0 Now <code>\u20B9{_b['last']:,.2f}</code>\n"
+                            f"\U0001F7E2 BUY <code>\u20B9{_b['buy']:,.2f}</code> \u00b7 \U0001F6D1 SL <code>\u20B9{_b['sl']:,.2f}</code>\n"
+                            f"\U0001F3AF T1 <code>\u20B9{_b['t1']:,.2f}</code> \u00b7 T2 <code>\u20B9{_b['t2']:,.2f}</code> \u00b7 resistance <code>\u20B9{_b['resistance']:,.2f}</code>")
                 for a in ss["bc_alerts"][:3]:
                     try:
                         st.toast(f"🚀 {a['name']} — {a['txt'][:70]}")
@@ -4871,6 +5106,48 @@ def combo_tab(ss, mst_s):
                                mime="text/csv", **STRETCH, key="cb_csv")
         except Exception:
             pass
+
+    # ── 📤 SEND PICKS TO TELEGRAM (whenever YOU want — full plan + open buttons) ──
+    with st.expander("📤 SEND PICKS TO TELEGRAM (on demand)"):
+        _prio = {"🎯 PERFECT": 0, "✅ MATCH": 1}
+        _pool = [c for c in combos if c.get("verdict") in _prio or c.get("dtr") == "UPTREND"]
+        _pool.sort(key=lambda c: (_prio.get(c.get("verdict"), 2), -c.get("combo", 0)))
+        _nsend = st.slider("How many picks to send", 5, 20, 10, key="cb_tgn")
+        st.caption(f"Filter: 🎯 PERFECT + ✅ MATCH + UPTREND · {len(_pool)} of "
+                   f"{len(combos)} qualify · each pick arrives with full BUY/SL/T1/T2 plan and "
+                   "one-tap 📈 Google · 📊 TradingView buttons.")
+        if st.button("📤 SEND to Telegram now", key="cb_tg_go", **STRETCH):
+            if not _pool:
+                st.info("No PERFECT / UPTREND picks on the board right now — scan again later.")
+            else:
+                _sel = _pool[:_nsend]
+                _tot = len(_sel)
+                _prg = st.progress(0.0, text="📤 Sending picks…")
+                tg_send(f"\U0001F3AF <b>COMBO PICKS \u00b7 {now_ist().strftime('%H:%M')}</b>\n"
+                        f"<i>{_tot} pick(s) \u00b7 PERFECT &amp; UPTREND first \u00b7 full plan below \u2014 "
+                        f"tap a button under any stock to open it</i>")
+                _ok_n = 0
+                for _i, c in enumerate(_sel, 1):
+                    _msg = (f"\U0001F3AF <b>{_esc(c['name'])}</b> \u00b7 {c.get('verdict', '\u2014')}\n"
+                            f"\U0001F4C8 {str(c.get('sig', '')).title()} \u00b7 {c.get('dtr', '')} \u00b7 "
+                            f"conf {c.get('conf', 0):.0f}% \u00b7 score {c.get('combo', 0):.0f}\n"
+                            f"\U0001F4B0 Now <code>\u20B9{c['price']:,.2f}</code> \u00b7 "
+                            f"<b>{c['chg_day']:+.2f}%</b> today\n"
+                            f"\U0001F7E2 BUY <code>\u20B9{c.get('buy_at') or 0:,.2f}</code> \u00b7 "
+                            f"\U0001F6D1 SL <code>\u20B9{c.get('sl') or 0:,.2f}</code>\n"
+                            f"\U0001F3AF T1 <code>\u20B9{c.get('t1') or 0:,.2f}</code> \u00b7 "
+                            f"\u2705 T2 <code>\u20B9{c.get('t2') or 0:,.2f}</code>\n"
+                            f"\U0001F6E1\uFE0F support \u20B9{c.get('support') or 0:,.2f} \u00b7 "
+                            f"\U0001F6A7 resist \u20B9{c.get('resistance') or 0:,.2f}")
+                    if tg_send(_msg, buttons=stock_buttons(c["sym"])):
+                        _ok_n += 1
+                    _prg.progress(_i / _tot, text=f"\U0001F4E4 Sent {_i}/{_tot}\u2026")
+                    time.sleep(0.6)
+                _prg.empty()
+                if _ok_n:
+                    st.success(f"\u2705 Sent {_ok_n} picks (full plans + open buttons) to all phones.")
+                else:
+                    st.error("Couldn't send \u2014 check the \U0001F514 Telegram box settings on the \u26A1 tab.")
 
 
 def dashboard_tab(ss, mst_s, ml, mm):
