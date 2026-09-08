@@ -1695,18 +1695,19 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
         vwap_hold = (ctx["green_last"] and abs(last / vwap - 1) <= 0.0025
                      and last >= vwap * 0.998 and ctx["cl_last"] > ctx["cl_prev"]
                      and 0 <= ctx["chg_day"] <= 4)
-        if breakout or vwap_hold:
+        too_extended = last > vwap * 1.012 and ctx["vr_last"] < 2.0   # 🚫 spike = instant pullback
+        if (breakout or vwap_hold) and not too_extended:
             entry = round(last, 2)
             sl = round(min(vwap, min(ctx["lows3"])) * 0.998, 2)
-            if entry - sl < entry * 0.004:
-                sl = round(entry * 0.996, 2)
+            if entry - sl < entry * 0.005:      # wider net = fewer instant stop-outs
+                sl = round(entry * 0.995, 2)
             R = entry - sl
             t1 = round(entry + 1.0 * R, 2)
             t2 = round(min(entry + 1.8 * R, entry * 1.035), 2)
             qty = max(1, int(cap // entry)) if cap else 1
             why = "session-high BREAKOUT with volume" if breakout else "pullback HELD VWAP and turned up"
             pos.update(stage="HOLD", entry=entry, sl=sl, t1=t1, t2=t2, qty=qty,
-                       half=False, res=None, sig=why, hw=entry)
+                       half=False, res=None, sig=why, hw=entry, ent_mins=t, vr_streak=0)
             ev.append(("buy", f"{nm} · BUY NOW ₹{entry:,.2f} · qty≈{qty} (₹{cap:,})\n"
                               f"🛑 SL ₹{sl:,.2f} · 🎯 T1 ₹{t1:,.2f} (+{(t1/entry-1)*100:.1f}%) sell HALF · "
                               f"🎯 T2 ₹{t2:,.2f} (+{(t2/entry-1)*100:.1f}%) sell rest\n"
@@ -1716,8 +1717,8 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
     if pos["stage"] == "HOLD":
         pos["hw"] = max(pos.get("hw") or pos["entry"], last)
         pnl = (last / pos["entry"] - 1) * 100
+        grace = (t - pos.get("ent_mins", t)) < 15          # first 15 min: give the trade air
         if last <= pos["sl"]:
-            res = pnl if not pos["half"] else (pos["t1"] / pos["entry"] - 1) * 100 / 2
             pos.update(stage="DONE", res=round(pnl, 2))
             ev.append(("sl", f"{nm} · 🛑 STOPLOSS ₹{pos['sl']:,.2f} hit — EXIT ALL NOW. "
                              f"Result {pnl:+.1f}% · small loss = capital saved"
@@ -1733,13 +1734,17 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
         elif t >= 15 * 60 + 5:
             pos.update(stage="DONE", res=round(pnl, 2))
             ev.append(("eod", f"{nm} · 🔚 SQUARE OFF NOW — market closing in minutes. {pnl:+.1f}%"))
-        elif last < vwap * 0.9975 and ctx["red_last"]:
-            pos.update(stage="DONE", res=round(pnl, 2))
-            ev.append(("exit", f"{nm} · ⚠️ EXIT ALL — fell below VWAP & momentum dead. {pnl:+.1f}%"))
-        elif t >= 11 * 60 + 30 and -0.3 < pnl < 0.4:
-            pos.update(stage="DONE", res=round(pnl, 2))
-            ev.append(("time", f"{nm} · ⏰ TIME EXIT — going nowhere ({pnl:+.1f}%). "
-                               f"Rotate the money to a live mover"))
+        else:
+            weak = (last < vwap * 0.9975 and ctx["red_last"])
+            pos["vr_streak"] = (pos.get("vr_streak", 0) + 1) if weak else 0
+            deep = last < vwap * 0.995
+            if (not grace) and (deep or pos["vr_streak"] >= 2):
+                pos.update(stage="DONE", res=round(pnl, 2))
+                ev.append(("exit", f"{nm} · ⚠️ EXIT ALL — fell below VWAP & momentum dead. {pnl:+.1f}%"))
+            elif (not grace) and t >= 11 * 60 + 30 and -0.3 < pnl < 0.4:
+                pos.update(stage="DONE", res=round(pnl, 2))
+                ev.append(("time", f"{nm} · ⏰ TIME EXIT — going nowhere ({pnl:+.1f}%). "
+                                   f"Rotate the money to a live mover"))
     return ev
 
 
@@ -1779,6 +1784,67 @@ def coach_action_text(sym, pos, ctx):
     if ctx["n"] < 3:
         return ("⏳ WAIT — first candles forming (act from 9:25)", "#64748b")
     return ("👀 WATCHING — coach will say BUY the moment the candle confirms", "#93c5fd")
+
+
+def fresh_picks(movers):
+    """Only the FRESH climbs with profit room: just started (day% small),
+    still near VWAP (not stretched), slope up. The already-ran ones are
+    exactly the ones that pull back — we skip them on purpose."""
+    ranked = [m for m in movers if m.get("state") in ("CLIMBING", "FORMING")]
+    fresh = [m for m in ranked if mv_room_ok(m) and m.get("slope1h", 0) > 0]
+    return fresh, max(len(ranked) - len(fresh), 0)
+
+
+def render_fresh_tab(ss, mst_s):
+    st.markdown(_H("""<div style='background:linear-gradient(135deg,#14532d,#052e16);border-radius:18px;
+    padding:18px 22px;margin-bottom:14px;'>
+    <div style='color:white;font-size:20px;font-weight:900;'>🟢 FRESH BUYS — just starting, room left</div>
+    <div style='color:#bbf7d0;font-size:12.5px;margin-top:6px;line-height:1.8;'>
+    Only climbs that <b>JUST started</b>: day change small · price still near VWAP · slope turning up.
+    The stocks that already ran keep looking tempting — but they are the ones that pull back and eat your money.
+    This board hides them on purpose. Builds on the ⚡ radar (same scan, zero extra load).</div></div>"""),
+        unsafe_allow_html=True)
+    movers = ss.get("mv") or []
+    if not movers:
+        st.info("Start the ⚡ Live Movers radar first — this board fills from the same scan "
+                "(no extra CPU). Then come back here.")
+        return
+    fresh, skipped = fresh_picks(movers)
+    a1, a2, a3 = st.columns(3)
+    with a1: st.metric("🟢 Fresh — buyable", len(fresh), "just started · room left")
+    with a2: st.metric("🚫 Skipped — already ran", skipped, "these pull back — avoid")
+    with a3: st.metric("🕒 Scan", ss.get("mv_ts_str") or "—")
+    if not fresh:
+        st.info("No FRESH climbs right now. The ones running have already stretched — buying them "
+                "is how you become the exit liquidity. Wait; this board refills every radar scan. "
+                f"({skipped} stretched climb(s) hidden)")
+        return
+    names = ss.get("mv_names") or {}
+    for m in fresh[:40]:
+        last, vw = m["last"], m.get("vwap") or m["last"]
+        buy = round(min(last, vw * 1.001), 2)
+        sl = round(min(vw * 0.995, buy * 0.995), 2)
+        R = max(buy - sl, buy * 0.004)
+        t1 = round(buy + 1.2 * R, 2)
+        t2 = round(min(buy + 2.0 * R, buy * 1.035), 2)
+        st.markdown(_H(
+            f"<div style='background:#0f172a;border:1px solid #1e293b;border-left:3px solid #22c55e;"
+            f"border-radius:12px;padding:10px 14px;margin:6px 0;'>"
+            f"<div style='display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;'>"
+            f"<b style='color:#f1f5f9;font-size:14px;'>{names.get(m['sym'], m['sym'].replace('.NS',''))}"
+            f" <span style='color:#64748b;font-size:11px;'>{m['sym'].replace('.NS','')}</span></b>"
+            f"<span style='color:#e2e8f0;font-family:monospace;font-weight:800;'>₹{last:,.2f} "
+            f"<span style='color:#22c55e;font-size:11px;'>{m['chg_day']:+.2f}%</span></span></div>"
+            f"<div style='color:#94a3b8;font-size:11px;margin-top:3px;'>"
+            f"{'⚡ CLIMBING' if m['state']=='CLIMBING' else '🌱 FORMING'} · score {m['climb']:.0f} · "
+            f"VWAP ₹{vw:,.2f} (<b style='color:#4ade80;'>{m.get('ext',0):+.2f}% above</b> = room left) · "
+            f"1h {m['slope1h']:+.2f}%</div>"
+            f"<div style='color:#e2e8f0;font-size:12px;font-family:monospace;margin-top:5px;'>"
+            f"🎯 BUY dip ≤ <b style='color:#4ade80;'>₹{buy:,.2f}</b> · 🛑 SL <b style='color:#f87171;'>₹{sl:,.2f}</b> · "
+            f"💰 T1 <b style='color:#fbbf24;'>₹{t1:,.2f}</b> · ✅ T2 <b style='color:#22c55e;'>₹{t2:,.2f}</b></div></div>"),
+            unsafe_allow_html=True)
+    st.caption("Plan maths: BUY at the dip near VWAP · SL 0.5% under VWAP · T1 +1.2R sell half · T2 +2R (max +3.5%). "
+               "If price runs away without the dip — let it go, the next fresh one comes.")
 
 
 def render_coach_tab(ss, mst_s):
@@ -2028,7 +2094,15 @@ def up_activate(code):
         exp_in = float(r.get("expires_in") or (r.get("data") or {}).get("expires_in") or 86400)
         if not tok:
             return False, "Upstox did not return a token — check Key/Secret/Redirect URI."
-        d["token"], d["exp"] = tok, time.time() + min(exp_in, 86400)
+        try:   # Upstox says "expires_in 86400" but REALLY dies at the next 3:30 AM IST —
+            import calendar as _cal          # cap it so the box never shows a fake 🟢
+            _n = now_ist().replace(hour=3, minute=30, second=0, microsecond=0)
+            if _n <= now_ist():
+                _n += _dtd(days=1)
+            _cap = _cal.timegm(_n.timetuple()) - 19800   # next 3:30 AM IST → epoch
+        except Exception:
+            _cap = time.time() + 86400
+        d["token"], d["exp"] = tok, min(time.time() + min(exp_in, 86400), _cap)
         _json.dump(d, open(up_file(), "w", encoding="utf-8"))
         return True, "LIVE"
     except urllib.error.HTTPError as e:
@@ -3853,15 +3927,24 @@ def compute_movers(got):
             state = ("CLIMBING" if (climb >= 68 and chg_day > 0 and slope1h > 0)
                      else "FORMING" if (climb >= 57 and chg_day > 0 and slope1h > -0.05)
                      else "WATCH" if climb >= 58 else "—")
+            _vw = float((cl * vol).sum() / vol.sum()) if vol.sum() > 0 else last
             out.append({"sym": sym, "last": round(last, 2), "chg_day": round(chg_day, 2),
                         "green": int(round(green * 100)), "slope1h": round(float(slope1h), 2),
                         "pos": int(round(pos * 100)), "vr": round(float(vr), 2),
                         "climb": climb, "steady": steady, "state": state,
-                        "hi": round(hi, 2), "lo": round(lo, 2)})
+                        "hi": round(hi, 2), "lo": round(lo, 2),
+                        "vwap": round(_vw, 2), "ext": round((last / _vw - 1) * 100, 2)})
         except Exception:
             continue
     out.sort(key=lambda m: -m["climb"])
     return out
+
+
+def mv_room_ok(m):
+    """True if the climb still has PROFIT ROOM: not stretched above VWAP and
+    not already up too much today — the buyable kind, not the topped-out kind
+    (those keep 'climbing' but pull back and eat your money)."""
+    return (m.get("ext", 9.9) <= 1.2 and 0 < m.get("chg_day", 9) <= 3.0)
 
 
 def _mv_row(i, m, name, delta=0):
@@ -4007,13 +4090,15 @@ def live_movers_tab(ss, mst_s):
         ss["mv_ranks"] = {mm["sym"]: r for r, mm in enumerate(movers, 1)}
         alerts = ss.get("mv_alerts") or []
         if mst_s == "open":   # 🔕 after close: silent review — never re-announce old climbs
-            for m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)][:6]:
+            for m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)
+                      and mv_room_ok(x)][:6]:
                 alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": m["sym"],
                                   "name": names.get(m["sym"], m["sym"].replace(".NS", "")),
                                   "txt": (f"🌱 FORMING a climb (early) · {m['chg_day']:+.2f}% today · "
                                           f"{m['green']}% green · 1h {m['slope1h']:+.2f}% · ₹{m['last']:,.2f} · "
                                           f"🎯 buy the DIP ~₹{m['last'] * 0.99:,.2f}, don't chase up")})
-            for m in [x for x in movers if x["sym"] in (now_climb - prev_climb)]:
+            for m in [x for x in movers if x["sym"] in (now_climb - prev_climb)
+                      and mv_room_ok(x)]:
                 alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": m["sym"],
                                   "name": names.get(m["sym"], m["sym"].replace(".NS", "")),
                                   "txt": (f"started climbing · {m['chg_day']:+.2f}% today · {m['green']}% green candles · "
@@ -4023,13 +4108,15 @@ def live_movers_tab(ss, mst_s):
         ss["mv_prev"] = sorted(now_climb)
         ss["mv_prevform"] = sorted(now_form | now_climb)
         if mst_s == "open":   # 🔕 Telegram/toasts only while the market is LIVE
-            for _m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)][:3]:
+            for _m in [x for x in movers if x["sym"] in (now_form - prev_form - now_climb)
+                       and mv_room_ok(x)][:3]:
                 tg_send(f"🌱 {names.get(_m['sym'], _m['sym'].replace('.NS',''))} FORMING A CLIMB (early)\n"
                         f"{_m['chg_day']:+.2f}% today · {_m['green']}% green · 1h {_m['slope1h']:+.2f}% · "
                         f"vol {_m['vr']:.1f}x\nNow ₹{_m['last']:,.2f}\n"
                         f"🎯 WAIT for the dip ~₹{_m['last'] * 0.99:,.2f} (−1%) to buy — don't chase up\n"
                         f"⚠️ Already jumped away? Let it go — the next one will come")
-            for _m in [x for x in movers if x["sym"] in (now_climb - prev_climb)][:5]:
+            for _m in [x for x in movers if x["sym"] in (now_climb - prev_climb)
+                       and mv_room_ok(x)][:5]:
                 tg_send(f"⚡ {names.get(_m['sym'], _m['sym'].replace('.NS',''))} STARTED CLIMBING\n"
                         f"{_m['chg_day']:+.2f}% today · {_m['green']}% green candles · "
                         f"1h {_m['slope1h']:+.2f}% · vol {_m['vr']:.1f}x\n"
@@ -5485,9 +5572,10 @@ def main():
     <div style='color:#fbbf24;font-weight:700;font-size:12px;'>Focus</div><div style='color:white;font-weight:900;font-size:16px;'>Uptrend + Levels</div></div>
     </div></div></div>"""), unsafe_allow_html=True)
 
-    tab_dash, tab_mv, tab_bnc, tab_co, tab_cb, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
-        ["🔴 Live Dashboard (500)", "⚡ Live Movers (Now)", "🚀 Uptrend Starting", "🎯 Trade Coach (Timing)",
-         "🎯 Combo Picks", "📊 Analyze Stock", "🔍 Scanner", "🔎 Search Any Stock", "📓 Journal", "🌙 EOD Review", "📚 Trading Guide"])
+    tab_dash, tab_mv, tab_fr, tab_bnc, tab_co, tab_cb, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
+        ["🔴 Live Dashboard (500)", "⚡ Live Movers (Now)", "🟢 Fresh Buys (Room)", "🚀 Uptrend Starting",
+         "🎯 Trade Coach (Timing)", "🎯 Combo Picks", "📊 Analyze Stock", "🔍 Scanner", "🔎 Search Any Stock",
+         "📓 Journal", "🌙 EOD Review", "📚 Trading Guide"])
 
     # ── TAB 0: LIVE DASHBOARD (the common board) ──
     with tab_dash:
@@ -5506,6 +5594,13 @@ def main():
             live_movers_tab(ss, mst_s)
         except Exception as e:
             st.warning(f"⚠️ Live Movers problem: {type(e).__name__}: {e}")
+
+    # ── TAB: FRESH BUYS (room left) ──
+    with tab_fr:
+        try:
+            render_fresh_tab(ss, mst_s)
+        except Exception as e:
+            st.warning(f"⚠️ Fresh board problem: {type(e).__name__}: {e}")
 
     # ── TAB: UPTREND STARTING (support bounces) ──
     with tab_bnc:
