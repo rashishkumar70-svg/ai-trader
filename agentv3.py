@@ -1586,8 +1586,8 @@ def _esc(s):
 
 
 def _tg_post(token, cid, text, html, buttons=None):
-    """One raw Telegram post. html=True adds parse_mode HTML;
-    buttons = inline keyboard rows [[{text,url},…],…]."""
+    """One raw Telegram post → returns message_id (None if unknown).
+    html=True adds parse_mode HTML; buttons = inline keyboard rows."""
     payload = {"chat_id": cid, "text": text[:1000], "disable_web_page_preview": True}
     if html:
         payload["parse_mode"] = "HTML"
@@ -1597,7 +1597,68 @@ def _tg_post(token, cid, text, html, buttons=None):
         f"https://api.telegram.org/bot{token}/sendMessage",
         data=_json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json"})
-    urllib.request.urlopen(req, timeout=6).read()
+    r = _json.loads(urllib.request.urlopen(req, timeout=6).read().decode("utf-8"))
+    return ((r.get("result") or {}).get("message_id"))
+
+
+_TG_SENT = {"day": None, "items": []}     # today's sent messages (for the EOD cleaner)
+
+
+def _tg_track(cid, mid):
+    """Remember a sent message so the end-of-day cleaner can delete it after close."""
+    try:
+        if not mid:
+            return
+        _today = now_ist().strftime("%Y-%m-%d")
+        if _TG_SENT.get("day") != _today:
+            _TG_SENT.update(day=_today, items=[])
+        _TG_SENT["items"].append([str(cid), int(mid)])
+        _json.dump(_TG_SENT, open(f"tg_sent_{_ukey()}.json", "w", encoding="utf-8"))
+    except Exception:
+        pass
+
+
+def tg_daily_cleanup():
+    """🧹 After close (15:35+): delete today's alert messages from every chat —
+    the phone stays clean for tomorrow. Runs once per day; report cards and
+    manual tests are KEPT. Telegram only allows deleting messages < 48h old."""
+    try:
+        n = now_ist()
+        if n.weekday() >= 5:
+            return 0
+        if not (n.hour > 15 or (n.hour == 15 and n.minute >= 35)):
+            return 0
+        fn = f"tg_sent_{_ukey()}.json"
+        try:
+            d = _json.load(open(fn, encoding="utf-8"))
+        except Exception:
+            d = {}
+        today = n.strftime("%Y-%m-%d")
+        if d.get("cleanup_day") == today:
+            return 0
+        cfg = tg_load()
+        if not cfg.get("token"):
+            return 0
+        deleted = 0
+        for cid, mid in (d.get("items") or [])[:300]:
+            try:
+                req = urllib.request.Request(
+                    f"https://api.telegram.org/bot{cfg['token']}/deleteMessage",
+                    data=_json.dumps({"chat_id": cid, "message_id": int(mid)}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"})
+                urllib.request.urlopen(req, timeout=5).read()
+                deleted += 1
+                time.sleep(0.05)
+            except Exception:
+                continue      # already gone / too old — skip quietly
+        _TG_SENT.update(day=today, items=[])
+        try:
+            _json.dump({"cleanup_day": today, "items": []}, open(fn, "w", encoding="utf-8"))
+        except Exception:
+            pass
+        return deleted
+    except Exception:
+        return 0
 
 
 def stock_buttons(sym):
@@ -1609,15 +1670,18 @@ def stock_buttons(sym):
     ]]
 
 
-def tg_send_one(cid, text, _retry=True, buttons=None):
+def tg_send_one(cid, text, _retry=True, buttons=None, keep=False):
     """Send to ONE chat id in RICH format (bold · boxed prices · italics,
-    optional one-tap buttons). If Telegram rejects the formatting,
-    auto-resends plain — alerts never die."""
+    optional one-tap buttons). keep=True survives the end-of-day cleanup
+    (report cards, manual tests); everything else auto-deletes after close.
+    If Telegram rejects the formatting, auto-resends plain — alerts never die."""
     cfg = tg_load()
     if not cfg.get("token"):
         return False, "no token configured"
     try:
-        _tg_post(cfg["token"], cid, text, html=_retry, buttons=buttons)
+        mid = _tg_post(cfg["token"], cid, text, html=_retry, buttons=buttons)
+        if not keep:
+            _tg_track(cid, mid)
         return True, ""
     except urllib.error.HTTPError as e:
         if e.code == 400 and _retry:      # bad formatting → strip tags, plain resend
@@ -1626,8 +1690,10 @@ def tg_send_one(cid, text, _retry=True, buttons=None):
             except Exception:
                 pass
             try:
-                _tg_post(cfg["token"], cid, re.sub(r"<[^>]+>", "", text), html=False,
-                         buttons=buttons)
+                mid = _tg_post(cfg["token"], cid, re.sub(r"<[^>]+>", "", text), html=False,
+                               buttons=buttons)
+                if not keep:
+                    _tg_track(cid, mid)
                 return True, ""
             except Exception:
                 pass
@@ -1640,16 +1706,16 @@ def tg_send_one(cid, text, _retry=True, buttons=None):
         return False, f"{type(e).__name__}: {e}"[:110]
 
 
-def tg_send(text, buttons=None):
+def tg_send(text, buttons=None, keep=False):
     """Send one message to EVERY configured chat — comma-separated IDs let you share
-    alerts with brother/family. Optional one-tap buttons. Silently skips if not
-    configured; never crashes a scan."""
+    alerts with brother/family. Optional one-tap buttons; keep=True survives the
+    end-of-day cleanup. Silently skips if not configured; never crashes a scan."""
     cfg = tg_load()
     if not cfg.get("token") or not cfg.get("chat"):
         return False
     sent_any = False
     for cid in [c.strip() for c in str(cfg["chat"]).split(",") if c.strip()]:
-        ok, _r = tg_send_one(cid, text, buttons=buttons)
+        ok, _r = tg_send_one(cid, text, buttons=buttons, keep=keep)
         sent_any = sent_any or ok
     return sent_any
 
@@ -1873,7 +1939,9 @@ def coach_collect_log(posd):
 def coach_eod_summary(log, cap):
     n = len(log)
     if not n:
-        return ""
+        return (f"\U0001F4CA <b>COACH REPORT CARD \u00b7 {now_ist().strftime('%a %d %b')}</b>\n"
+                "\U0001F9ED No completed trades today \u2014 no valid setups triggered.\n"
+                "\U0001F4B0 Capital preserved \u2014 patience is a position too.")
     wins = [t for t in log if (t.get("res") or 0) > 0]
     avg = sum(t.get("res") or 0 for t in log) / n
     rupees = sum((t.get("res") or 0) * cap / 100 for t in log)
@@ -2135,16 +2203,25 @@ def render_coach_tab(ss, mst_s):
                        f"(auto-halved on soft days)\n"
                        f"<i>\u26A1 Momentum till 12:00 \u2192 \U0001F6E1\uFE0F support 12:00\u201314:30 \u2192 \U0001F51A square-off 15:05</i>"):
                 rt_save("co", plan_day=_today)
-        if (mst_s == "open" and 15 * 60 + 10 <= _t_now <= 15 * 60 + 30
-                and _co_rt.get("eod_day") != _today and ss.get("co_log")):
-            if tg_send(coach_eod_summary(ss["co_log"], int(ss.get("co_cap") or COACH_CAP_DEFAULT))):
-                rt_save("co", eod_day=_today)
         ss["co_feed"] = feed[:60]
         ss["co_last"] = time.time()
         ss["co_ts"] = now_ist().strftime("%d %b %Y · %H:%M")
         rt_save("co", on=True, watch=ss["co_watch"], names=ss["co_names"], pos=ss["co_pos"],
                 cap=ss.get("co_cap"), feed=ss["co_feed"], last_scan=ss["co_last"], ts_str=ss["co_ts"],
                 log=ss.get("co_log") or [])
+
+    # 📊 EVENING REPORT CARD — automatic, once/day after 15:10, survives cleanup
+    try:
+        _t_eod = now_ist().hour * 60 + now_ist().minute
+        _eod_day = now_ist().strftime("%Y-%m-%d")
+        if (ss.get("co_on") and _t_eod >= 15 * 60 + 10
+                and (rt_load().get("co") or {}).get("eod_day") != _eod_day):
+            if tg_send(coach_eod_summary(ss.get("co_log") or [],
+                                         int(ss.get("co_cap") or COACH_CAP_DEFAULT)),
+                       keep=True):
+                rt_save("co", eod_day=_eod_day)
+    except Exception:
+        pass
 
     ctxs = ss.get("co_ctx") or {}
     posd = ss.get("co_pos") or {}
@@ -2524,7 +2601,8 @@ def tg_settings_ui(tag=""):
         with b2:
             if st.button("📨 Send test message", key=f"tg_test{tag}", **STRETCH):
                 if tg_send("\u2705 <b>AI Trader Pro \u2014 Telegram alerts are working!</b>\n"
-                           "You will get \u26A1 climb and \U0001F680 support-bounce alerts here."):
+                           "You will get \u26A1 climb and \U0001F680 support-bounce alerts here.",
+                           keep=True):
                     st.success("Sent! Check your Telegram app. 🎉")
                 else:
                     st.error("Couldn't send — press 💾 Save first, and double-check token & chat ID.")
@@ -2543,7 +2621,7 @@ def tg_settings_ui(tag=""):
                     st.error(f"Bot token problem: {e}")
                 for cid in [c.strip() for c in str(cfg.get("chat", "")).split(",") if c.strip()]:
                     ok, why = tg_send_one(cid, "🔍 AI Trader Pro test — if you can read this, "
-                                               "Telegram alerts to this chat work!")
+                                               "Telegram alerts to this chat work!", keep=True)
                     if ok:
                         st.success(f"✅ {cid} — DELIVERED")
                     else:
@@ -2554,7 +2632,8 @@ def tg_settings_ui(tag=""):
                 st.success("Reset ✓ — alerts now go to you + brother again.")
         st.caption("Each person who wants alerts: open the bot link (t.me/…), press START, then get their Id "
                    "from @userinfobot. Paste IDs separated by commas — e.g. 123456789,987654321 — and everyone "
-                   "gets every alert. Stored ONLY inside your app instance — never share publicly.")
+                   "gets every alert. Stored ONLY inside your app instance — never share publicly. "
+                   "Daily alerts auto-delete after close (15:35) — only report cards stay.")
 
 
 def rt_clear(engine):
@@ -5824,6 +5903,7 @@ def main():
         if k not in ss:
             ss[k] = v
     mst_s, ml, mm = mkt_status()
+    tg_daily_cleanup()   # 🧹 after close: clear today's alert messages from the phones
     tg_online_ping()   # 🔔 "app is online" Telegram message (max 1 per 30 min)
     mclr = "#22c55e" if mst_s == "open" else "#f59e0b" if mst_s == "pre" else "#ef4444"
 
