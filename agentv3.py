@@ -32,7 +32,7 @@ MAX_PRICE = 600.0
 
 # ── 🔔 Telegram (owner's bot — preconfigured; can be overridden in the app) ──
 TG_DEFAULT_TOKEN = "8725365776:AAENJn_QG8qYEyWE7sUu_DiaH_qgsAA_JLY"
-TG_DEFAULT_CHAT = "8585402983,1996619549"   # Ashish + brother
+TG_DEFAULT_CHAT = "8585402983,1996619549,6765588648"   # Ashish + brother
 
 
 def _H(html):
