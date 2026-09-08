@@ -1834,6 +1834,7 @@ def render_coach_tab(ss, mst_s):
             st.rerun()
         st.caption("Best routine: ~9:05 run the morning scan (⚡/🚀) → 9:20 come here and START. "
                    "The coach does the watching — you do the clicking in your broker app.")
+        up_settings_ui("_co")
         return
 
     if ss.get("_co_resumed"):
@@ -1938,6 +1939,264 @@ def render_coach_tab(ss, mst_s):
         ⏰ <b style='color:#93c5fd;'>TIME EXIT</b> — after 11:30 the trade goes nowhere (−0.3%…+0.4%) → rotate.<br>
         🔚 <b style='color:#93c5fd;'>SQUARE OFF</b> — 15:05, intraday isn't carried overnight.<br>
         Refresh is ~90 s on free Yahoo data — good enough for 5-min candle timing.</div>""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════
+# 📡 UPSTOX LIVE QUOTES — optional real-time layer over Yahoo
+#   Yahoo stays the backbone (history + charts + scans). When an Upstox
+#   token is active, every scan cycle ALSO pulls tick-fresh last-traded
+#   prices (up to 500 per request) and splices them onto the newest
+#   candle — states, alerts & coach instructions react in seconds.
+#   Anything fails / no token → silent Yahoo fallback. Zero crash risk.
+#   Credentials live ONLY inside this app instance — never in GitHub.
+# ══════════════════════════════════════════════════════════════════
+UP_REDIRECT_DEFAULT = "https://api.upstox.com"
+UP_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+         "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
+_UP_LTP = {}        # {sym: (price, ts)} in-memory live-price cache
+_UP_KEYS = {"d": None, "m": {}}   # daily instrument-key map, in memory
+
+
+def up_file():
+    return f"upstox_{_ukey()}.json"
+
+
+def up_load():
+    d = {"key": "", "secret": "", "redirect": UP_REDIRECT_DEFAULT, "token": "", "exp": 0}
+    try:
+        if _os.path.exists(up_file()):
+            j = _json.load(open(up_file(), encoding="utf-8"))
+            if isinstance(j, dict):
+                for k in d:
+                    if j.get(k) is not None:
+                        d[k] = j[k]
+    except Exception:
+        pass
+    return d
+
+
+def up_save(key, secret, redirect=None):
+    d = up_load()
+    d.update({"key": key.strip(), "secret": secret.strip(),
+              "redirect": (redirect or d.get("redirect") or UP_REDIRECT_DEFAULT).strip()})
+    if not (key.strip() and secret.strip()):
+        d["token"], d["exp"] = "", 0
+    try:
+        _json.dump(d, open(up_file(), "w", encoding="utf-8"))
+        return True
+    except Exception:
+        return False
+
+
+def up_token_valid():
+    try:
+        d = up_load()
+        return bool(d.get("token")) and time.time() < float(d.get("exp") or 0) - 120
+    except Exception:
+        return False
+
+
+def up_login_url():
+    import urllib.parse as _upp
+    d = up_load()
+    q = _upp.urlencode({"client_id": d["key"], "redirect_uri": d["redirect"],
+                        "response_type": "code"})
+    return f"https://api.upstox.com/v2/login/authorization/dialog?{q}"
+
+
+def up_activate(code):
+    """Exchange the one-time login code for an all-day access token
+    (Upstox tokens expire at 3:30 AM IST — quick re-login each morning)."""
+    d = up_load()
+    code = (code or "").strip().split("code=")[-1].split("&")[0].strip()
+    if not (d.get("key") and d.get("secret")):
+        return False, "Save API Key + Secret first."
+    if not code:
+        return False, "Paste the code from the browser address bar first."
+    try:
+        import urllib.parse as _up
+        req = urllib.request.Request(
+            "https://api.upstox.com/v2/login/authorization/token",
+            data=_up.urlencode({"code": code, "client_id": d["key"], "client_secret": d["secret"],
+                                "redirect_uri": d["redirect"],
+                                "grant_type": "authorization_code"}).encode("utf-8"),
+            headers={"Content-Type": "application/x-www-form-urlencoded",
+                     "Accept": "application/json", "User-Agent": UP_UA,
+                     "Accept-Language": "en-US,en;q=0.9"})
+        r = _json.loads(urllib.request.urlopen(req, timeout=15).read().decode("utf-8"))
+        tok = r.get("access_token") or (r.get("data") or {}).get("access_token") or ""
+        exp_in = float(r.get("expires_in") or (r.get("data") or {}).get("expires_in") or 86400)
+        if not tok:
+            return False, "Upstox did not return a token — check Key/Secret/Redirect URI."
+        d["token"], d["exp"] = tok, time.time() + min(exp_in, 86400)
+        _json.dump(d, open(up_file(), "w", encoding="utf-8"))
+        return True, "LIVE"
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read().decode()
+            msg = ""
+            if "cloudflare" in body.lower() or "error 1010" in body.lower():
+                return False, "Upstox firewall blocked the request — press Activate again."
+            try:
+                msg = (_json.loads(body).get("errors") or [{}])[0].get("message", "")[:110]
+            except Exception:
+                pass
+        except Exception:
+            msg = ""
+        if "client_id" in (msg or "").lower() or "client_secret" in (msg or "").lower():
+            return False, ("Upstox says the API Key or SECRET is wrong. Go to "
+                           "account.upstox.com/developer/apps → use the COPY button on both "
+                           "(don't type by hand) → paste here → 💾 Save → fresh login code → Activate.")
+        if "redirect" in (msg or "").lower():
+            return False, ("Redirect URI mismatch — it must EXACTLY match the Redirect URI field "
+                           "of your Upstox app (check for missing 's' in https, trailing '/').")
+        if "segment" in (msg or "").lower():
+            return False, ("Your Upstox account segments are not active — reactivate from the "
+                           "Upstox app/web (Profile → Reactivate), then login again.")
+        return False, (f"Upstox rejected it: {msg or 'check the code'}. "
+                       f"Codes expire in minutes — login again & paste a fresh one.")
+    except Exception as e:
+        return False, f"Network issue — try again ({type(e).__name__})."
+
+
+def up_keys_map(syms):
+    """sym.NS → Upstox instrument_key via the instrument master (cached 1×/day)."""
+    today = now_ist().strftime("%Y-%m-%d")
+    fn = f"upstox_keys_{_ukey()}.json"
+    if _UP_KEYS.get("d") != today:
+        try:
+            if _os.path.exists(fn):
+                j = _json.load(open(fn, encoding="utf-8"))
+                if j.get("d") == today:
+                    _UP_KEYS.update({"d": today, "m": j.get("m") or {}})
+        except Exception:
+            pass
+    want = {s.replace(".NS", ""): s for s in syms}
+    if not set(want).issubset(set(_UP_KEYS["m"])):
+        try:
+            import gzip as _gz
+            rq = urllib.request.Request(
+                "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz",
+                headers={"User-Agent": UP_UA, "Accept": "*/*"})
+            raw = _gz.decompress(urllib.request.urlopen(rq, timeout=45).read())
+            mm = {}
+            for r in _json.loads(raw):
+                if r.get("segment") == "NSE_EQ" and r.get("trading_symbol"):
+                    mm[r["trading_symbol"]] = r.get("instrument_key") or ""
+            _UP_KEYS.update({"d": today, "m": mm})
+            try:
+                _json.dump({"d": today, "m": mm}, open(fn, "w", encoding="utf-8"))
+            except Exception:
+                pass
+        except Exception:
+            pass
+    return {v: _UP_KEYS["m"].get(k, "") for k, v in want.items() if _UP_KEYS["m"].get(k)}
+
+
+def up_prefetch(syms):
+    """1 batched call per ~250 symbols → tick-fresh prices into _UP_LTP.
+    No token / any failure → returns False, scans stay on Yahoo untouched."""
+    try:
+        if not up_token_valid() or not syms:
+            return False
+        d = up_load()
+        kmap = up_keys_map(list(syms))
+        if not kmap:
+            return False
+        rev = {k: s for s, k in kmap.items()}
+        vals = list(kmap.values())
+        got_n = 0
+        for i in range(0, len(vals), 250):
+            req = urllib.request.Request(
+                "https://api.upstox.com/v2/market-quote/ltp?instrument_key="
+                + ",".join(vals[i:i + 250]),
+                headers={"Accept": "application/json", "User-Agent": UP_UA,
+                         "Authorization": f"Bearer {d['token']}"})
+            data = (_json.loads(urllib.request.urlopen(req, timeout=8)
+                                .read().decode("utf-8")) or {}).get("data") or {}
+            now = time.time()
+            for k, v in data.items():
+                s = rev.get(k)
+                px = v.get("last_price") if isinstance(v, dict) else None
+                if s and px:
+                    _UP_LTP[s] = (float(px), now)
+                    got_n += 1
+        return got_n > 0
+    except Exception:
+        return False
+
+
+def up_patch_df(sym, df):
+    """Splice the tick-fresh LTP onto the newest candle (Close; High/Low if broken)."""
+    try:
+        hit = _UP_LTP.get(sym)
+        if not hit or time.time() - hit[1] > 300 or df is None or len(df) == 0:
+            return df
+        px = float(hit[0])
+        i = len(df) - 1
+        df.iloc[i, df.columns.get_loc("Close")] = px
+        if px > float(df.iloc[i]["High"]):
+            df.iloc[i, df.columns.get_loc("High")] = px
+        if px < float(df.iloc[i]["Low"]):
+            df.iloc[i, df.columns.get_loc("Low")] = px
+    except Exception:
+        pass
+    return df
+
+
+def up_settings_ui(tag=""):
+    with st.expander("📡 UPSTOX LIVE QUOTES (optional — real-time prices)"):
+        d = up_load()
+        c = up_token_valid()
+        if c:
+            t = time.gmtime(float(d["exp"]) + 19800)
+            st.markdown(f"<div style='background:#052e16;border:1px solid #22c55e;border-radius:10px;"
+                        f"padding:10px 14px;color:#bbf7d0;font-size:13px;'>🟢 <b>LIVE — real-time quotes ON</b> "
+                        f"· token valid till {time.strftime('%H:%M', t)} IST (the 3:30 AM reset is Upstox's "
+                        f"rule — quick re-login next morning).</div>", unsafe_allow_html=True)
+        elif d.get("key"):
+            st.markdown("<div style='background:#422006;border:1px solid #f59e0b;border-radius:10px;"
+                        "padding:10px 14px;color:#fde68a;font-size:13px;'>🟡 <b>Keys saved — token not active "
+                        "today.</b> Do the 30-second login below (every morning). Scans run fine on Yahoo "
+                        "meanwhile.</div>", unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='background:#1e293b;border:1px solid #475569;border-radius:10px;"
+                        "padding:10px 14px;color:#cbd5e1;font-size:13px;'>⚪ <b>OFF — using Yahoo "
+                        "(works fine).</b> Add your free Upstox Basic keys for tick-fresh prices: "
+                        "account.upstox.com/developer/apps</div>", unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            k = st.text_input("Upstox API Key", value=d.get("key", ""), key=f"up_k{tag}")
+        with c2:
+            sc = st.text_input("Upstox API Secret", value=d.get("secret", ""), type="password",
+                               key=f"up_s{tag}")
+        rd = st.text_input("Redirect URI (must EXACTLY match your Upstox app)", value=d.get("redirect", ""),
+                           key=f"up_r{tag}")
+        if st.button("💾 Save Upstox keys", key=f"up_save{tag}", **STRETCH):
+            up_save(k, sc, rd)
+            st.success("Saved ✓ — stored ONLY inside this app instance (never in the GitHub file).")
+        if k.strip() and sc.strip():
+            st.markdown(f"🔐 **Step 1 — [open the Upstox login link]({up_login_url()})** (new tab → login with "
+                        f"mobile+PIN → approve). The browser then lands on a URL containing <code>?code=…</code> "
+                        f"— copy that code.", unsafe_allow_html=True)
+            if st.button("🔑 I have the code — let me paste it", key=f"up_sh{tag}"):
+                st.session_state[f"up_show{tag}"] = True
+            if st.session_state.get(f"up_show{tag}"):
+                code = st.text_input("Step 2 — paste the code from the address bar", key=f"up_c{tag}",
+                                     placeholder="e.g. 7c9f2e1a…")
+                if st.button("🚀 Activate live quotes", key=f"up_go{tag}", **STRETCH):
+                    ok, msg = up_activate(code)
+                    if ok:
+                        st.success("🟢 LIVE! Real-time quotes are ON for today — every scan and coach "
+                                   "instruction now uses tick-fresh prices.")
+                        try:
+                            st.toast("📡 Upstox live quotes activated")
+                        except Exception:
+                            pass
+                    else:
+                        st.error(msg)
+        st.caption("Free Upstox Basic plan · quotes only · no orders · no funds. Keys + token stay inside "
+                   "your app instance — never in GitHub. Any failure = silent Yahoo fallback, scans never break.")
 
 
 def tg_settings_ui(tag=""):
@@ -3258,6 +3517,8 @@ def build_watchlist(src_key, n, custom_txt=""):
 def fetch_chunk(syms, iv, per):
     """ONE batched yfinance download for up to ~50 symbols — this is what
     makes 500-stock live scanning possible (10 requests instead of 500)."""
+    if iv in ("1m", "5m", "15m"):
+        up_prefetch(tuple(syms))   # 📡 tick-fresh LTPs into cache (no-op without token)
     try:
         data = yf.download(list(syms), period=per, interval=iv, group_by='ticker',
                            threads=True, progress=False, auto_adjust=True)
@@ -3285,7 +3546,7 @@ def fetch_chunk(syms, iv, per):
                 continue
     except Exception:
         pass
-    return out
+    return {s: up_patch_df(s, d) for s, d in out.items()}   # 📡 splice live LTP
 
 
 def day_chg_from_intraday(df):
@@ -3700,6 +3961,7 @@ def live_movers_tab(ss, mst_s):
         rt_save("mv", on=True, src=mv_src, n=mv_n, watch=watch, names=names)
 
     tg_settings_ui("_mv")
+    up_settings_ui("_mv")
 
     if not ss.get("mv_on"):
         st.markdown("<div style='background:#0b1220;border-radius:20px;padding:48px;text-align:center;'>"
@@ -4213,6 +4475,7 @@ def bounce_tab(ss, mst_s):
         rt_save("bc", on=True, src=ss.get("bc_src"), n=ss.get("bc_n", 500), watch=watch, names=names)
 
     tg_settings_ui("_bc")
+    up_settings_ui("_bc")
 
     if not ss.get("bc_on"):
         st.markdown("<div style='background:#0b1220;border-radius:20px;padding:44px;text-align:center;'>"
