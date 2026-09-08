@@ -32,7 +32,7 @@ MAX_PRICE = 600.0
 
 # ── 🔔 Telegram (owner's bot — preconfigured; can be overridden in the app) ──
 TG_DEFAULT_TOKEN = "8725365776:AAENJn_QG8qYEyWE7sUu_DiaH_qgsAA_JLY"
-TG_DEFAULT_CHAT = "8585402983,1996619549,6765588648"   # Ashish + brother
+TG_DEFAULT_CHAT = "8585402983,1996619549,6765588648"   # Ashish + brother + family
 
 
 def _H(html):
@@ -1841,7 +1841,8 @@ def render_coach_tab(ss, mst_s):
         st.info("♾️ Coach resumed automatically — a page refresh does NOT stop it. Press ⏹ Stop to end it.")
     try:
         from streamlit_autorefresh import st_autorefresh
-        st_autorefresh(interval=90 * 1000, key="co_tick")
+        if mst_s == "open":          # 🛌 after close: NO auto-refresh (free-CPU saver)
+            st_autorefresh(interval=90 * 1000, key="co_tick")
     except Exception:
         pass
 
@@ -1850,7 +1851,7 @@ def render_coach_tab(ss, mst_s):
         ss["co_on"] = False
         st.rerun()
 
-    due = time.time() - ss.get("co_last", 0) > 80
+    due = mst_s == "open" and time.time() - ss.get("co_last", 0) > 80
     if due or not ss.get("co_ctx"):
         with st.spinner("🎯 Coach is reading the candles…"):
             got, _ = _sweep(ss["co_watch"], "5m", "2d", with_daily=False, progress=False)
@@ -3719,14 +3720,15 @@ def live_movers_tab(ss, mst_s):
     try:
         from streamlit_autorefresh import st_autorefresh
         _sec = int(ss.get("mv_int", "2 min").split()[0]) * 60
-        st_autorefresh(interval=_sec * 1000, key="mv_tick")
+        if mst_s == "open":          # 🛌 after close: NO auto-refresh (free-CPU saver)
+            st_autorefresh(interval=_sec * 1000, key="mv_tick")
     except Exception:
         pass
 
     watch = ss.get("mv_watch") or []
     names = ss.get("mv_names") or {}
     _sec = int(ss.get("mv_int", "2 min").split()[0]) * 60
-    due = time.time() - ss.get("mv_last", 0) > (_sec - 10)
+    due = mst_s == "open" and time.time() - ss.get("mv_last", 0) > (_sec - 10)
     if rescan or due or not ss.get("mv"):
         with st.spinner("⚡ Scanning the board live (5-minute candles)…"):
             got, _ = _sweep(watch, "5m", "2d", with_daily=False, progress=True)
@@ -4229,14 +4231,15 @@ def bounce_tab(ss, mst_s):
     try:
         from streamlit_autorefresh import st_autorefresh
         _sec = int(ss.get("bc_int", "3 min").split()[0]) * 60
-        st_autorefresh(interval=_sec * 1000, key="bc_tick")
+        if mst_s == "open":          # 🛌 after close: NO auto-refresh (free-CPU saver)
+            st_autorefresh(interval=_sec * 1000, key="bc_tick")
     except Exception:
         pass
 
     watch = ss.get("bc_watch") or []
     names = ss.get("bc_names") or {}
     _sec = int(ss.get("bc_int", "3 min").split()[0]) * 60
-    due = time.time() - ss.get("bc_last", 0) > (_sec - 10)
+    due = mst_s == "open" and time.time() - ss.get("bc_last", 0) > (_sec - 10)
     if rescan_bc or due or not ss.get("bc"):
         with st.spinner("🚀 Scanning for support bounces (live candles + support levels)…"):
             got, gotd = _sweep(watch, "5m", "2d", with_daily=True, progress=True)
@@ -4413,14 +4416,15 @@ def combo_tab(ss, mst_s):
     try:
         from streamlit_autorefresh import st_autorefresh
         _sec = int(ss.get("cb_int", "2 min").split()[0]) * 60
-        st_autorefresh(interval=_sec * 1000, key="cb_tick")
+        if mst_s == "open":          # 🛌 after close: NO auto-refresh (free-CPU saver)
+            st_autorefresh(interval=_sec * 1000, key="cb_tick")
     except Exception:
         pass
 
     watch = ss.get("cb_watch") or []
     names = ss.get("cb_names") or {}
     _sec = int(ss.get("cb_int", "2 min").split()[0]) * 60
-    due = time.time() - ss.get("cb_last", 0) > (_sec - 10)
+    due = mst_s == "open" and time.time() - ss.get("cb_last", 0) > (_sec - 10)
     if rescan_cb or due or not ss.get("cb"):
         with st.spinner("🎯 Combo scan — live candles + calculation for the whole board…"):
             ss["cb"] = combo_scan(watch, names)
@@ -4874,7 +4878,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
                 "Educational use only.</div>", unsafe_allow_html=True)
 
     # ---- auto-refresh hook ----
-    if ss.get("dash_auto"):
+    if ss.get("dash_auto") and mst_s == "open":   # 🛌 after close: no auto-tick
         secs = {"1 min": 60, "2 min": 120, "3 min": 180, "5 min": 300}[ss.get("dash_int", "2 min")]
         _smooth = False
         try:
