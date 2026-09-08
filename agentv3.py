@@ -5563,7 +5563,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.6 · PRO TERMINAL · 500 LIVE</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.8 · BUILD 8 SEP · 500 LIVE</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
@@ -5573,9 +5573,8 @@ def main():
     </div></div></div>"""), unsafe_allow_html=True)
 
     tab_dash, tab_mv, tab_fr, tab_bnc, tab_co, tab_cb, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
-        ["🔴 Live Dashboard (500)", "⚡ Live Movers (Now)", "🟢 Fresh Buys (Room)", "🚀 Uptrend Starting",
-         "🎯 Trade Coach (Timing)", "🎯 Combo Picks", "📊 Analyze Stock", "🔍 Scanner", "🔎 Search Any Stock",
-         "📓 Journal", "🌙 EOD Review", "📚 Trading Guide"])
+        ["🔴 Dashboard", "⚡ Movers", "🟢 Fresh Buys", "🚀 Uptrend", "🎯 Coach", "🎯 Combo",
+         "📊 Analyze", "🔍 Scanner", "🔎 Search", "📓 Journal", "🌙 EOD", "📚 Guide"])
 
     # ── TAB 0: LIVE DASHBOARD (the common board) ──
     with tab_dash:
