@@ -1797,8 +1797,11 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
     t = mins if mins is not None else (now_ist().hour * 60 + now_ist().minute)
     nm = pos.get("name") or ctx["sym"].replace(".NS", "")
 
+    _brk = _coach_brake_state()
     if pos["stage"] == "WAIT":
         if ctx["n"] < 3 or t < 9 * 60 + 25:          # 9:15–9:25 warm-up
+            return ev
+        if _brk["braked"]:                           # 🛑 day brake active — manage only
             return ev
         if t >= 14 * 60 + 30:                         # no FRESH entries late
             return ev
@@ -1810,8 +1813,11 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
         weak_day = _rchg <= -0.3
         mixed_day = -0.3 < _rchg <= 0.3
         cap = (cap // 2) if (weak_day or mixed_day) else cap   # 🟡🔴 half size
-        if t >= 12 * 60:                              # ☀️ AFTERNOON: support bounces only
-            sup = ctx.get("sup_aft") or vwap
+        if t >= 12 * 60 or _rchg <= -0.5:            # ☀️ afternoon OR 🔴 red day:
+            sup = ctx.get("sup_aft") or vwap          # support bounces ONLY (Wed-9-Sep lesson:
+                                                      # 6/6-snapshot stocks fell −3…−6.5% on a
+                                                      # red NIFTY — morning strength means nothing
+                                                      # when the market slides)
             if (ctx["green_last"] and ctx["chg_day"] > -3.0
                     and sup * 0.997 <= last <= sup * 1.004):
                 entry = round(last, 2)
@@ -1865,6 +1871,7 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
         grace = (t - pos.get("ent_mins", t)) < 15          # first 15 min: give the trade air
         if last <= pos["sl"]:
             pos.update(stage="DONE", res=round(pnl, 2), outcome="sl")
+            _coach_pnl_add(pnl, cap)
             ev.append(("sl", f"\U0001F6D1 <b>STOPLOSS \u00b7 {_esc(nm)}</b>\n"
                              f"\u26A0\uFE0F <b>EXIT ALL NOW</b> below <code>\u20B9{pos['sl']:,.2f}</code>\n"
                              f"\U0001F4C9 Result <b>{pnl:+.1f}%</b> \u00b7 small loss = capital saved"
@@ -1876,11 +1883,13 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
                              f"\U0001F6D1 SL moved to entry <code>\u20B9{pos['entry']:,.2f}</code> \u2014 <b>profit locked</b> \u2714"))
         elif pos["half"] and last >= pos["t2"]:
             pos.update(stage="DONE", res=round(pnl, 2), outcome="t2")
+            _coach_pnl_add(pnl, cap)
             ev.append(("t2", f"\u2705 <b>T2 HIT \u00b7 {_esc(nm)}</b>\n"
                              f"\U0001F3AF Sell the <b>REST</b> at <code>\u20B9{pos['t2']:,.2f}</code>\n"
                              f"\U0001F3C6 Trade complete <b>{pnl:+.1f}%</b> \U0001F389"))
         elif t >= 15 * 60 + 5:
             pos.update(stage="DONE", res=round(pnl, 2), outcome="eod")
+            _coach_pnl_add(pnl, cap)
             ev.append(("eod", f"\U0001F51A <b>SQUARE OFF \u00b7 {_esc(nm)}</b>\n"
                               f"Market closing \u2014 exit now \u00b7 <b>{pnl:+.1f}%</b>"))
         else:
@@ -1889,10 +1898,12 @@ def coach_cycle(ctx, pos, cap=COACH_CAP_DEFAULT, mins=None):
             deep = last < vwap * 0.995
             if (not grace) and (deep or pos["vr_streak"] >= 2):
                 pos.update(stage="DONE", res=round(pnl, 2), outcome="exit")
+                _coach_pnl_add(pnl, cap)
                 ev.append(("exit", f"\u26A0\uFE0F <b>EXIT ALL \u00b7 {_esc(nm)}</b>\n"
                                    f"\U0001F4C9 Fell below VWAP, momentum dead \u00b7 <b>{pnl:+.1f}%</b>"))
             elif (not grace) and t >= 11 * 60 + 30 and -0.3 < pnl < 0.4:
                 pos.update(stage="DONE", res=round(pnl, 2), outcome="time")
+                _coach_pnl_add(pnl, cap)
                 ev.append(("time", f"\u23F0 <b>TIME EXIT \u00b7 {_esc(nm)}</b>\n"
                                    f"Going nowhere ({pnl:+.1f}%) \u2014 rotate to a live mover"))
     return ev
@@ -1952,6 +1963,140 @@ def coach_eod_summary(log, cap):
             f"\U0001F3C6 Best: <b>{_esc(best['name'])} {best['res']:+.1f}%</b>")
     tail = " \u00b7 ".join(f"{_esc(t['name'])} {t['res']:+.1f}% ({t['outcome']})" for t in log[:6])
     return head + ("\n" + tail if tail else "")
+
+
+CONS_SLOTS = [("09:30", 9 * 60 + 30), ("09:45", 9 * 60 + 45),
+              ("10:00", 10 * 60), ("10:15", 10 * 60 + 15)]
+
+
+def cons_state():
+    _today = now_ist().strftime("%Y-%m-%d")
+    try:
+        d = rt_load().get("cons") or {}
+        if d.get("day") != _today:
+            return {"day": _today, "snaps": {}, "n": 0}
+        return d
+    except Exception:
+        return {"day": _today, "snaps": {}, "n": 0}
+
+
+def cons_capture(combos):
+    """🏅 Snapshot the TOP 20 at 9:30 / 9:45 / 10:00 / 10:15 — piggybacks the
+    combo scan (zero extra CPU). A stock appearing 3-4x is genuinely strong,
+    not a flicker: the stable-picks filter against result confusion."""
+    try:
+        n = now_ist()
+        if n.weekday() >= 5 or not combos:
+            return
+        t = n.hour * 60 + n.minute
+        d = cons_state()
+        for lbl, slot in CONS_SLOTS:
+            if t >= slot and lbl not in (d.get("snaps") or {}):
+                d.setdefault("snaps", {})[lbl] = [c["sym"] for c in combos[:20]]
+                d["n"] = len(d["snaps"])
+                rt_save("cons", **d)
+                return          # one snapshot per scan cycle
+    except Exception:
+        pass
+
+
+def cons_compute():
+    """→ (tier1 [3+ appearances], tier2 [2], meta{day,n,counts,best})"""
+    d = cons_state()
+    counts, best = {}, {}
+    for lbl, syms in (d.get("snaps") or {}).items():
+        for i, s in enumerate(syms, 1):
+            counts[s] = counts.get(s, 0) + 1
+            best[s] = min(best.get(s, 999), i)
+    n = d.get("n") or 0
+    tier1 = sorted([s for s, c in counts.items() if c >= 3], key=lambda s: (-counts[s], best[s]))
+    tier2 = sorted([s for s, c in counts.items() if c == 2], key=lambda s: best[s])
+    return tier1, tier2, {"day": d.get("day"), "n": n, "counts": counts, "best": best}
+
+
+def cons_lock_coach(ss):
+    """🏅 After the 4th morning snapshot the coach follows ONLY the stable
+    picks (held positions are preserved). Runs once per day."""
+    try:
+        t1, t2, cm = cons_compute()
+        if not t1 or (cm.get("n") or 0) < 4:
+            return False
+        if (rt_load().get("co") or {}).get("cons_day") == cm.get("day"):
+            return False
+        held = {s: p for s, p in (ss.get("co_pos") or {}).items()
+                if p.get("stage") in ("HOLD", "DONE")}
+        want_n = int(ss.get("co_n") or COACH_N_DEFAULT)
+        new_w = [s for s in t1 if s not in held][:want_n]
+        for s in t2:
+            if len(new_w) >= want_n:
+                break
+            if s not in held and s not in new_w:
+                new_w.append(s)
+        if not new_w:
+            return False
+        nm = ss.get("co_names") or {}
+        pos = dict(held)
+        for s in new_w:
+            pos.setdefault(s, {"stage": "WAIT", "name": nm.get(s, s.replace(".NS", ""))})
+        ss["co_watch"] = new_w + [s for s in held if s not in new_w]
+        ss["co_pos"] = pos
+        ss["co_ctx"] = {}
+        txt = ", ".join(f"{nm.get(s, s.replace('.NS',''))} ({cm['counts'][s]}\u00d7)"
+                        for s in new_w[:8])
+        tg_send(f"\U0001F3C5 <b>STABLE PICKS LOCKED \u00b7 coach follows ONLY these now</b>\n"
+                f"{_esc(txt)}\n"
+                f"<i>Appeared in 3\u20134 of the 4 morning scans (9:30\u201310:15) \u2014 "
+                f"the proven ones, no more confusion.</i>")
+        rt_save("co", cons_day=cm.get("day"))
+        return True
+    except Exception:
+        return False
+
+
+def high52_map(syms):
+    """🏔️ 52-week-high distance for the top combo stocks (1 batched 1y fetch)."""
+    try:
+        syms = [s for s in syms if s and not str(s).startswith("^")][:48]
+        if not syms:
+            return {}
+        got = fetch_chunk(tuple(syms), "1d", "1y")
+        out = {}
+        for s in syms:
+            df = got.get(s)
+            if df is None or len(df) < 100:
+                continue
+            hi52 = float(df["High"].max())
+            last = float(df["Close"].iloc[-1])
+            if hi52 > 0:
+                out[s] = {"hi52": round(hi52, 2), "dist": round((last / hi52 - 1) * 100, 2)}
+        return out
+    except Exception:
+        return {}
+
+
+_COACH_PNL = {"day": None, "pnl": 0.0, "braked": False}
+
+
+def _coach_brake_state():
+    _today = now_ist().strftime("%Y-%m-%d")
+    if _COACH_PNL.get("day") != _today:
+        _COACH_PNL.update(day=_today, pnl=0.0, braked=False)
+    return _COACH_PNL
+
+
+def _coach_pnl_add(res_pct, cap):
+    """Track realized day P&L (₹ per trade-capital). At −1.5% of capital the
+    coach stops taking new entries for the day — a bad day stays small."""
+    try:
+        st_ = _coach_brake_state()
+        st_["pnl"] += (res_pct or 0) / 100.0 * (cap or COACH_CAP_DEFAULT)
+        if (not st_["braked"] and st_["pnl"] <= -0.015 * (cap or COACH_CAP_DEFAULT)):
+            st_["braked"] = True
+            tg_send("\U0001F6D1 <b>DAY BRAKE \u00b7 coach stops new entries today</b>\n"
+                    f"Realized {st_['pnl']:,.0f} \u20B9 today \u2014 past the \u22121.5% safety line.\n"
+                    "<i>Existing holds are managed to their exits. Protect the capital, trade fresh tomorrow.</i>")
+    except Exception:
+        pass
 
 
 def coach_phase(t=None):
@@ -2066,6 +2211,7 @@ def render_coach_tab(ss, mst_s):
     # 🚀 AUTO-START — the coach begins by itself after 9:20 on market days
     if (not ss.get("co_on") and mst_s == "open"
             and now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20
+            and ss.get("co_stop_day") != now_ist().strftime("%Y-%m-%d")
             and ss.get("co_auto", True)):
         try:
             _top, _nm = coach_pick(int(ss.get("co_n") or COACH_N_DEFAULT))
@@ -2143,6 +2289,7 @@ def render_coach_tab(ss, mst_s):
     if st.button("⏹ Stop coach", key="co_stop"):
         rt_clear("co")
         ss["co_on"] = False
+        ss["co_stop_day"] = now_ist().strftime("%Y-%m-%d")
         st.rerun()
 
     _ph, _pht = coach_phase()
@@ -2203,6 +2350,7 @@ def render_coach_tab(ss, mst_s):
                        f"(auto-halved on soft days)\n"
                        f"<i>\u26A1 Momentum till 12:00 \u2192 \U0001F6E1\uFE0F support 12:00\u201314:30 \u2192 \U0001F51A square-off 15:05</i>"):
                 rt_save("co", plan_day=_today)
+        cons_lock_coach(ss)     # 🏅 after 10:15 snapshot: follow ONLY the stable picks
         ss["co_feed"] = feed[:60]
         ss["co_last"] = time.time()
         ss["co_ts"] = now_ist().strftime("%d %b %Y · %H:%M")
@@ -4650,7 +4798,7 @@ def _combo_row(i, c, scan_ts="", now_map=None):
     return (f"<div style='display:flex;align-items:center;gap:12px;background:#0f172a;border:1px solid #1e293b;"
             f"border-left:3px solid {vc};border-radius:12px;padding:8px 14px;margin:5px 0;flex-wrap:wrap;'>"
             f"<div style='color:#475569;font-weight:900;font-size:15px;width:26px;font-family:monospace;'>{i}</div>"
-            f"<div style='min-width:148px;'><div style='color:#f1f5f9;font-weight:800;font-size:14px;'>{c['name'][:19]}</div>"
+            f"<div style='min-width:148px;'><div style='color:#f1f5f9;font-weight:800;font-size:14px;'>{c['name'][:19]}{' 🏔️' if c.get('near52') else ''}</div>"
             f"<div style='color:#64748b;font-size:10px;'>{c['sym'].replace('.NS','')} · {c['sig'].title()} · {ema}"
             f"{' · 🕒 ' + scan_ts if scan_ts else ''}</div></div>"
             f"<div style='min-width:92px;color:#e2e8f0;font-weight:800;font-size:14px;font-family:monospace;'>₹{c['price']:,.2f}</div>"
@@ -4756,12 +4904,33 @@ def compute_bounces(got, gotd):
             res_dist = (hi20 - last) / last * 100
             if not (-0.5 <= sup_dist <= 1.5):     # only stocks AT/ON support
                 continue
+            # ── 🔁 support-test counter: FIRST bounce is the best bounce.
+            #    Bounced once and fell back to test again = weakening support;
+            #    sliced below support and crawled back = broken level. Neither
+            #    is a fresh buy — they are exactly how "it bounced again!"
+            #    trades lose money.
+            _lows = [float(x) for x in t["Low"].values]
+            _tz, _bz = support * 1.004, support * 0.994
+            _touches, _broke, _in_t, _away = 0, False, False, 0
+            for _lv in _lows:
+                if _lv <= _bz:
+                    _broke = True
+                if _lv <= _tz:
+                    if not _in_t:
+                        _touches += 1
+                        _in_t = True
+                    _away = 0
+                else:
+                    _away += 1
+                    if _away >= 3:
+                        _in_t = False
             # strict turn confirmation (loose version won only 22% on a soft day):
             # real bounce = clearly off the low + rising last hour + green candles + volume interest
             turning = (((rec >= 0.40 and slope1h > 0.0 and green >= 0.55) or
                         (slope1h >= 0.20 and green >= 0.60))
                        and (vr >= 1.05 or rec >= 0.60))
-            starting = turning and chg_day <= 4.0
+            # first test ONLY: retests (2nd+ touch) and broken supports never flag STARTING
+            starting = (turning and chg_day <= 4.0 and _touches == 1 and not _broke)
             score = (40 * max(0.0, (1.5 - sup_dist)) / 1.5 + 30 * min(rec, 1.5) / 1.5
                      + 15.0 * green + 15.0 * min(vr, 2.0) / 2.0)
             # ── realistic bounce targets: tight stop just below support,
@@ -4783,9 +4952,11 @@ def compute_bounces(got, gotd):
                         "rec": round(rec, 2), "green": int(round(green * 100)),
                         "slope1h": round(float(slope1h), 2), "vr": round(float(vr), 2),
                         "score": round(score, 1),
-                        "state": "🚀 UPTREND STARTING" if starting else "🛡️ AT SUPPORT",
+                        "state": ("🚀 UPTREND STARTING" if starting else
+                                  "⚠️ SUPPORT BROKEN" if _broke else
+                                  "🔁 RETESTED — weaker" if _touches >= 2 else "🛡️ AT SUPPORT"),
                         "starting": starting, "buy": buy, "sl": sl,
-                        "t1": t1, "t2": t2})
+                        "t1": t1, "t2": t2, "touches": _touches, "broke": _broke})
         except Exception:
             continue
     out.sort(key=lambda b: (not b["starting"], -b["score"]))
@@ -4797,8 +4968,13 @@ def _bc_row(i, b, name):
     cc = "#22c55e" if b["chg_day"] >= 0 else "#ef4444"
     badge = (f"<span style='background:rgba(34,197,94,.16);color:#4ade80;font-size:10px;font-weight:900;"
              f"padding:3px 10px;border-radius:8px;'>🚀 UPTREND STARTING</span>" if b["starting"] else
-             f"<span style='background:rgba(59,130,246,.16);color:#93c5fd;font-size:10px;font-weight:900;"
-             f"padding:3px 10px;border-radius:8px;'>🛡️ AT SUPPORT · waiting for turn</span>")
+             (f"<span style='background:rgba(239,68,68,.16);color:#f87171;font-size:10px;font-weight:900;"
+              f"padding:3px 10px;border-radius:8px;'>⚠️ SUPPORT BROKEN — skip</span>" if b.get("broke") else
+              f"<span style='background:rgba(245,158,11,.16);color:#fbbf24;font-size:10px;font-weight:900;"
+              f"padding:3px 10px;border-radius:8px;'>🔁 TEST #{b.get('touches', 1)} — weaker, skip</span>"
+              if (b.get("touches") or 1) >= 2 else
+              f"<span style='background:rgba(59,130,246,.16);color:#93c5fd;font-size:10px;font-weight:900;"
+              f"padding:3px 10px;border-radius:8px;'>🛡️ AT SUPPORT · waiting for turn</span>"))
     return (f"<div style='display:flex;align-items:center;gap:12px;background:#0f172a;border:1px solid #1e293b;"
             f"border-left:3px solid {st_};border-radius:12px;padding:8px 14px;margin:5px 0;flex-wrap:wrap;'>"
             f"<div style='color:#475569;font-weight:900;font-size:15px;width:26px;font-family:monospace;'>{i}</div>"
@@ -4916,14 +5092,22 @@ def bounce_tab(ss, mst_s):
             prev_start = set(ss.get("bc_prev") or [])
             now_start = {b["sym"] for b in bounces if b["starting"]}
             alerts = ss.get("bc_alerts") or []
-            if mst_s == "open":   # 🔕 after close: silent review — no stale bounce alerts
-                for b in [x for x in bounces if x["sym"] in (now_start - prev_start)]:
+            _td = now_ist().strftime("%Y-%m-%d")
+            if ss.get("bc_alerted_day") != _td:      # fresh day → fresh alert budget
+                ss["bc_alerted_day"] = _td
+                ss["bc_alerted"] = set()
+            _alerted = set(ss.get("bc_alerted") or [])
+            if mst_s == "open":   # 🔕 after close: silent review + ONE alert/stock/day
+                for b in [x for x in bounces if x["sym"] in (now_start - prev_start)
+                          and x["sym"] not in _alerted]:
+                    _alerted.add(b["sym"])
                     alerts.insert(0, {"ts": now_ist().strftime("%H:%M:%S"), "sym": b["sym"],
                                       "name": names.get(b["sym"], b["sym"].replace(".NS", "")),
                                       "txt": (f"reached support ₹{b['support']:,.2f} and TURNING UP · now ₹{b['last']:,.2f} "
                                               f"(+{b['rec']:.2f}% off low) · BUY ₹{b['buy']:,.2f} · SL ₹{b['sl']:,.2f} "
                                               f"· SELL T1 ₹{b['t1']:,.2f}")})
             ss["bc_alerts"] = alerts[:40]
+            ss["bc_alerted"] = _alerted
             ss["bc_prev"] = sorted(now_start)
             if mst_s == "open":
                 for _b in [x for x in bounces if x["sym"] in (now_start - prev_start)][:5]:
@@ -5004,6 +5188,24 @@ def bounce_tab(ss, mst_s):
 
 
 def combo_tab(ss, mst_s):
+    # 🚀 AUTO-START — the combo radar begins BY ITSELF at 9:20 on market days
+    # (the 🏅 consensus snapshots 9:30–10:15 depend on it running). Pressing
+    # ⏹ Stop keeps it stopped for the rest of the day.
+    if (not ss.get("cb_on") and mst_s == "open"
+            and now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20
+            and ss.get("cb_stop_day") != now_ist().strftime("%Y-%m-%d")
+            and ss.get("cb_auto", True)):
+        try:
+            _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
+        except Exception:
+            _w, _nm = [], {}
+        if _w:
+            ss["cb_watch"] = _w; ss["cb_names"] = _nm
+            ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
+            rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=_w, names=_nm)
+            ss["_cb_autostarted"] = True
+            st.rerun()
+
     # ♾️ AUTO-RESUME — the combo scan keeps running across page refreshes
     if not ss.get("cb_on"):
         _rt = rt_load().get("cb") or {}
@@ -5059,6 +5261,7 @@ def combo_tab(ss, mst_s):
 
     if stop_cb:
         ss["cb_on"] = False
+        ss["cb_stop_day"] = now_ist().strftime("%Y-%m-%d")
         rt_clear("cb")
     if start_cb:
         watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
@@ -5076,6 +5279,10 @@ def combo_tab(ss, mst_s):
                     "press <b style='color:#22c55e;'>🎯 START COMBO SCAN</b></div></div>", unsafe_allow_html=True)
         return
 
+    if ss.get("_cb_autostarted"):
+        ss["_cb_autostarted"] = False
+        st.success("🚀 Combo radar AUTO-STARTED (market open) — snapshotting TOP-20 at 9:30 · 9:45 · "
+                   "10:00 · 10:15 for the 🏅 stable picks. The 📤 send button is ready whenever you are.")
     if ss.get("_cb_resumed"):
         ss["_cb_resumed"] = False
         st.info("♾️ Combo scan resumed automatically — a page refresh does NOT stop it. "
@@ -5096,6 +5303,17 @@ def combo_tab(ss, mst_s):
     if rescan_cb or due or not ss.get("cb"):
         with st.spinner("🎯 Combo scan — live candles + calculation for the whole board…"):
             ss["cb"] = combo_scan(watch, names)
+            cons_capture(ss["cb"])          # 🏅 9:30/9:45/10:00/10:15 TOP-20 snapshots
+            try:                            # 🏔️ 52-week-high club (cached 30 min)
+                if time.time() - ss.get("cb_52w_ts", 0) > 1800:
+                    ss["cb_52w"] = high52_map([c["sym"] for c in ss["cb"][:48]])
+                    ss["cb_52w_ts"] = time.time()
+                _h52 = ss.get("cb_52w") or {}
+                for c in ss["cb"]:
+                    _hh = _h52.get(c["sym"])
+                    c["near52"] = bool(_hh and _hh["dist"] >= -2.5)
+            except Exception:
+                pass
             ss["cb_last"] = time.time()
             ss["cb_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
             ss.pop("cb_recheck", None)
@@ -5190,11 +5408,55 @@ def combo_tab(ss, mst_s):
         except Exception:
             pass
 
+    # ── 🏅 STABLE PERFECT PICKS (morning consensus) ──
+    _t1c, _t2c, _cmc = cons_compute()
+    _namesL = ss.get("cb_names") or {}
+    if _cmc["n"]:
+        with st.expander(f"🏅 STABLE PERFECT PICKS — {_cmc['n']}/4 morning scans captured", expanded=True):
+            st.caption("Snapshots of the TOP 20 at 9:30 · 9:45 · 10:00 · 10:15. A stock appearing 3–4× "
+                       "is genuinely strong, not a flicker — after the 4th snapshot the 🎯 coach "
+                       "follows ONLY these (kept positions stay).")
+            if _t1c:
+                for _s in _t1c:
+                    _cnt, _bst = _cmc["counts"][_s], _cmc["best"][_s]
+                    st.markdown(_H(f"<div style='display:flex;justify-content:space-between;background:#052e16;"
+                                   f"border:1px solid #22c55e;border-radius:10px;padding:7px 12px;margin:4px 0;flex-wrap:wrap;gap:6px;'>"
+                                   f"<b style='color:#bbf7d0;'>🏅 {_esc(_namesL.get(_s, _s.replace('.NS','')))}</b>"
+                                   f"<span style='color:#4ade80;font-family:monospace;font-weight:800;'>"
+                                   f"{_cnt}/{_cmc['n']} scans · best rank #{_bst}</span></div>"), unsafe_allow_html=True)
+            else:
+                st.info(f"{_cmc['n']} snapshot(s) captured — stocks appearing 3×+ will show here. "
+                        "Full lock-in after the 10:15 snapshot (keep this radar running).")
+            if _t2c:
+                st.caption("🔁 Appeared 2× (watchlist): " + ", ".join(
+                    _namesL.get(s, s.replace(".NS", "")) for s in _t2c[:10]))
+
+    # ── 🏔️ 52-WEEK HIGH CLUB ──
+    _h52u = ss.get("cb_52w") or {}
+    _club = [(c, _h52u[c["sym"]]) for c in combos if c["sym"] in _h52u and _h52u[c["sym"]]["dist"] >= -2.5]
+    if _club:
+        with st.expander(f"🏔️ 52-WEEK HIGH CLUB — {len(_club)} stock(s) within 2.5% of their 52-week high"):
+            st.caption("Stocks near their 52-week high are the market's strongest — buyers keep "
+                       "defending them. Fresh breakouts here often run furthest.")
+            for c, h in _club[:20]:
+                st.markdown(_H(f"<div style='display:flex;justify-content:space-between;background:#0f172a;"
+                               f"border:1px solid #1e293b;border-left:3px solid #f59e0b;border-radius:10px;"
+                               f"padding:7px 12px;margin:4px 0;flex-wrap:wrap;gap:6px;'>"
+                               f"<b style='color:#f1f5f9;'>🏔️ {_esc(c['name'])} "
+                               f"<span style='color:#64748b;font-size:11px;'>{c['verdict']}</span></b>"
+                               f"<span style='color:#e2e8f0;font-family:monospace;'>₹{c['price']:,.2f} · "
+                               f"<span style='color:{'#22c55e' if c['chg_day'] >= 0 else '#ef4444'};'>{c['chg_day']:+.2f}%</span>"
+                               f" · 52W high ₹{h['hi52']:,.2f} ({h['dist']:+.2f}%)</span></div>"),
+                            unsafe_allow_html=True)
+
     # ── 📤 SEND PICKS TO TELEGRAM (whenever YOU want — full plan + open buttons) ──
     with st.expander("📤 SEND PICKS TO TELEGRAM (on demand)"):
         _prio = {"🎯 PERFECT": 0, "✅ MATCH": 1}
         _pool = [c for c in combos if c.get("verdict") in _prio or c.get("dtr") == "UPTREND"]
-        _pool.sort(key=lambda c: (_prio.get(c.get("verdict"), 2), -c.get("combo", 0)))
+        _cms = cons_compute()[2]
+        _cmap, _cmn = _cms.get("counts") or {}, _cms.get("n") or 0
+        _pool.sort(key=lambda c: (-_cmap.get(c["sym"], 0),
+                                  _prio.get(c.get("verdict"), 2), -c.get("combo", 0)))
         _nsend = st.slider("How many picks to send", 5, 20, 10, key="cb_tgn")
         st.caption(f"Filter: 🎯 PERFECT + ✅ MATCH + UPTREND · {len(_pool)} of "
                    f"{len(combos)} qualify · each pick arrives with full BUY/SL/T1/T2 plan and "
@@ -5222,6 +5484,10 @@ def combo_tab(ss, mst_s):
                             f"\u2705 T2 <code>\u20B9{c.get('t2') or 0:,.2f}</code>\n"
                             f"\U0001F6E1\uFE0F support \u20B9{c.get('support') or 0:,.2f} \u00b7 "
                             f"\U0001F6A7 resist \u20B9{c.get('resistance') or 0:,.2f}")
+                    if _cmap.get(c["sym"], 0) >= 2:
+                        _msg += f"\n\U0001F3C5 STABLE \u00b7 appeared {_cmap[c['sym']]}/{_cmn} morning scans"
+                    if c.get("near52"):
+                        _msg += "\n\U0001F3D8\uFE0F Near 52-WEEK HIGH"
                     if tg_send(_msg, buttons=stock_buttons(c["sym"])):
                         _ok_n += 1
                     _prg.progress(_i / _tot, text=f"\U0001F4E4 Sent {_i}/{_tot}\u2026")
@@ -5924,7 +6190,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.8 · BUILD 8 SEP · 500 LIVE</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.10 · FAST BUILD · 500 LIVE</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
@@ -5933,9 +6199,9 @@ def main():
     <div style='color:#fbbf24;font-weight:700;font-size:12px;'>Focus</div><div style='color:white;font-weight:900;font-size:16px;'>Uptrend + Levels</div></div>
     </div></div></div>"""), unsafe_allow_html=True)
 
-    tab_dash, tab_mv, tab_fr, tab_bnc, tab_co, tab_cb, tab_analyze, tab_scan, tab_search, tab_journal, tab_eod, tab_guide = st.tabs(
+    tab_dash, tab_mv, tab_fr, tab_bnc, tab_co, tab_cb, tab_analyze, tab_scan, tab_journal, tab_guide = st.tabs(
         ["🔴 Dashboard", "⚡ Movers", "🟢 Fresh Buys", "🚀 Uptrend", "🎯 Coach", "🎯 Combo",
-         "📊 Analyze", "🔍 Scanner", "🔎 Search", "📓 Journal", "🌙 EOD", "📚 Guide"])
+         "📊 Analyze+Search", "🔍 Scanner", "🌙 EOD+Journal", "📚 Guide"])
 
     # ── TAB 0: LIVE DASHBOARD (the common board) ──
     with tab_dash:
@@ -6166,7 +6432,7 @@ def main():
                 pass
 
     # ── TAB 3: SEARCH ──
-    with tab_search:
+        st.markdown("<hr style='border:1px solid #dbeafe;margin:22px 0 14px 0;'>", unsafe_allow_html=True)
         st.markdown('<div class="input-row">', unsafe_allow_html=True)
         st.markdown("<div style='font-size:15px;font-weight:800;color:#1d4ed8;margin-bottom:12px;'>🔎 SEARCH ANY NSE/BSE STOCK (full live universe)</div>", unsafe_allow_html=True)
         q1, q2 = st.columns([4, 1])
@@ -6254,7 +6520,7 @@ def main():
                         st.rerun()
 
     # ── TAB: EOD REVIEW (before vs after) ──
-    with tab_eod:
+        st.markdown("<hr style='border:1px solid #dbeafe;margin:22px 0 14px 0;'>", unsafe_allow_html=True)
         try:
             eod_review_tab(ss)
         except Exception as e:
