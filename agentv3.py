@@ -3903,8 +3903,12 @@ def fetch_chunk(syms, iv, per):
     if iv in ("1m", "5m", "15m"):
         up_prefetch(tuple(syms))   # 📡 tick-fresh LTPs into cache (no-op without token)
     try:
-        data = yf.download(list(syms), period=per, interval=iv, group_by='ticker',
-                           threads=True, progress=False, auto_adjust=True)
+        try:
+            data = yf.download(list(syms), period=per, interval=iv, group_by='ticker',
+                               threads=True, progress=False, auto_adjust=True)
+        except RuntimeError:      # 🧵 free-host thread limit → single-thread retry
+            data = yf.download(list(syms), period=per, interval=iv, group_by='ticker',
+                               threads=False, progress=False, auto_adjust=True)
     except Exception:
         return {}
     out = {}
