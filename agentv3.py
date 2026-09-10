@@ -1966,7 +1966,51 @@ def coach_eod_summary(log, cap):
 
 
 CONS_SLOTS = [("09:30", 9 * 60 + 30), ("09:45", 9 * 60 + 45),
-              ("10:00", 10 * 60), ("10:15", 10 * 60 + 15)]
+              ("10:00", 10 * 60), ("10:15", 10 * 60 + 15)]   # default schedule
+CONS_CFG_DEFAULT = {"start": "09:30", "end": "10:15", "every": 15}
+
+
+def _hmm(s):
+    """'9.30' / '09:30' / '930' → minutes past midnight (None if not a time)."""
+    try:
+        s = str(s).strip().replace(".", ":").replace(" ", "")
+        if ":" in s:
+            h, m = s.split(":", 1)
+        elif len(s) > 2:
+            h, m = s[:-2], s[-2:]
+        else:
+            h, m = s, "0"
+        h, m = int(h), int(m)
+        if 0 <= h <= 23 and 0 <= m <= 59:
+            return h * 60 + m
+    except Exception:
+        pass
+    return None
+
+
+def cons_cfg_load():
+    try:
+        c = rt_load().get("conscfg") or {}
+        if c.get("start") and c.get("end") and int(c.get("every") or 0) >= 2:
+            return {"start": str(c["start"]), "end": str(c["end"]), "every": int(c["every"])}
+    except Exception:
+        pass
+    return dict(CONS_CFG_DEFAULT)
+
+
+def cons_slots(cfg=None):
+    """📸 Snapshot slots from YOUR schedule (start → end, every N minutes)."""
+    cfg = cfg or cons_cfg_load()
+    a, b = _hmm(cfg["start"]), _hmm(cfg["end"])
+    step = max(2, int(cfg.get("every") or 15))
+    out = []
+    if a is None or b is None or b < a:
+        return list(CONS_SLOTS)
+    t = a
+    while t <= b and len(out) < 12:
+        out.append((f"{t // 60:02d}:{t % 60:02d}", t))
+        t += step
+    return out or list(CONS_SLOTS)
 
 
 def cons_state():
@@ -1990,9 +2034,11 @@ def cons_capture(combos):
             return
         t = n.hour * 60 + n.minute
         d = cons_state()
-        for lbl, slot in CONS_SLOTS:
+        for lbl, slot in cons_slots():
             if t >= slot and lbl not in (d.get("snaps") or {}):
                 d.setdefault("snaps", {})[lbl] = [c["sym"] for c in combos[:20]]
+                d.setdefault("ts", {})[lbl] = n.strftime("%H:%M")
+                d.setdefault("date", n.strftime("%a %d %b %Y"))
                 d["n"] = len(d["snaps"])
                 rt_save("cons", **d)
                 return          # one snapshot per scan cycle
@@ -2003,15 +2049,76 @@ def cons_capture(combos):
 def cons_compute():
     """→ (tier1 [3+ appearances], tier2 [2], meta{day,n,counts,best})"""
     d = cons_state()
+    slots = cons_slots()
+    total = len(slots)
+    need = total if total <= 3 else max(3, round(total * 0.6))
     counts, best = {}, {}
     for lbl, syms in (d.get("snaps") or {}).items():
         for i, s in enumerate(syms, 1):
             counts[s] = counts.get(s, 0) + 1
             best[s] = min(best.get(s, 999), i)
     n = d.get("n") or 0
-    tier1 = sorted([s for s, c in counts.items() if c >= 3], key=lambda s: (-counts[s], best[s]))
-    tier2 = sorted([s for s, c in counts.items() if c == 2], key=lambda s: best[s])
-    return tier1, tier2, {"day": d.get("day"), "n": n, "counts": counts, "best": best}
+    tier1 = sorted([s for s, c in counts.items() if c >= need], key=lambda s: (-counts[s], best[s]))
+    tier2 = sorted([s for s, c in counts.items() if c == need - 1 and need > 1], key=lambda s: best[s])
+    return tier1, tier2, {"day": d.get("day"), "n": n, "counts": counts, "best": best,
+                          "total": total, "need": need, "slots": slots,
+                          "ts": d.get("ts") or {}, "date": d.get("date"),
+                          "result_ts": d.get("result_ts"), "cfg": cons_cfg_load()}
+
+
+def cons_announce(names=None):
+    """📲 GUARANTEED Telegram delivery of the final snapshot result — fires
+    once/day the moment all 4 morning scans exist (straight from the combo
+    scan; also fires on evening reopen). Says it plainly even when NO stock
+    made 3x+ — silence is what caused result confusion."""
+    try:
+        d = cons_state()
+        t1, t2, cm = cons_compute()
+        if ((d.get("n") or 0) < (cm.get("total") or 4)
+                or d.get("announced_day") == d.get("day")):
+            return False
+        names = names or (rt_load().get("cb") or {}).get("names") or {}
+
+        def _nm(s):
+            return names.get(s, s.replace(".NS", ""))
+
+        def _mins(hhmm):
+            try:
+                h, m = str(hhmm).split(":")
+                return int(h) * 60 + int(m)
+            except Exception:
+                return 9999
+
+        _cfg = cm.get("cfg") or {}
+        _win = f"{_cfg.get('start', '09:30')}–{_cfg.get('end', '10:15')}"
+        _tot, _nd = cm.get("total") or 4, cm.get("need") or 3
+        _date = d.get("date") or now_ist().strftime("%a %d %b %Y")
+        slots = " · ".join(f"{lbl}→{(d.get('ts') or {}).get(lbl, '?')}" for lbl, _s in cm["slots"])
+        late = any(_mins((d.get("ts") or {}).get(lbl, "?")) - _s > 10 for lbl, _s in cm["slots"])
+        if t1:
+            _lines = []
+            for s in t1[:10]:
+                _icn = "🏅" if cm["counts"][s] == _tot else "✅"
+                _lines.append(f"{_icn} <b>{_esc(_nm(s))}</b> — {cm['counts'][s]}/{_tot} scans · best rank #{cm['best'][s]}")
+            body = (f"🏅 <b>STABLE PICKS · {_win} window · {_tot}/{_tot} scans</b>\n"
+                    f"📅 {_date}\n" + "\n".join(_lines))
+            if t2:
+                body += "\n🔁 <i>Watchlist (" + str(_nd - 1) + "×): " + _esc(", ".join(_nm(s) for s in t2[:8])) + "</i>"
+        else:
+            body = (f"🏅 <b>STABLE PICKS · {_win} window · {_tot}/{_tot} scans</b>\n"
+                    f"📅 {_date}\n"
+                    f"⚠️ <b>No stock appeared {_nd}×+</b> — no firm leaders in this window. "
+                    "Coach keeps its own watchlist — do NOT force trades.")
+        body += "\n🕑 <i>Slots filled: " + slots + (" ⚠️ late backfill" if late else "") + "</i>"
+        body += "\n🏁 <i>Result at " + now_ist().strftime("%H:%M") + " IST</i>"
+        if tg_send(body):
+            d["announced_day"] = d.get("day")
+            d["result_ts"] = now_ist().strftime("%H:%M")
+            rt_save("cons", **d)
+            return True
+        return False
+    except Exception:
+        return False
 
 
 def cons_lock_coach(ss):
@@ -2019,7 +2126,7 @@ def cons_lock_coach(ss):
     picks (held positions are preserved). Runs once per day."""
     try:
         t1, t2, cm = cons_compute()
-        if not t1 or (cm.get("n") or 0) < 4:
+        if not t1 or (cm.get("n") or 0) < (cm.get("total") or 4):
             return False
         if (rt_load().get("co") or {}).get("cons_day") == cm.get("day"):
             return False
@@ -2045,7 +2152,8 @@ def cons_lock_coach(ss):
                         for s in new_w[:8])
         tg_send(f"\U0001F3C5 <b>STABLE PICKS LOCKED \u00b7 coach follows ONLY these now</b>\n"
                 f"{_esc(txt)}\n"
-                f"<i>Appeared in 3\u20134 of the 4 morning scans (9:30\u201310:15) \u2014 "
+                f"<i>Appeared in {cm.get('need') or 3}+ of the {cm.get('total') or 4} scans "
+                f"({(cm.get('cfg') or {}).get('start', '09:30')}\u2013{(cm.get('cfg') or {}).get('end', '10:15')}) \u2014 "
                 f"the proven ones, no more confusion.</i>")
         rt_save("co", cons_day=cm.get("day"))
         return True
@@ -2368,6 +2476,17 @@ def render_coach_tab(ss, mst_s):
                                          int(ss.get("co_cap") or COACH_CAP_DEFAULT)),
                        keep=True):
                 rt_save("co", eod_day=_eod_day)
+                try:
+                    _cbrt = (rt_load().get("cb") or {}).get("combos") or []
+                    _top = sorted([c for c in _cbrt if c.get("verdict") in ("🎯 PERFECT", "✅ MATCH")],
+                                  key=lambda c: -(c.get("chg_day") or 0))[:5]
+                    if _top:
+                        _tl = "\n".join(f"{c['name']} {c['chg_day']:+.1f}% ({c['verdict']})" for c in _top)
+                        tg_send("🏆 <b>COMBO BOARD · today's strongest agreements</b>\n" + _tl +
+                                "\n<i>Live climb + calculation both agreed — the day's real leaders.</i>",
+                                keep=True)
+                except Exception:
+                    pass
     except Exception:
         pass
 
@@ -5221,6 +5340,8 @@ def combo_tab(ss, mst_s):
                 ss["cb_n"] = _rt["n"]
             ss["_cb_resumed"] = True
 
+    cons_announce()   # 📲 reopen later/evening: today's final result still gets delivered
+
     st.markdown(_H("""<div style='background:linear-gradient(135deg,#1e1b4b,#0f3d2e);border-radius:18px;
     padding:18px 22px;margin-bottom:12px;'>
     <div style='color:white;font-size:20px;font-weight:900;'>🎯 COMBO — live money ∩ calculation</div>
@@ -5304,6 +5425,7 @@ def combo_tab(ss, mst_s):
         with st.spinner("🎯 Combo scan — live candles + calculation for the whole board…"):
             ss["cb"] = combo_scan(watch, names)
             cons_capture(ss["cb"])          # 🏅 9:30/9:45/10:00/10:15 TOP-20 snapshots
+            cons_announce(names)           # 📲 guaranteed Telegram delivery of the final list
             try:                            # 🏔️ 52-week-high club (cached 30 min)
                 if time.time() - ss.get("cb_52w_ts", 0) > 1800:
                     ss["cb_52w"] = high52_map([c["sym"] for c in ss["cb"][:48]])
@@ -5408,14 +5530,67 @@ def combo_tab(ss, mst_s):
         except Exception:
             pass
 
-    # ── 🏅 STABLE PERFECT PICKS (morning consensus) ──
+    # ── ⏱️ SNAPSHOT SCHEDULE — YOU choose the analysis window ──
+    with st.expander("⏱️ SNAPSHOT SCHEDULE — set your analysis window"):
+        _cc = cons_cfg_load()
+        _g1, _g2, _g3 = st.columns(3)
+        with _g1:
+            _ns = st.text_input("From (like 9.30)", value=_cc["start"], key="cons_from")
+        with _g2:
+            _ne = st.text_input("To (like 10.15)", value=_cc["end"], key="cons_to")
+        with _g3:
+            _ev = st.number_input("Every N min", 2, 30, int(_cc["every"]), key="cons_every")
+        if st.button("✅ APPLY SCHEDULE", key="cons_apply", **STRETCH):
+            _a, _b = _hmm(_ns), _hmm(_ne)
+            _nsl = 0
+            if _a is not None and _b is not None and _b >= _a:
+                _nsl = (_b - _a) // max(2, int(_ev)) + 1
+            if _a is None or _b is None:
+                st.error("⏰ Time not understood — write like 9.30 or 09:30")
+            elif _b < _a:
+                st.error("⏰ 'To' time must be AFTER 'From' time")
+            elif _nsl < 2:
+                st.error("⏰ Window too small — From and To must differ by at least the interval")
+            elif _nsl > 12:
+                st.error(f"⚠️ That makes {_nsl} snapshots (max 12) — increase the minutes or shorten the window")
+            else:
+                rt_save("conscfg", start=f"{_a // 60:02d}:{_a % 60:02d}",
+                        end=f"{_b // 60:02d}:{_b % 60:02d}", every=int(_ev))
+                rt_save("cons", day="RESET", snaps={}, n=0, ts={}, date=None,
+                        result_ts=None, announced_day=None)      # fresh analysis
+                try:
+                    rt_save("co", cons_day=None)                 # allow re-lock on new window
+                except Exception:
+                    pass
+                ss["_cons_applied"] = True
+                st.rerun()
+        if ss.get("_cons_applied"):
+            ss["_cons_applied"] = False
+            st.success("✅ Snapshot schedule APPLIED — today's snapshots reset. "
+                       "Next scans follow your new times.")
+        _cur = cons_slots()
+        st.caption("📸 Snapshots at: " + " · ".join(l for l, _m in _cur) + f" ({len(_cur)} scans) — "
+                   "the result + Telegram message arrive right after the LAST snapshot. "
+                   "Changing the schedule resets today's snapshots so the analysis stays clean.")
+
+    # ── 🏅 STABLE PICKS (your window's consensus result) ──
     _t1c, _t2c, _cmc = cons_compute()
     _namesL = ss.get("cb_names") or {}
+    _ccfg = _cmc.get("cfg") or {}
+    _win = f"{_ccfg.get('start', '09:30')}–{_ccfg.get('end', '10:15')}"
     if _cmc["n"]:
-        with st.expander(f"🏅 STABLE PERFECT PICKS — {_cmc['n']}/4 morning scans captured", expanded=True):
-            st.caption("Snapshots of the TOP 20 at 9:30 · 9:45 · 10:00 · 10:15. A stock appearing 3–4× "
-                       "is genuinely strong, not a flicker — after the 4th snapshot the 🎯 coach "
-                       "follows ONLY these (kept positions stay).")
+        with st.expander(f"🏅 STABLE PICKS — {_cmc['n']}/{_cmc['total']} scans · window {_win}", expanded=True):
+            _slbl = " · ".join(l for l, _m in _cmc["slots"])
+            st.caption(f"📸 {_cmc.get('date') or now_ist().strftime('%a %d %b %Y')} — TOP-20 snapshots at "
+                       f"{_slbl}. A stock appearing in {_cmc['need']}+ of {_cmc['total']} scans is "
+                       f"genuinely strong, not a flicker — after the last snapshot the 🎯 coach "
+                       f"follows ONLY these (kept positions stay).")
+            _tss = _cmc.get("ts") or {}
+            _slotline = " · ".join(f"{l} <b>{_tss.get(l, '⏳ pending')}</b>" for l, _m in _cmc["slots"])
+            _res = f" · 🏁 result at <b>{_cmc['result_ts']}</b>" if _cmc.get("result_ts") else ""
+            st.markdown(_H(f"<div style='background:#0b1220;border:1px solid #1e293b;border-radius:10px;"
+                           f"padding:8px 12px;color:#94a3b8;font-size:12px;margin-bottom:8px;'>"
+                           f"🕒 Scans: {_slotline}{_res}</div>"), unsafe_allow_html=True)
             if _t1c:
                 for _s in _t1c:
                     _cnt, _bst = _cmc["counts"][_s], _cmc["best"][_s]
@@ -5423,12 +5598,13 @@ def combo_tab(ss, mst_s):
                                    f"border:1px solid #22c55e;border-radius:10px;padding:7px 12px;margin:4px 0;flex-wrap:wrap;gap:6px;'>"
                                    f"<b style='color:#bbf7d0;'>🏅 {_esc(_namesL.get(_s, _s.replace('.NS','')))}</b>"
                                    f"<span style='color:#4ade80;font-family:monospace;font-weight:800;'>"
-                                   f"{_cnt}/{_cmc['n']} scans · best rank #{_bst}</span></div>"), unsafe_allow_html=True)
+                                   f"{_cnt}/{_cmc['total']} scans · best rank #{_bst}</span></div>"), unsafe_allow_html=True)
             else:
-                st.info(f"{_cmc['n']} snapshot(s) captured — stocks appearing 3×+ will show here. "
-                        "Full lock-in after the 10:15 snapshot (keep this radar running).")
+                st.info(f"{_cmc['n']}/{_cmc['total']} snapshots captured — stocks appearing "
+                        f"{_cmc['need']}×+ will show here. Full result after the "
+                        f"{_cmc['slots'][-1][0]} snapshot (keep this radar running).")
             if _t2c:
-                st.caption("🔁 Appeared 2× (watchlist): " + ", ".join(
+                st.caption(f"🔁 Appeared {_cmc['need'] - 1}× (watchlist): " + ", ".join(
                     _namesL.get(s, s.replace(".NS", "")) for s in _t2c[:10]))
 
     # ── 🏔️ 52-WEEK HIGH CLUB ──
@@ -6190,7 +6366,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.10 · FAST BUILD · 500 LIVE</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.11 · CUSTOM WINDOWS</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
