@@ -351,22 +351,52 @@ def universe_search(query, limit=40):
 # ============================================================
 # UTILITIES
 # ============================================================
+# ── 📅 NSE TRADING HOLIDAYS 2026 (official NSE circular list) — update
+#    each December/January when NSE publishes the new year's calendar ──
+NSE_HOLIDAYS = {
+    "2026-01-15": "Maharashtra Municipal Election",
+    "2026-01-26": "Republic Day",
+    "2026-03-03": "Holi",
+    "2026-03-26": "Shri Ram Navami",
+    "2026-03-31": "Shri Mahavir Jayanti",
+    "2026-04-03": "Good Friday",
+    "2026-04-14": "Dr. Ambedkar Jayanti",
+    "2026-05-01": "Maharashtra Day",
+    "2026-05-28": "Bakri Id",
+    "2026-06-26": "Muharram",
+    "2026-09-14": "Ganesh Chaturthi",
+    "2026-10-02": "Mahatma Gandhi Jayanti",
+    "2026-10-20": "Dussehra",
+    "2026-11-10": "Diwali-Balipratipada",
+    "2026-11-24": "Guru Nanak Jayanti",
+    "2026-12-25": "Christmas",
+}
+
+
+def _next_trading_day(d):
+    """Next date that is NOT a weekend and NOT an NSE holiday."""
+    d = d + _dtd(days=1)
+    while d.weekday() >= 5 or d.strftime("%Y-%m-%d") in NSE_HOLIDAYS:
+        d += _dtd(days=1)
+    return d
+
+
 def mkt_status():
     n = now_ist()
+    _hol = NSE_HOLIDAYS.get(n.strftime("%Y-%m-%d"))
+    if _hol:
+        _d = _next_trading_day(n.date())
+        return "closed", f"🔴 HOLIDAY · {_hol}", f"Opens {_d.strftime('%A %d %b')} 9:15 AM"
     if n.weekday() >= 5:
-        _d = n.date() + _dtd(days=1)
-        while _d.weekday() >= 5:
-            _d += _dtd(days=1)
-        return "closed", "🔴 CLOSED", f"Opens {_d.strftime('%A')} 9:15 AM"
+        _d = _next_trading_day(n.date())
+        return "closed", "🔴 CLOSED", f"Opens {_d.strftime('%A %d %b')} 9:15 AM"
     t = n.time()
     if t < dtime(9, 0):    return "pre",  "🌅 PRE-MARKET", "Opens today 9:15 AM"
     if t < dtime(9, 15):   return "pre",  "🌅 PRE-OPEN",   "Opens very soon!"
     if t <= dtime(15, 30): return "open", "🟢 MARKET LIVE","Closes 3:30 PM"
-    # after close → the NEXT TRADING day (skips Sat/Sun, always shows the day name)
-    _d = n.date() + _dtd(days=1)
-    while _d.weekday() >= 5:
-        _d += _dtd(days=1)
-    return "closed", "🔴 CLOSED", f"Opens {_d.strftime('%A')} 9:15 AM"
+    # after close → the NEXT TRADING day (skips weekends AND NSE holidays)
+    _d = _next_trading_day(n.date())
+    return "closed", "🔴 CLOSED", f"Opens {_d.strftime('%A %d %b')} 9:15 AM"
 
 
 def session_time_context():
@@ -1967,8 +1997,9 @@ def coach_eod_summary(log, cap):
 
 CONS_SLOTS = [("09:30", 9 * 60 + 30), ("09:45", 9 * 60 + 45),
               ("10:00", 10 * 60), ("10:15", 10 * 60 + 15)]   # legacy default
-CONS_CFG_DEFAULT = {"wins": [{"start": "09:30", "end": "10:15", "every": 15},
-                             {"start": "10:15", "end": "10:45", "every": 10}]}
+CONS_CFG_DEFAULT = {"wins": [{"start": "09:30", "end": "09:50", "every": 10},
+                             {"start": "09:50", "end": "10:15", "every": 5},
+                             {"start": "10:20", "end": "10:40", "every": 10}]}
 
 
 def _hmm(s):
@@ -2051,7 +2082,7 @@ def cons_capture(combos):
     passed (one snapshot per window per scan cycle; piggybacks combo scan)."""
     try:
         n = now_ist()
-        if n.weekday() >= 5 or not combos:
+        if n.weekday() >= 5 or n.strftime("%Y-%m-%d") in NSE_HOLIDAYS or not combos:
             return
         t = n.hour * 60 + n.minute
         d = cons_state()
@@ -5197,7 +5228,7 @@ def bounce_tab(ss, mst_s):
             _keys = list(DASH_SRC.keys())
             _def = _keys.index("🌐 Full NSE (auto-fill to your count)") if "🌐 Full NSE (auto-fill to your count)" in _keys else 0
             st.selectbox("Universe", _keys, index=_def, key="bc_src")
-            st.slider("How many stocks", 100, 500, 500, 50, key="bc_n")
+            st.slider("How many stocks", 100, 500, 300, 50, key="bc_n")
         with k2:
             st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=2, key="bc_int")
             st.caption("One scan = live 5-min candles + daily history (support/resistance) for the whole board.")
@@ -5361,13 +5392,13 @@ def combo_tab(ss, mst_s):
             and ss.get("cb_stop_day") != now_ist().strftime("%Y-%m-%d")
             and ss.get("cb_auto", True)):
         try:
-            _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
+            _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 300))
         except Exception:
             _w, _nm = [], {}
         if _w:
             ss["cb_watch"] = _w; ss["cb_names"] = _nm
             ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
-            rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=_w, names=_nm)
+            rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 300), watch=_w, names=_nm)
             ss["_cb_autostarted"] = True
             st.rerun()
 
@@ -5414,9 +5445,9 @@ def combo_tab(ss, mst_s):
             _keys = list(DASH_SRC.keys())
             _def = _keys.index("🌐 Full NSE (auto-fill to your count)") if "🌐 Full NSE (auto-fill to your count)" in _keys else 0
             st.selectbox("Universe", _keys, index=_def, key="cb_src")
-            st.slider("How many stocks", 100, 500, 500, 50, key="cb_n")
+            st.slider("How many stocks", 100, 500, 300, 50, key="cb_n")
         with k2:
-            st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=1, key="cb_int")
+            st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=2, key="cb_int")
             st.caption("One scan = live 5-minute candles + daily history for the whole board (~1–2 min).")
         s1, s2, s3 = st.columns(3)
         with s1:
@@ -5431,10 +5462,10 @@ def combo_tab(ss, mst_s):
         ss["cb_stop_day"] = now_ist().strftime("%Y-%m-%d")
         rt_clear("cb")
     if start_cb:
-        watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
+        watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 300))
         ss["cb_watch"] = watch; ss["cb_names"] = names
         ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
-        rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=watch, names=names)
+        rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 300), watch=watch, names=names)
 
     if not ss.get("cb_on"):
         st.markdown("<div style='background:#0b1220;border-radius:20px;padding:44px;text-align:center;'>"
@@ -5449,7 +5480,7 @@ def combo_tab(ss, mst_s):
     if ss.get("_cb_autostarted"):
         ss["_cb_autostarted"] = False
         st.success("🚀 Combo radar AUTO-STARTED (market open) — snapshotting TOP-20 through your ⏱️ "
-                   "analysis windows (9:30–10:15 and 10:15–10:45 by default) — one 🏅 result per window. "
+                   "analysis windows (9:30–9:50 · 9:50–10:15 · 10:20–10:40 by default) — one 🏅 result per window. "
                    "The 📤 send button is ready whenever you are.")
     if ss.get("_cb_resumed"):
         ss["_cb_resumed"] = False
@@ -5488,7 +5519,7 @@ def combo_tab(ss, mst_s):
             ss.pop("cb_recheck", None)
         rt_save("cb", on=True, watch=watch, names=names, combos=ss["cb"],
                 last_scan=ss["cb_last"], ts_str=ss.get("cb_ts_str"),
-                src=ss.get("cb_src"), n=ss.get("cb_n", 500))
+                src=ss.get("cb_src"), n=ss.get("cb_n", 300))
 
     combos = ss.get("cb") or []
     if not combos:
@@ -5582,29 +5613,42 @@ def combo_tab(ss, mst_s):
         _cc = cons_cfg_load()
         _w1 = _cc["wins"][0]
         _w2 = (_cc["wins"][1] if len(_cc["wins"]) > 1
-               else {"start": "10:15", "end": "10:45", "every": 10})
-        st.markdown("**WINDOW 1 — morning consensus**")
+               else {"start": "09:50", "end": "10:15", "every": 5})
+        _w3 = (_cc["wins"][2] if len(_cc["wins"]) > 2
+               else {"start": "10:20", "end": "10:40", "every": 10})
+        st.markdown("**WINDOW 1 — opening (9:30 → 9:50)**")
         _a1, _b1, _c1 = st.columns(3)
         with _a1:
             _ns1 = st.text_input("From (like 9.30)", value=_w1["start"], key="cons_from1")
         with _b1:
-            _ne1 = st.text_input("To (like 10.15)", value=_w1["end"], key="cons_to1")
+            _ne1 = st.text_input("To (like 9.50)", value=_w1["end"], key="cons_to1")
         with _c1:
             _ev1 = st.number_input("Every N min", 2, 30, int(_w1["every"]), key="cons_every1")
-        st.markdown("**WINDOW 2 — late-morning confirmation**")
+        st.markdown("**WINDOW 2 — morning confirm (9:50 → 10:15)**")
         _a2, _b2, _c2, _d2 = st.columns(4)
         with _a2:
-            _ns2 = st.text_input("From (like 10.15)", value=_w2["start"], key="cons_from2")
+            _ns2 = st.text_input("From (like 9.50)", value=_w2["start"], key="cons_from2")
         with _b2:
-            _ne2 = st.text_input("To (like 10.45)", value=_w2["end"], key="cons_to2")
+            _ne2 = st.text_input("To (like 10.15)", value=_w2["end"], key="cons_to2")
         with _c2:
             _ev2 = st.number_input("Every N min", 2, 30, int(_w2["every"]), key="cons_every2")
         with _d2:
-            _en2 = st.checkbox("Window 2 ON", value=len(_cc["wins"]) > 1, key="cons_en2")
+            _en2 = st.checkbox("ON", value=len(_cc["wins"]) > 1, key="cons_en2")
+        st.markdown("**WINDOW 3 — late morning (10:20 → 10:40)**")
+        _a3, _b3, _c3, _d3 = st.columns(4)
+        with _a3:
+            _ns3 = st.text_input("From (like 10.20)", value=_w3["start"], key="cons_from3")
+        with _b3:
+            _ne3 = st.text_input("To (like 10.40)", value=_w3["end"], key="cons_to3")
+        with _c3:
+            _ev3 = st.number_input("Every N min", 2, 30, int(_w3["every"]), key="cons_every3")
+        with _d3:
+            _en3 = st.checkbox("ON", value=len(_cc["wins"]) > 2, key="cons_en3")
         if st.button("✅ APPLY SCHEDULE", key="cons_apply", **STRETCH):
             _errs, _wins = [], []
             for _lbl, _ns, _ne, _ev, _on in (("Window 1", _ns1, _ne1, int(_ev1), True),
-                                              ("Window 2", _ns2, _ne2, int(_ev2), _en2)):
+                                              ("Window 2", _ns2, _ne2, int(_ev2), _en2),
+                                              ("Window 3", _ns3, _ne3, int(_ev3), _en3)):
                 if not _on:
                     continue
                 _a, _b = _hmm(_ns), _hmm(_ne)
@@ -5782,7 +5826,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
                 custom_txt = st.text_area("Symbols (comma/space separated · max 500)",
                                           placeholder="RELIANCE, TCS, SUZLON, ZENSARTECH …",
                                           height=80, key="dash_custom")
-            n_sel = st.slider("How many stocks (minimum 200 recommended)", 100, 500, 500, 50, key="dash_n",
+            n_sel = st.slider("How many stocks (minimum 200 recommended)", 100, 500, 300, 50, key="dash_n",
                               help="Full-NSE fills up to this many. The board GUARANTEES at least "
                                    "min(200, list size) live stocks — missing symbols are auto-retried.")
         with c2:
@@ -6440,7 +6484,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.12 · DUAL WINDOWS</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.14 · TRIPLE WINDOWS · LITE</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
