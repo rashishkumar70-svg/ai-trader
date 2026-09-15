@@ -4239,10 +4239,17 @@ def build_watchlist(src_key, n, custom_txt=""):
     return out, nm
 
 
+_FEED = {"req": 0, "got": 0, "ts": 0.0}   # 🩺 data-feed health (requested vs received)
+
+
 @st.cache_data(ttl=90, max_entries=120, show_spinner=False)
 def fetch_chunk(syms, iv, per):
     """ONE batched yfinance download for up to ~50 symbols — this is what
     makes 500-stock live scanning possible (10 requests instead of 500)."""
+    try:
+        _FEED["req"] += len(syms)
+    except Exception:
+        pass
     if iv in ("1m", "5m", "15m"):
         up_prefetch(tuple(syms))   # 📡 tick-fresh LTPs into cache (no-op without token)
     try:
@@ -4274,6 +4281,10 @@ def fetch_chunk(syms, iv, per):
                     out[s] = df
             except Exception:
                 continue
+    except Exception:
+        pass
+    try:
+        _FEED["got"] += len(out); _FEED["ts"] = time.time()
     except Exception:
         pass
     return {s: up_patch_df(s, d) for s, d in out.items()}   # 📡 splice live LTP
@@ -4734,6 +4745,8 @@ def live_movers_tab(ss, mst_s):
         with st.spinner("⚡ Scanning the board live (5-minute candles)…"):
             got, _ = _sweep(watch, "5m", "2d", with_daily=False, progress=True)
         movers = compute_movers(got)
+        ss["mv_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "req": len(watch or []),
+                           "got": len(got), "rows": len(movers)}
         ss["mv"] = movers
         ss["mv_last"] = time.time()
         ss["mv_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
@@ -4794,14 +4807,35 @@ def live_movers_tab(ss, mst_s):
                 alerts=ss.get("mv_alerts") or [], src=ss.get("mv_src"), n=ss.get("mv_n"))
 
     movers = ss.get("mv") or []
+    _mvh = ss.get("mv_health") or {}
     if not movers:
-        if mst_s == "open":
+        _hr, _hg = int(_mvh.get("req") or 0), int(_mvh.get("got") or 0)
+        _pct = int(_hg * 100 / _hr) if _hr else 0
+        if _hr:
+            st.caption(f"🩺 SCAN DIAGNOSIS · data feed {_hg}/{_hr} stocks ({_pct}%) · "
+                       f"last scan {_mvh.get('ts', '—')}")
+        if mst_s == "open" and _hr and _hg == 0:
+            st.markdown("<div style='background:#2a0e0e;border:1px solid #ef4444;border-radius:12px;padding:14px 18px;"
+                        "color:#fecaca;font-size:13px;line-height:1.8;'>❌ <b>DATA FEED FAILED — downloaded 0 of "
+                        f"{_hr} stocks.</b><br>The connection between this server and the price source (Yahoo) is "
+                        "failing — host overload or a temporary block. <b>The program is fine; the connection is not."
+                        "</b><br>✔️ The radar retries automatically every cycle.<br>"
+                        "🔁 If this red box stays for <b>15+ minutes</b>: reboot the app <b>ONCE</b>, then wait "
+                        "5 minutes without touching anything.</div>", unsafe_allow_html=True)
+        elif mst_s == "open" and _hr and _pct < 60:
+            st.markdown(f"<div style='background:#3a2a06;border:1px solid #f59e0b;border-radius:12px;padding:14px 18px;"
+                        f"color:#fde68a;font-size:13px;line-height:1.8;'>⚠️ <b>PARTIAL DATA — only {_hg}/{_hr} stocks "
+                        f"({_pct}%) downloaded.</b><br>The server connection is struggling right now; the board below "
+                        "may be incomplete. Auto-retry on the next scan — no action needed.</div>", unsafe_allow_html=True)
+        elif mst_s == "open":
             st.markdown("<div style='background:#0b2447;border:1px solid #3b82f6;border-radius:12px;padding:14px 18px;"
                         "color:#bfdbfe;font-size:13px;line-height:1.8;'>🕘 <b>Market is open but the session just "
                         "started.</b> Five-minute candles are still building (first ones arrive after 9:15).<br>"
                         "✔️ Press <b>🔄 Scan now</b> again — from <b>~9:30 AM</b> you'll get early scores, and they "
                         "become reliable from <b>~9:45 AM</b> (6+ candles).<br>"
-                        "⏰ Keep auto-refresh ON — the radar fills up by itself.</div>", unsafe_allow_html=True)
+                        "⏰ Keep auto-refresh ON — the radar fills up by itself."
+                        + (f"<br>✅ <b>Data connection is HEALTHY</b> ({_hg}/{_hr} · {_pct}%) — the filters just "
+                           "haven't found movers yet." if _hr else "") + "</div>", unsafe_allow_html=True)
         elif mst_s == "pre":
             st.info("🌅 Market opens at 9:15 AM IST. Press ⚡ START before the open — the radar will begin scoring "
                     "as soon as the first candles form (~9:20–9:30).")
@@ -4821,6 +4855,8 @@ def live_movers_tab(ss, mst_s):
     st.markdown(f"<div style='background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:8px 14px;"
                 f"color:#94a3b8;font-size:12px;margin-bottom:10px;'>🕒 Last scan: <b style='color:#e2e8f0;'>{_mv_ts} IST</b>"
                 f" · <b style='color:{_mvc};'>{_mv_age} min ago</b>"
+                + (f" · 🩺 feed <b style='color:{'#4ade80' if _mvh.get('got', 0) >= _mvh.get('req', 1) * 0.6 else '#f87171'};'>"
+                   f"{_mvh.get('got', '?')}/{_mvh.get('req', '?')}</b>" if _mvh.get("req") else "")
                 + (" — <b style='color:#f87171;'>data is old, climbs may have ended. Press 🔄 Scan now.</b>"
                    if _mv_age > 12 and mst_s == "open" else "") + "</div>", unsafe_allow_html=True)
 
@@ -5515,15 +5551,34 @@ def combo_tab(ss, mst_s):
                 pass
             ss["cb_last"] = time.time()
             ss["cb_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
+            try:                                # 🩺 connection probe (20 stocks)
+                _prb = fetch_chunk(tuple(watch[:20]), "5m", "1d") if watch else {}
+                ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": len(_prb)}
+            except Exception:
+                ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": 0}
             ss.pop("cb_recheck", None)
         rt_save("cb", on=True, watch=watch, names=names, combos=ss["cb"],
                 last_scan=ss["cb_last"], ts_str=ss.get("cb_ts_str"),
                 src=ss.get("cb_src"), n=ss.get("cb_n", 300))
 
     combos = ss.get("cb") or []
+    _cbh = ss.get("cb_health") or {}
     if not combos:
-        st.info("No scorable stocks yet — see the timing note above (first reliable scores from ~9:45 AM IST; "
-                "after close you get the full-day review).")
+        _pr = int(_cbh.get("probe") or -1)
+        if _pr == 0:
+            st.markdown("<div style='background:#2a0e0e;border:1px solid #ef4444;border-radius:12px;padding:14px 18px;"
+                        "color:#fecaca;font-size:13px;line-height:1.8;'>❌ <b>DATA FEED FAILED — the 20-stock connection "
+                        "test returned NOTHING.</b><br>The server↔Yahoo link is down (host overload or temporary "
+                        "block). <b>The program is fine; the connection is not.</b> Auto-retry every cycle — if this "
+                        "red box stays <b>15+ minutes</b>, reboot the app <b>ONCE</b> and wait 5 minutes.</div>",
+                        unsafe_allow_html=True)
+        elif 0 < _pr < 12:
+            st.warning(f"⚠️ PARTIAL DATA — connection test got only {_pr}/20 stocks. The server connection is "
+                       f"struggling; scores may be incomplete. Auto-retry on the next scan — no action needed.")
+        else:
+            st.info("No scorable stocks yet — first reliable scores from ~9:45 AM IST (see the timing note above)."
+                    + (f" 🩺 Connection test: {_pr}/20 OK — the data line is healthy; the filters just "
+                       "haven't found agreement yet." if _pr >= 0 else ""))
         return
     if mst_s == "closed":
         st.markdown("<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:10px;padding:8px 14px;"
@@ -6470,7 +6525,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.12 · DUAL WINDOWS · LITE</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.15 · SCAN DIAGNOSIS · LITE</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
