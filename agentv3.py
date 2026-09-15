@@ -1997,9 +1997,8 @@ def coach_eod_summary(log, cap):
 
 CONS_SLOTS = [("09:30", 9 * 60 + 30), ("09:45", 9 * 60 + 45),
               ("10:00", 10 * 60), ("10:15", 10 * 60 + 15)]   # legacy default
-CONS_CFG_DEFAULT = {"wins": [{"start": "09:30", "end": "09:50", "every": 10},
-                             {"start": "09:50", "end": "10:15", "every": 5},
-                             {"start": "10:20", "end": "10:40", "every": 10}]}
+CONS_CFG_DEFAULT = {"wins": [{"start": "09:30", "end": "10:15", "every": 15},
+                             {"start": "10:15", "end": "10:45", "every": 10}]}
 
 
 def _hmm(s):
@@ -5480,7 +5479,7 @@ def combo_tab(ss, mst_s):
     if ss.get("_cb_autostarted"):
         ss["_cb_autostarted"] = False
         st.success("🚀 Combo radar AUTO-STARTED (market open) — snapshotting TOP-20 through your ⏱️ "
-                   "analysis windows (9:30–9:50 · 9:50–10:15 · 10:20–10:40 by default) — one 🏅 result per window. "
+                   "analysis windows (9:30–10:15 and 10:15–10:45 by default) — one 🏅 result per window. "
                    "The 📤 send button is ready whenever you are.")
     if ss.get("_cb_resumed"):
         ss["_cb_resumed"] = False
@@ -5613,42 +5612,29 @@ def combo_tab(ss, mst_s):
         _cc = cons_cfg_load()
         _w1 = _cc["wins"][0]
         _w2 = (_cc["wins"][1] if len(_cc["wins"]) > 1
-               else {"start": "09:50", "end": "10:15", "every": 5})
-        _w3 = (_cc["wins"][2] if len(_cc["wins"]) > 2
-               else {"start": "10:20", "end": "10:40", "every": 10})
-        st.markdown("**WINDOW 1 — opening (9:30 → 9:50)**")
+               else {"start": "10:15", "end": "10:45", "every": 10})
+        st.markdown("**WINDOW 1 — morning consensus**")
         _a1, _b1, _c1 = st.columns(3)
         with _a1:
             _ns1 = st.text_input("From (like 9.30)", value=_w1["start"], key="cons_from1")
         with _b1:
-            _ne1 = st.text_input("To (like 9.50)", value=_w1["end"], key="cons_to1")
+            _ne1 = st.text_input("To (like 10.15)", value=_w1["end"], key="cons_to1")
         with _c1:
             _ev1 = st.number_input("Every N min", 2, 30, int(_w1["every"]), key="cons_every1")
-        st.markdown("**WINDOW 2 — morning confirm (9:50 → 10:15)**")
+        st.markdown("**WINDOW 2 — late-morning confirmation**")
         _a2, _b2, _c2, _d2 = st.columns(4)
         with _a2:
-            _ns2 = st.text_input("From (like 9.50)", value=_w2["start"], key="cons_from2")
+            _ns2 = st.text_input("From (like 10.15)", value=_w2["start"], key="cons_from2")
         with _b2:
-            _ne2 = st.text_input("To (like 10.15)", value=_w2["end"], key="cons_to2")
+            _ne2 = st.text_input("To (like 10.45)", value=_w2["end"], key="cons_to2")
         with _c2:
             _ev2 = st.number_input("Every N min", 2, 30, int(_w2["every"]), key="cons_every2")
         with _d2:
-            _en2 = st.checkbox("ON", value=len(_cc["wins"]) > 1, key="cons_en2")
-        st.markdown("**WINDOW 3 — late morning (10:20 → 10:40)**")
-        _a3, _b3, _c3, _d3 = st.columns(4)
-        with _a3:
-            _ns3 = st.text_input("From (like 10.20)", value=_w3["start"], key="cons_from3")
-        with _b3:
-            _ne3 = st.text_input("To (like 10.40)", value=_w3["end"], key="cons_to3")
-        with _c3:
-            _ev3 = st.number_input("Every N min", 2, 30, int(_w3["every"]), key="cons_every3")
-        with _d3:
-            _en3 = st.checkbox("ON", value=len(_cc["wins"]) > 2, key="cons_en3")
+            _en2 = st.checkbox("Window 2 ON", value=len(_cc["wins"]) > 1, key="cons_en2")
         if st.button("✅ APPLY SCHEDULE", key="cons_apply", **STRETCH):
             _errs, _wins = [], []
             for _lbl, _ns, _ne, _ev, _on in (("Window 1", _ns1, _ne1, int(_ev1), True),
-                                              ("Window 2", _ns2, _ne2, int(_ev2), _en2),
-                                              ("Window 3", _ns3, _ne3, int(_ev3), _en3)):
+                                              ("Window 2", _ns2, _ne2, int(_ev2), _en2)):
                 if not _on:
                     continue
                 _a, _b = _hmm(_ns), _hmm(_ne)
@@ -6484,7 +6470,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.14 · TRIPLE WINDOWS · LITE</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.12 · DUAL WINDOWS · LITE</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
