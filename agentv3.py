@@ -5263,7 +5263,7 @@ def bounce_tab(ss, mst_s):
             _keys = list(DASH_SRC.keys())
             _def = _keys.index("🌐 Full NSE (auto-fill to your count)") if "🌐 Full NSE (auto-fill to your count)" in _keys else 0
             st.selectbox("Universe", _keys, index=_def, key="bc_src")
-            st.slider("How many stocks", 100, 500, 300, 50, key="bc_n")
+            st.slider("How many stocks", 100, 500, 500, 50, key="bc_n")
         with k2:
             st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=2, key="bc_int")
             st.caption("One scan = live 5-min candles + daily history (support/resistance) for the whole board.")
@@ -5427,13 +5427,13 @@ def combo_tab(ss, mst_s):
             and ss.get("cb_stop_day") != now_ist().strftime("%Y-%m-%d")
             and ss.get("cb_auto", True)):
         try:
-            _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 300))
+            _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
         except Exception:
             _w, _nm = [], {}
         if _w:
             ss["cb_watch"] = _w; ss["cb_names"] = _nm
             ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
-            rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 300), watch=_w, names=_nm)
+            rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=_w, names=_nm)
             ss["_cb_autostarted"] = True
             st.rerun()
 
@@ -5480,9 +5480,9 @@ def combo_tab(ss, mst_s):
             _keys = list(DASH_SRC.keys())
             _def = _keys.index("🌐 Full NSE (auto-fill to your count)") if "🌐 Full NSE (auto-fill to your count)" in _keys else 0
             st.selectbox("Universe", _keys, index=_def, key="cb_src")
-            st.slider("How many stocks", 100, 500, 300, 50, key="cb_n")
+            st.slider("How many stocks", 100, 500, 500, 50, key="cb_n")
         with k2:
-            st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=2, key="cb_int")
+            st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=1, key="cb_int")
             st.caption("One scan = live 5-minute candles + daily history for the whole board (~1–2 min).")
         s1, s2, s3 = st.columns(3)
         with s1:
@@ -5497,10 +5497,10 @@ def combo_tab(ss, mst_s):
         ss["cb_stop_day"] = now_ist().strftime("%Y-%m-%d")
         rt_clear("cb")
     if start_cb:
-        watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 300))
+        watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
         ss["cb_watch"] = watch; ss["cb_names"] = names
         ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
-        rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 300), watch=watch, names=names)
+        rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=watch, names=names)
 
     if not ss.get("cb_on"):
         st.markdown("<div style='background:#0b1220;border-radius:20px;padding:44px;text-align:center;'>"
@@ -5559,7 +5559,7 @@ def combo_tab(ss, mst_s):
             ss.pop("cb_recheck", None)
         rt_save("cb", on=True, watch=watch, names=names, combos=ss["cb"],
                 last_scan=ss["cb_last"], ts_str=ss.get("cb_ts_str"),
-                src=ss.get("cb_src"), n=ss.get("cb_n", 300))
+                src=ss.get("cb_src"), n=ss.get("cb_n", 500))
 
     combos = ss.get("cb") or []
     _cbh = ss.get("cb_health") or {}
@@ -5867,7 +5867,7 @@ def dashboard_tab(ss, mst_s, ml, mm):
                 custom_txt = st.text_area("Symbols (comma/space separated · max 500)",
                                           placeholder="RELIANCE, TCS, SUZLON, ZENSARTECH …",
                                           height=80, key="dash_custom")
-            n_sel = st.slider("How many stocks (minimum 200 recommended)", 100, 500, 300, 50, key="dash_n",
+            n_sel = st.slider("How many stocks (minimum 200 recommended)", 100, 500, 500, 50, key="dash_n",
                               help="Full-NSE fills up to this many. The board GUARANTEES at least "
                                    "min(200, list size) live stocks — missing symbols are auto-retried.")
         with c2:
@@ -6525,7 +6525,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.15 · SCAN DIAGNOSIS · LITE</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.15 · SCAN DIAGNOSIS · FULL</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
