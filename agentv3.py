@@ -1846,20 +1846,35 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
+APP_VERSION = "v13.17 · PRO DARK · AUTOPILOT"
+
+
 def tg_online_ping():
-    """🟢 Tell the owner the app just came online (redeploy / cloud wake-up).
-    Max one message per 30 minutes — page refreshes stay silent."""
+    """🟢 ONE 'online' ping per trading morning (the day's first start,
+    8 AM–12 PM only). Silent the rest of the day — restarts, refreshes
+    and the autopilot's hourly reloads NEVER re-announce. A separate
+    'PROGRAM UPDATED' notice fires ONLY when the running version really
+    changed (evening deploy)."""
     try:
-        fn = f"tg_online_{_ukey()}.json"
-        last = 0
+        fn = f"tg_boot_{_ukey()}.json"
+        d = {}
         if _os.path.exists(fn):
-            last = _json.load(open(fn, encoding="utf-8")).get("ts", 0)
-        if time.time() - last > 1800:
-            if tg_send(f"\U0001F7E2 <b>AI Trader Pro is ONLINE</b>\n"
-                       f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
-                       f"<i>App just started (redeploy or wake-up) and is ready.</i>\n"
-                       f"Open \u26A1 Movers or \U0001F3AF Coach to begin today's session."):
-                _json.dump({"ts": time.time()}, open(fn, "w", encoding="utf-8"))
+            d = _json.load(open(fn, encoding="utf-8")) or {}
+        today = now_ist().strftime("%Y-%m-%d")
+        if d.get("ver") != APP_VERSION and d:
+            tg_send(f"\u2705 <b>PROGRAM UPDATED</b>\n"
+                    f"\U0001F680 Now running <b>{_esc(APP_VERSION)}</b>\n"
+                    f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
+                    f"<i>Same trading logic \u2014 engines and rules unchanged.</i>")
+        d["ver"] = APP_VERSION
+        _trading_day = now_ist().weekday() < 5 and today not in NSE_HOLIDAYS
+        if (d.get("day") != today and _trading_day and 8 <= now_ist().hour < 12
+                and tg_send(f"\U0001F7E2 <b>AI Trader is ONLINE</b>\n"
+                            f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
+                            f"<i>Morning auto-start \u2014 radars begin at 9:20.</i>\n"
+                            f"\U0001F3C5 RESULT 1 ~10:16 \u00b7 RESULT 2 ~10:46 \u2014 right here on Telegram.")):
+            d["day"] = today
+        _json.dump(d, open(fn, "w", encoding="utf-8"))
     except Exception:
         pass
 
@@ -6637,7 +6652,7 @@ def main():
             ss[k] = v
     mst_s, ml, mm = mkt_status()
     tg_daily_cleanup()   # 🧹 after close: clear today's alert messages from the phones
-    tg_online_ping()   # 🔔 "app is online" Telegram message (max 1 per 30 min)
+    tg_online_ping()   # 🔔 ONE morning "online"/day + "program updated" on version change
     mclr = "#22c55e" if mst_s == "open" else "#f59e0b" if mst_s == "pre" else "#ef4444"
 
     # live breadth badge for the navbar once the dashboard has data
@@ -6653,7 +6668,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.16 · PRO DARK · AUTOPILOT</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.17 · PRO DARK · AUTOPILOT</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
