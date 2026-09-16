@@ -1727,27 +1727,64 @@ def _tg_post(token, cid, text, html, buttons=None):
     return ((r.get("result") or {}).get("message_id"))
 
 
-_TG_SENT = {"day": None, "items": []}     # today's sent messages (for the EOD cleaner)
+_TG_SENT = {"day": None, "items": []}     # sent messages (EOD cleaner + morning purge)
+try:                                       # 🔄 restart-safe: tracked IDs live on disk,
+    _t = _json.load(open(f"tg_sent_{_ukey()}.json", encoding="utf-8"))   # not in memory —
+    if isinstance(_t, dict):               # a restart/deploy never orphans messages
+        _TG_SENT.update(day=_t.get("day"), items=_t.get("items") or [])
+except Exception:
+    pass
 
 
-def _tg_track(cid, mid):
-    """Remember a sent message so the end-of-day cleaner can delete it after close."""
+def _tg_norm_items(d):
+    """Normalize tracked items to [cid, mid, date, keep] (old files: [cid, mid])."""
+    out = []
+    for it in (d.get("items") or []):
+        try:
+            if len(it) >= 4:
+                out.append([str(it[0]), int(it[1]), str(it[2]), 1 if it[3] else 0])
+            else:
+                out.append([str(it[0]), int(it[1]),
+                            str(d.get("day") or now_ist().strftime("%Y-%m-%d")), 0])
+        except Exception:
+            continue
+    return out
+
+
+def _tg_track(cid, mid, keep=False):
+    """Remember EVERY sent message (chat, id, DATE, keep-flag). The cleaners
+    delete it later: same-day alerts after close · ALL previous-day messages
+    at the next midnight rollover. Restart-safe — IDs live in the file."""
     try:
         if not mid:
             return
         _today = now_ist().strftime("%Y-%m-%d")
-        if _TG_SENT.get("day") != _today:
-            _TG_SENT.update(day=_today, items=[])
-        _TG_SENT["items"].append([str(cid), int(mid)])
+        _items = _tg_norm_items(_TG_SENT)   # normalize FIRST — old items keep their own date
+        _TG_SENT["day"] = _today
+        _TG_SENT["items"] = _items + [[str(cid), int(mid), _today, 1 if keep else 0]]
         _json.dump(_TG_SENT, open(f"tg_sent_{_ukey()}.json", "w", encoding="utf-8"))
     except Exception:
         pass
 
 
+def _tg_delete(cfg, cid, mid):
+    """Delete one Telegram message (quietly)."""
+    try:
+        req = urllib.request.Request(
+            f"https://api.telegram.org/bot{cfg['token']}/deleteMessage",
+            data=_json.dumps({"chat_id": cid, "message_id": int(mid)}).encode("utf-8"),
+            headers={"Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=5).read()
+        time.sleep(0.05)
+        return True
+    except Exception:
+        return False      # already gone / too old — skip quietly
+
+
 def tg_daily_cleanup():
-    """🧹 After close (15:35+): delete today's alert messages from every chat —
-    the phone stays clean for tomorrow. Runs once per day; report cards and
-    manual tests are KEPT. Telegram only allows deleting messages < 48h old."""
+    """🧹 After close (15:35+): delete TODAY's alert messages (report cards
+    and manual tests stay for the evening review). Telegram only allows
+    deleting messages < 48h old."""
     try:
         n = now_ist()
         if n.weekday() >= 5:
@@ -1765,21 +1802,62 @@ def tg_daily_cleanup():
         cfg = tg_load()
         if not cfg.get("token"):
             return 0
-        deleted = 0
-        for cid, mid in (d.get("items") or [])[:300]:
-            try:
-                req = urllib.request.Request(
-                    f"https://api.telegram.org/bot{cfg['token']}/deleteMessage",
-                    data=_json.dumps({"chat_id": cid, "message_id": int(mid)}).encode("utf-8"),
-                    headers={"Content-Type": "application/json"})
-                urllib.request.urlopen(req, timeout=5).read()
-                deleted += 1
-                time.sleep(0.05)
-            except Exception:
-                continue      # already gone / too old — skip quietly
-        _TG_SENT.update(day=today, items=[])
+        items = _tg_norm_items(d)
+        keep_items, deleted = [], 0
+        for cid, mid, dstr, keep in items[:300]:
+            if dstr == today and not keep:
+                if _tg_delete(cfg, cid, mid):
+                    deleted += 1
+            else:
+                keep_items.append([cid, mid, dstr, keep])
+        _TG_SENT.update(day=today, items=list(keep_items))
         try:
-            _json.dump({"cleanup_day": today, "items": []}, open(fn, "w", encoding="utf-8"))
+            _json.dump({"cleanup_day": today, "purge_day": d.get("purge_day"),
+                        "day": today, "items": keep_items},
+                       open(fn, "w", encoding="utf-8"))
+        except Exception:
+            pass
+        return deleted
+    except Exception:
+        return 0
+
+
+def tg_morning_purge():
+    """🧹 NEW DAY, CLEAN CHAT: first run of each new day deletes ALL messages
+    still tracked from PREVIOUS days (including report cards) — every trading
+    morning starts with an empty Telegram chat."""
+    try:
+        fn = f"tg_sent_{_ukey()}.json"
+        try:
+            d = _json.load(open(fn, encoding="utf-8"))
+        except Exception:
+            d = {}
+        today = now_ist().strftime("%Y-%m-%d")
+        if d.get("purge_day") == today:
+            return 0
+        items = _tg_norm_items(d)
+        if not any(it[2] < today for it in items):
+            d["purge_day"] = today
+            try:
+                _json.dump(d, open(fn, "w", encoding="utf-8"))
+            except Exception:
+                pass
+            return 0
+        cfg = tg_load()
+        if not cfg.get("token"):
+            return 0
+        keep_items, deleted = [], 0
+        for cid, mid, dstr, keep in items[:300]:
+            if dstr < today:
+                if _tg_delete(cfg, cid, mid):
+                    deleted += 1
+            else:
+                keep_items.append([cid, mid, dstr, keep])
+        _TG_SENT.update(day=today, items=list(keep_items))
+        try:
+            _json.dump({"purge_day": today, "cleanup_day": d.get("cleanup_day"),
+                        "day": today, "items": keep_items},
+                       open(fn, "w", encoding="utf-8"))
         except Exception:
             pass
         return deleted
@@ -1806,8 +1884,7 @@ def tg_send_one(cid, text, _retry=True, buttons=None, keep=False):
         return False, "no token configured"
     try:
         mid = _tg_post(cfg["token"], cid, text, html=_retry, buttons=buttons)
-        if not keep:
-            _tg_track(cid, mid)
+        _tg_track(cid, mid, keep)
         return True, ""
     except urllib.error.HTTPError as e:
         if e.code == 400 and _retry:      # bad formatting → strip tags, plain resend
@@ -1818,8 +1895,7 @@ def tg_send_one(cid, text, _retry=True, buttons=None, keep=False):
             try:
                 mid = _tg_post(cfg["token"], cid, re.sub(r"<[^>]+>", "", text), html=False,
                                buttons=buttons)
-                if not keep:
-                    _tg_track(cid, mid)
+                _tg_track(cid, mid, keep)
                 return True, ""
             except Exception:
                 pass
@@ -1846,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.18 · PRO DARK · AUTOPILOT"
+APP_VERSION = "v13.19 · CLEAN CHAT"
 
 
 def tg_online_ping():
@@ -6658,6 +6734,7 @@ def main():
             ss[k] = v
     mst_s, ml, mm = mkt_status()
     tg_daily_cleanup()   # 🧹 after close: clear today's alert messages from the phones
+    tg_morning_purge()   # 🧹 new day: delete ALL of yesterday's messages — clean morning chat
     tg_online_ping()   # 🔔 ONE morning "online"/day + "program updated" on version change
     mclr = "#22c55e" if mst_s == "open" else "#f59e0b" if mst_s == "pre" else "#ef4444"
 
@@ -6674,7 +6751,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.18 · PRO DARK · AUTOPILOT</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.19 · CLEAN CHAT</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
