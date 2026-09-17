@@ -7285,6 +7285,20 @@ def main():
     mst_s, ml, mm = mkt_status()
     tg_daily_cleanup()   # 🧹 after close: clear today's alert messages from the phones
     tg_morning_purge()   # 🧹 new day: delete ALL of yesterday's messages — clean morning chat
+    try:                  # 🧹 NEW-DAY RESET — yesterday's data never leaks into today
+        _nd = now_ist().strftime("%Y-%m-%d")
+        if (rt_load().get("dayrst") or {}).get("day") != _nd:
+            _keepcap = (rt_load().get("co") or {}).get("cap")   # 💰 capital survives the reset
+            for _eng in ("co", "cb", "mv", "bc", "cons"):   # dead sessions + old boards/alerts/snapshots
+                rt_clear(_eng)
+            if _keepcap:
+                rt_save("co", cap=_keepcap)
+            for _k in ("co_log", "co_feed", "co_volc", "co_ctx", "mv_alerts", "bc_alerts",
+                       "cb", "co_pos", "dash", "mv", "bc", "bc_prev", "mv_prevform"):
+                ss.pop(_k, None)
+            rt_save("dayrst", day=_nd)
+    except Exception:
+        pass
     tg_online_ping()   # 🔔 ONE morning "online"/day + "program updated" on version change
     mclr = "#22c55e" if mst_s == "open" else "#f59e0b" if mst_s == "pre" else "#ef4444"
 
