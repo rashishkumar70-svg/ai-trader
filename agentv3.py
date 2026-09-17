@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.21.2 · ANALYTICS"
+APP_VERSION = "v13.21.3 · ANALYTICS"
 
 
 def tg_online_ping():
@@ -3294,44 +3294,49 @@ def up_settings_ui(tag=""):
             else:
                 st.error("Paste the token first: Upstox → account.upstox.com/developer/apps → Analytics "
                          "tab → Generate Token → copy icon.")
-        st.caption("⬇️ CLASSIC method (daily login) — optional, the analytics token above is better:")
-        c1, c2 = st.columns(2)
-        with c1:
-            k = st.text_input("Upstox API Key", value=d.get("key", ""), key=f"up_k{tag}")
-        with c2:
-            sc = st.text_input("Upstox API Secret", value=d.get("secret", ""), type="password",
-                               key=f"up_s{tag}")
-        rd = st.text_input("Redirect URI (must EXACTLY match your Upstox app)", value=d.get("redirect", ""),
-                           key=f"up_r{tag}")
-        if st.button("💾 Save Upstox keys", key=f"up_save{tag}", **STRETCH):
-            up_save(k, sc, rd)
-            st.success("Saved ✓ — stored ONLY inside this app instance (never in the GitHub file).")
-        if k.strip() and sc.strip():
-            st.markdown(f"🔐 **Step 1 — [open the Upstox login link]({up_login_url()})** (new tab → login with "
-                        f"mobile+PIN → approve). The browser then lands on a URL containing <code>?code=…</code> "
-                        f"— copy that code.", unsafe_allow_html=True)
-            if st.button("🔑 I have the code — let me paste it", key=f"up_sh{tag}"):
-                st.session_state[f"up_show{tag}"] = True
-            if st.session_state.get(f"up_show{tag}"):
-                code = st.text_input("Step 2 — paste the code from the address bar", key=f"up_c{tag}",
-                                     placeholder="e.g. 7c9f2e1a…")
-                if st.button("🚀 Activate live quotes", key=f"up_go{tag}", **STRETCH):
-                    ok, msg = up_activate(code)
-                    if ok:
-                        try:
-                            if mkt_status()[0] == "open":
-                                st.session_state["up_kick"] = True   # 🚀 API-FIRST: engines start NOW
-                                st.rerun()
-                        except Exception:
-                            pass
-                        st.success("🟢 LIVE! Real-time quotes are ON for today — every scan and coach "
-                                   "instruction now uses tick-fresh prices.")
-                        try:
-                            st.toast("📡 Upstox live quotes activated")
-                        except Exception:
-                            pass
-                    else:
-                        st.error(msg)
+        # 🧹 the classic daily-login flow is HIDDEN while the 1-year analytics
+        # token is live — it reappears by itself ONLY if that token ever
+        # expires/revoked (emergency backup).
+        if not (d.get("atok") and up_token_valid()):
+            st.caption("⬇️ CLASSIC method (daily login) — optional, the analytics token above is better:")
+            c1, c2 = st.columns(2)
+            with c1:
+                k = st.text_input("Upstox API Key", value=d.get("key", ""), key=f"up_k{tag}")
+            with c2:
+                sc = st.text_input("Upstox API Secret", value=d.get("secret", ""), type="password",
+                                   key=f"up_s{tag}")
+            rd = st.text_input("Redirect URI (must EXACTLY match your Upstox app)", value=d.get("redirect", ""),
+                               key=f"up_r{tag}")
+            if st.button("💾 Save Upstox keys", key=f"up_save{tag}", **STRETCH):
+                up_save(k, sc, rd)
+                st.success("Saved ✓ — stored ONLY inside this app instance (never in the GitHub file).")
+            if k.strip() and sc.strip():
+                st.markdown(f"🔐 **Step 1 — [open the Upstox login link]({up_login_url()})** (new tab → login with "
+                            f"mobile+PIN → approve). The browser then lands on a URL containing <code>?code=…</code> "
+                            f"— copy that code.", unsafe_allow_html=True)
+                if st.button("🔑 I have the code — let me paste it", key=f"up_sh{tag}"):
+                    st.session_state[f"up_show{tag}"] = True
+                if st.session_state.get(f"up_show{tag}"):
+                    code = st.text_input("Step 2 — paste the code from the address bar", key=f"up_c{tag}",
+                                         placeholder="e.g. 7c9f2e1a…")
+                    if st.button("🚀 Activate live quotes", key=f"up_go{tag}", **STRETCH):
+                        ok, msg = up_activate(code)
+                        if ok:
+                            try:
+                                if mkt_status()[0] == "open":
+                                    st.session_state["up_kick"] = True   # 🚀 API-FIRST: engines start NOW
+                                    st.rerun()
+                            except Exception:
+                                pass
+                            st.success("🟢 LIVE! Real-time quotes are ON for today — every scan and coach "
+                                       "instruction now uses tick-fresh prices.")
+                            try:
+                                st.toast("📡 Upstox live quotes activated")
+                            except Exception:
+                                pass
+                        else:
+                            st.error(msg)
+
         st.caption("Free Upstox Basic plan · quotes only · no orders · no funds. Keys + token stay inside "
                    "your app instance — never in GitHub. Any failure = silent Yahoo fallback, scans never break. "
                    "🛡️ <b>UNINTERRUPTED MODE:</b> with today's token active, a Yahoo block auto-switches "
@@ -7250,7 +7255,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.21.2 · ANALYTICS</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.21.3 · ANALYTICS</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
