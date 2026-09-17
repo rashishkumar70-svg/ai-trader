@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.22 · COACH VOLCANO"
+APP_VERSION = "v13.22.1 · FRESH START"
 
 
 def tg_online_ping():
@@ -2677,6 +2677,12 @@ def render_coach_tab(ss, mst_s):
             st.rerun()
         st.caption("Best routine: ~9:05 run the morning scan (⚡/🚀) → 9:20 come here and START. "
                    "The coach does the watching — you do the clicking in your broker app.")
+        st.markdown("<div style='background:#1c1206;border:1px solid #7c2d12;border-radius:12px;padding:10px 16px;"
+                    "color:#fdba74;font-size:13px;line-height:1.8;'>🌋 <b>The VOLCANO eruption radar lives in this "
+                    "tab.</b> It wakes up together with the coach (auto-start 9:20 on market days, or press START "
+                    "above) — within ~1 minute of the first candle read you'll see the <b>🌋 VOLCANO — silent stock, "
+                    "sudden BOOM</b> section right here: 💥 erupting now · 👀 magma building · 🕳️ sinkholes · "
+                    "📜 today's eruption review.</div>", unsafe_allow_html=True)
         up_settings_ui("_co")
         return
 
@@ -7315,7 +7321,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.22 · COACH VOLCANO</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.22.1 · FRESH START</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
