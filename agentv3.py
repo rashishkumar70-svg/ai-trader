@@ -79,7 +79,7 @@ import concurrent.futures
 
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="AI Trader Terminal v13.16", page_icon="💹",
+st.set_page_config(page_title="AI Trader Pro v13.6 Pro Terminal", page_icon="💹",
                    layout="wide", initial_sidebar_state="collapsed")
 
 # ============================================================
@@ -89,89 +89,79 @@ st.markdown(_H("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 *{font-family:'Inter',sans-serif;box-sizing:border-box;}
-.stApp{background:#0a1120;color:#dbe4f0;}
-.stApp h1,.stApp h2,.stApp h3,.stApp h4{color:#f1f5f9;}
-.stApp p,.stApp li,.stApp label{color:#cbd5e1;}
-[data-testid="stCaptionContainer"]{color:#8fa3bd;}
+.stApp{background:#f5f7ff;color:#1a1f36;}
 .navbar{background:linear-gradient(135deg,#0d1b6e 0%,#1565c0 60%,#0288d1 100%);
-  border-radius:20px;padding:18px 28px;margin-bottom:22px;box-shadow:0 8px 32px rgba(0,0,0,0.5);
-  border:1px solid #1e3a5f;}
-.input-row{background:#0f1a2e;border-radius:16px;padding:20px 24px;margin-bottom:18px;
-  border:1px solid #1e293b;box-shadow:0 2px 12px rgba(0,0,0,0.35);}
-.sig-buy{background:linear-gradient(135deg,#052e16,#0b3a1f);border:3px solid #16a34a;
-  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(22,163,74,0.2);}
-.sig-sell{background:linear-gradient(135deg,#2a0e0e,#3d1420);border:3px solid #dc2626;
-  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(220,38,38,0.2);}
-.sig-wait{background:linear-gradient(135deg,#3a2a06,#33200a);border:3px solid #d97706;
-  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(217,119,6,0.18);}
-.mc-blue{background:linear-gradient(135deg,#16233d,#1e3a5f);border:2px solid #3b82f6;
-  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(59,130,246,0.15);}
-.mc-green{background:linear-gradient(135deg,#052e16,#0b3a1f);border:2px solid #16a34a;
-  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(22,163,74,0.15);}
-.mc-red{background:linear-gradient(135deg,#2a0e0e,#3d1420);border:2px solid #dc2626;
-  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(220,38,38,0.15);}
-.mc-purple{background:linear-gradient(135deg,#1e1b3a,#241b45);border:2px solid #9333ea;
-  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(147,51,234,0.15);}
-.mc-orange{background:linear-gradient(135deg,#2b1c0c,#33200a);border:2px solid #ea580c;
-  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(234,88,12,0.15);}
-.mc-white{background:#0f1a2e;border:1px solid #1e293b;border-radius:16px;padding:18px;
-  text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);}
-.lv-r{background:linear-gradient(90deg,#2a0e0e,#0f1a2e);border-left:5px solid #ef4444;
-  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(0,0,0,0.3);}
-.lv-s{background:linear-gradient(90deg,#052e16,#0f1a2e);border-left:5px solid #22c55e;
-  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(0,0,0,0.3);}
-.lv-p{background:linear-gradient(90deg,#3a2a06,#0f1a2e);border-left:5px solid #f59e0b;
-  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(0,0,0,0.3);}
-.lv-fib{background:linear-gradient(90deg,#1e1b3a,#0f1a2e);border-left:5px solid #a855f7;
-  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(0,0,0,0.3);}
-.lv-cur{background:linear-gradient(90deg,#16233d,#0f1a2e);border-left:5px solid #3b82f6;
-  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
-.sh{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#16233d,transparent);
-  border-left:5px solid #3b82f6;padding:10px 18px;border-radius:0 12px 12px 0;margin:26px 0 14px;
-  font-size:15px;font-weight:800;color:#60a5fa;letter-spacing:0.3px;}
-.sc-r{background:#0f1a2e;border:1px solid #1e293b;border-radius:14px;padding:16px;margin:6px 0;
-  box-shadow:0 2px 8px rgba(0,0,0,0.3);}
-.pbar-container{background:#1e293b;border-radius:20px;height:10px;overflow:hidden;}
+  border-radius:20px;padding:18px 28px;margin-bottom:22px;box-shadow:0 8px 32px rgba(13,27,110,0.25);}
+.input-row{background:white;border-radius:16px;padding:20px 24px;margin-bottom:18px;
+  border:1px solid #e0e7ff;box-shadow:0 2px 12px rgba(0,0,0,0.06);}
+.sig-buy{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:3px solid #16a34a;
+  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(22,163,74,0.15);}
+.sig-sell{background:linear-gradient(135deg,#fff1f2,#ffe4e6);border:3px solid #dc2626;
+  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(220,38,38,0.12);}
+.sig-wait{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:3px solid #d97706;
+  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(217,119,6,0.12);}
+.mc-blue{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #3b82f6;
+  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(59,130,246,0.12);}
+.mc-green{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #16a34a;
+  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(22,163,74,0.12);}
+.mc-red{background:linear-gradient(135deg,#fff1f2,#ffe4e6);border:2px solid #dc2626;
+  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(220,38,38,0.1);}
+.mc-purple{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:2px solid #9333ea;
+  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(147,51,234,0.1);}
+.mc-orange{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:2px solid #ea580c;
+  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(234,88,12,0.1);}
+.mc-white{background:white;border:1px solid #e0e7ff;border-radius:16px;padding:18px;
+  text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.lv-r{background:linear-gradient(90deg,#fff1f2,white);border-left:5px solid #ef4444;
+  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(239,68,68,0.08);}
+.lv-s{background:linear-gradient(90deg,#f0fdf4,white);border-left:5px solid #22c55e;
+  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(34,197,94,0.08);}
+.lv-p{background:linear-gradient(90deg,#fffbeb,white);border-left:5px solid #f59e0b;
+  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;}
+.lv-fib{background:linear-gradient(90deg,#faf5ff,white);border-left:5px solid #a855f7;
+  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(168,85,247,0.08);}
+.lv-cur{background:linear-gradient(90deg,#eff6ff,white);border-left:5px solid #3b82f6;
+  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 2px 8px rgba(59,130,246,0.12);}
+.sh{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#eff6ff,transparent);
+  border-left:5px solid #1d4ed8;padding:10px 18px;border-radius:0 12px 12px 0;margin:26px 0 14px;
+  font-size:15px;font-weight:800;color:#1d4ed8;letter-spacing:0.3px;}
+.sc-r{background:white;border:1px solid #e0e7ff;border-radius:14px;padding:16px;margin:6px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+.pbar-container{background:#e0e7ff;border-radius:20px;height:10px;overflow:hidden;}
 .pbar-buy{background:linear-gradient(90deg,#16a34a,#22c55e);height:10px;border-radius:20px;}
 .pbar-sell{background:linear-gradient(90deg,#dc2626,#ef4444);height:10px;border-radius:20px;}
-[data-testid="stMetric"]{background:#0f1a2e !important;border:1px solid #1e293b !important;border-radius:14px !important;
-  padding:14px !important;box-shadow:0 2px 8px rgba(0,0,0,0.3) !important;}
-[data-testid="stMetricValue"]{color:#f1f5f9 !important;font-weight:800 !important;font-size:22px !important;}
-[data-testid="stMetricLabel"]{color:#8fa3bd !important;font-size:11px !important;font-weight:600 !important;}
-[data-testid="stExpander"]{background:#0f1a2e;border:1px solid #1e293b;border-radius:14px;}
-[data-testid="stExpanderDetails"]{color:#cbd5e1;}
-[data-testid="stDataFrame"]{background:#0f1a2e;border:1px solid #1e293b;border-radius:12px;}
-.stTabs [data-baseweb="tab"]{color:#94a3b8;}
-.stTabs [aria-selected="true"]{color:#60a5fa !important;}
-.stButton>button{background:linear-gradient(135deg,#60a5fa,#3b82f6) !important;color:white !important;
+[data-testid="stMetric"]{background:white !important;border:1px solid #e0e7ff !important;border-radius:14px !important;
+  padding:14px !important;box-shadow:0 2px 8px rgba(0,0,0,0.04) !important;}
+[data-testid="stMetricValue"]{color:#1a1f36 !important;font-weight:800 !important;font-size:22px !important;}
+[data-testid="stMetricLabel"]{color:#6b7280 !important;font-size:11px !important;font-weight:600 !important;}
+.stButton>button{background:linear-gradient(135deg,#1d4ed8,#3b82f6) !important;color:white !important;
   border:none !important;border-radius:12px !important;font-weight:700 !important;padding:10px 24px !important;
-  font-size:14px !important;box-shadow:0 4px 12px rgba(29,78,216,0.4) !important;}
+  font-size:14px !important;box-shadow:0 4px 12px rgba(29,78,216,0.3) !important;}
 .stButton>button:hover{background:linear-gradient(135deg,#1e40af,#2563eb) !important;transform:translateY(-1px) !important;}
-div[data-testid="stTextInput"]>div>div>input{background:#0f1a2e !important;border:2px solid #1e293b !important;
-  border-radius:12px !important;color:#e2e8f0 !important;font-size:14px !important;font-weight:500 !important;}
+div[data-testid="stTextInput"]>div>div>input{background:white !important;border:2px solid #e0e7ff !important;
+  border-radius:12px !important;color:#1a1f36 !important;font-size:14px !important;font-weight:500 !important;}
 [data-testid="stSidebar"]{display:none !important;}
 #MainMenu{visibility:hidden;}footer{visibility:hidden;}header{visibility:hidden;}
-::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-thumb{background:#334155;border-radius:3px;}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-thumb{background:#3b82f6;border-radius:3px;}
 /* ---- dashboard components ---- */
-.breadth{display:flex;height:18px;border-radius:10px;overflow:hidden;border:1px solid #1e293b;background:#0f1a2e;}
+.breadth{display:flex;height:18px;border-radius:10px;overflow:hidden;border:1px solid #e0e7ff;background:white;}
 .b-up{background:linear-gradient(90deg,#16a34a,#22c55e);height:100%;}
 .b-dn{background:linear-gradient(90deg,#dc2626,#ef4444);height:100%;}
-.b-fl{background:#334155;height:100%;}
-.uchip{display:inline-block;background:#052e16;border:1.5px solid #16a34a;color:#4ade80;font-weight:800;
+.b-fl{background:#e5e7eb;height:100%;}
+.uchip{display:inline-block;background:#f0fdf4;border:1.5px solid #16a34a;color:#15803d;font-weight:800;
   font-size:12px;padding:5px 12px;border-radius:20px;margin:3px 3px 3px 0;}
-.dchip{display:inline-block;background:#2a0e0e;border:1.5px solid #dc2626;color:#f87171;font-weight:800;
+.dchip{display:inline-block;background:#fff1f2;border:1.5px solid #dc2626;color:#b91c1c;font-weight:800;
   font-size:12px;padding:5px 12px;border-radius:20px;margin:3px 3px 3px 0;}
-.nchip{display:inline-block;background:#16233d;border:1.5px solid #334155;color:#94a3b8;font-weight:700;
+.nchip{display:inline-block;background:#f9fafb;border:1.5px solid #d1d5db;color:#6b7280;font-weight:700;
   font-size:12px;padding:5px 12px;border-radius:20px;margin:3px 3px 3px 0;}
-.achip{display:inline-block;background:#3a2a06;border:1.5px solid #f59e0b;color:#fbbf24;font-size:11.5px;
+.achip{display:inline-block;background:#fffbeb;border:1.5px solid #f59e0b;color:#92400e;font-size:11.5px;
   padding:4px 10px;border-radius:9px;margin:3px 3px 3px 0;font-weight:700;}
-.ucard{background:#0f1a2e;border:1px solid #14532d;border-left:5px solid #16a34a;border-radius:12px;
-  padding:12px 14px;margin:4px 0;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
-.ucard .nm{font-weight:900;font-size:14px;color:#f1f5f9;}
-.ucard .pr{font-weight:900;font-size:18px;color:#60a5fa;}
+.ucard{background:white;border:1px solid #bbf7d0;border-left:5px solid #16a34a;border-radius:12px;
+  padding:12px 14px;margin:4px 0;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+.ucard .nm{font-weight:900;font-size:14px;color:#1a1f36;}
+.ucard .pr{font-weight:900;font-size:18px;color:#1d4ed8;}
 .badge{display:inline-block;border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:800;color:white;}
-.dashhead{background:linear-gradient(135deg,#7c2d12,#fbbf24,#d97706);border-radius:18px;padding:18px 24px;
-  margin-bottom:16px;box-shadow:0 8px 28px rgba(180,83,9,0.25);border:1px solid #fbbf24;}
+.dashhead{background:linear-gradient(135deg,#7c2d12,#b45309,#d97706);border-radius:18px;padding:18px 24px;
+  margin-bottom:16px;box-shadow:0 8px 28px rgba(180,83,9,0.25);}
 </style>
 """), unsafe_allow_html=True)
 
@@ -518,19 +508,19 @@ def calc_money(price, capital, sl, t1, t2, t3):
 
 def target_feasibility(money, target):
     if not money or money.get('qty', 0) == 0:
-        return {'label': '❌ SKIP', 'color': '#dc2626', 'bg': '#2a0e0e',
+        return {'label': '❌ SKIP', 'color': '#dc2626', 'bg': '#fff1f2',
                 'msg': 'Cannot buy even 1 share. Choose cheaper stock.', 'at': None}
     p1, p2, p3 = money['p1'], money['p2'], money['p3']
     if p1 >= target:
-        return {'label': '🟢 EASY', 'color': '#16a34a', 'bg': '#052e16',
+        return {'label': '🟢 EASY', 'color': '#16a34a', 'bg': '#f0fdf4',
                 'msg': f"T1 gives ₹{p1:.0f}! ₹{round(p1-target,0):.0f} more than target!", 'at': 'T1', 'ap': p1}
     if p2 >= target:
-        return {'label': '🔵 ACHIEVABLE', 'color': '#2563eb', 'bg': '#16233d',
+        return {'label': '🔵 ACHIEVABLE', 'color': '#2563eb', 'bg': '#eff6ff',
                 'msg': f"T2 gives ₹{p2:.0f}. Need {money['pct2']:.1f}% move.", 'at': 'T2', 'ap': p2}
     if p3 >= target:
-        return {'label': '🟣 STRETCH', 'color': '#9333ea', 'bg': '#1e1b3a',
+        return {'label': '🟣 STRETCH', 'color': '#9333ea', 'bg': '#faf5ff',
                 'msg': f"T3 gives ₹{p3:.0f}. Need {money['pct3']:.1f}% move.", 'at': 'T3', 'ap': p3}
-    return {'label': '❌ NOT ENOUGH', 'color': '#dc2626', 'bg': '#2a0e0e',
+    return {'label': '❌ NOT ENOUGH', 'color': '#dc2626', 'bg': '#fff1f2',
             'msg': f"Max profit ₹{p3:.0f}. Need cheaper stock or more capital.", 'at': None, 'ap': p3}
 
 
@@ -856,7 +846,7 @@ def make_plan(price, atr, sr, sig, session='closed', circuit=None):
             timing = "Too late for a fresh intraday entry — square off open trades by 3:15. Plan this for tomorrow instead."
             if 'BUY' in sig:
                 act = "🕒 TOO LATE TODAY — PLAN FOR TOMORROW"
-                ac = "#fbbf24"
+                ac = "#b45309"
                 msg = "Signal is fine, but not enough time left for a fresh intraday trade. Watch it at tomorrow's open."
     elif session == 'pre':
         when = "TODAY (pre-open)"
@@ -1089,13 +1079,13 @@ def compute_signals(df_in):
     bp = bs / tot2 * 100 if tot2 > 0 else 50
     sp = ss / tot2 * 100 if tot2 > 0 else 50
     conf = round(max(bp, sp), 1)
-    if bp >= 80: sig = "STRONG BUY"; sc = "#4ade80"; bg = "sig-buy"
+    if bp >= 80: sig = "STRONG BUY"; sc = "#15803d"; bg = "sig-buy"
     elif bp >= 68: sig = "BUY"; sc = "#16a34a"; bg = "sig-buy"
     elif bp >= 56: sig = "LEAN BUY"; sc = "#2563eb"; bg = "sig-buy"
-    elif sp >= 80: sig = "STRONG SELL"; sc = "#f87171"; bg = "sig-sell"
+    elif sp >= 80: sig = "STRONG SELL"; sc = "#b91c1c"; bg = "sig-sell"
     elif sp >= 68: sig = "SELL"; sc = "#dc2626"; bg = "sig-sell"
     elif sp >= 56: sig = "LEAN SELL"; sc = "#ea580c"; bg = "sig-sell"
-    else: sig = "NEUTRAL"; sc = "#fbbf24"; bg = "sig-wait"
+    else: sig = "NEUTRAL"; sc = "#b45309"; bg = "sig-wait"
 
     atr_v = safe(lat.get('ATR'), price * 0.015)
     if atr_v <= 0: atr_v = price * 0.015
@@ -1146,7 +1136,7 @@ def run_analysis(sym, iv, per):
 # PREMIUM CHART — 5 PANELS
 # ============================================================
 def make_chart(df, name, plan, sr):
-    C = {'bg': '#ffffff', 'plot': '#fafbff', 'grid': '#1e293b', 'up': '#16a34a', 'dn': '#dc2626', 'text': '#e2e8f0'}
+    C = {'bg': '#ffffff', 'plot': '#fafbff', 'grid': '#e0e7ff', 'up': '#16a34a', 'dn': '#dc2626', 'text': '#1a1f36'}
     fig = make_subplots(rows=5, cols=1, shared_xaxes=True, vertical_spacing=0.018,
                         row_heights=[0.42, 0.15, 0.15, 0.13, 0.15],
                         subplot_titles=[f"📈 {name}  |  Candles + EMAs + BB + Supertrend",
@@ -1155,7 +1145,7 @@ def make_chart(df, name, plan, sr):
                       xaxis_rangeslider_visible=False, margin=dict(l=60, r=180, t=55, b=30),
                       font=dict(size=11, color=C['text'], family='Inter'),
                       legend=dict(orientation='h', y=1.03, x=1, xanchor='right',
-                                  bgcolor='rgba(255,255,255,0.95)', bordercolor='#1e293b', borderwidth=1))
+                                  bgcolor='rgba(255,255,255,0.95)', bordercolor='#e0e7ff', borderwidth=1))
     fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'],
                                  name='Price', increasing=dict(line=dict(color=C['up'], width=1), fillcolor='rgba(22,163,74,0.8)'),
                                  decreasing=dict(line=dict(color=C['dn'], width=1), fillcolor='rgba(220,38,38,0.8)')), row=1, col=1)
@@ -1237,8 +1227,8 @@ def pivot_table_html(levels_dict, price):
         typ = "RESISTANCE" if lbl.startswith('R') else "SUPPORT" if lbl.startswith('S') else "PIVOT"
         html += (f"<div class='{css}'><div style='display:flex;justify-content:space-between;align-items:center;'>"
                  f"<div><span style='color:{clr};font-weight:700;font-size:13px;'>{lbl} — {typ}</span>"
-                 f"<span style='color:#64748b;font-size:11px;margin-left:8px;'>{tag}</span></div>"
-                 f"<div style='font-size:20px;font-weight:900;color:#e2e8f0;'>₹{lp:,.2f}</div></div></div>")
+                 f"<span style='color:#9ca3af;font-size:11px;margin-left:8px;'>{tag}</span></div>"
+                 f"<div style='font-size:20px;font-weight:900;color:#1a1f36;'>₹{lp:,.2f}</div></div></div>")
     return html
 
 
@@ -1321,7 +1311,7 @@ def ema200_filter(sym, price):
         near = abs(dist) < 1.2
         slope_up = float(e200.iloc[-1]) > float(e200.iloc[-6]) if len(e200) >= 6 else True
         if above and golden and slope_up:
-            verdict, vc, ok = "BULL STRUCTURE — longs favoured", "#4ade80", True
+            verdict, vc, ok = "BULL STRUCTURE — longs favoured", "#15803d", True
         elif above and not golden:
             verdict, vc, ok = "Above 200 EMA but no golden cross — cautious longs", "#2563eb", True
         elif above:
@@ -1453,13 +1443,13 @@ def get_stock_news(sym, limit=7):
     p = sum(1 for x in out if x["sent"] == "pos")
     n = sum(1 for x in out if x["sent"] == "neg")
     if not out:
-        verdict, vc = "No recent news found", "#8fa3bd"
+        verdict, vc = "No recent news found", "#6b7280"
     elif p > n:
         verdict, vc = "NEWS LEANS POSITIVE", "#16a34a"
     elif n > p:
         verdict, vc = "NEWS LEANS NEGATIVE — be careful", "#dc2626"
     else:
-        verdict, vc = "NEWS MIXED / NEUTRAL", "#fbbf24"
+        verdict, vc = "NEWS MIXED / NEUTRAL", "#b45309"
     return {"items": out, "pos": p, "neg": n, "verdict": verdict, "vc": vc}
 
 
@@ -1524,7 +1514,6 @@ def summarize_news_sentiment(news):
 # ============================================================
 import json as _json
 import os as _os
-import uuid as _uuid
 # ── 🧑‍🤝‍🧑 MULTI-USER MEMORY ──────────────────────────────────────────────
 #   Everyone who opens the app gets their OWN files, so memories never mix:
 #   your key lives in the link (?u=yourname). Default key = "main".
@@ -1595,91 +1584,6 @@ def rt_save(engine, **kw):
         return True
     except Exception:
         return False
-
-
-# ── 🤖 AUTOPILOT — single-pilot lock: ONE session drives each engine ──
-# The VPS runs a headless browser (autopilot.service) that keeps the app
-# open 24/7 — IT scans, snapshots and sends Telegram RESULTS even when no
-# human is watching. Any tab opened later becomes a LIVE READ-ONLY view
-# (fresh data, zero duplicate scans/alerts).
-def _sid(ss):
-    try:
-        if "_sid" not in ss:
-            ss["_sid"] = _uuid.uuid4().hex[:10]
-        return ss["_sid"]
-    except Exception:
-        return "s0"
-
-
-def _pilot_ok(engine, ss, stale=240):
-    """True if THIS session may drive `engine` (lock free, ours, or stale)."""
-    try:
-        lock = (rt_load().get(engine) or {}).get("_lock") or {}
-        return lock.get("sid") == _sid(ss) or time.time() - (lock.get("ts") or 0) > stale
-    except Exception:
-        return True
-
-
-def _pilot_beat(engine, ss):
-    """Claim/refresh the pilot lock for this session (on every scan)."""
-    try:
-        rt_save(engine, _lock={"sid": _sid(ss), "ts": time.time()})
-    except Exception:
-        pass
-
-
-def _mv_view_sync(ss):
-    _rt = rt_load().get("mv") or {}
-    if (_rt.get("last_scan") or 0) > ss.get("mv_last", 0):
-        ss["mv_on"] = True
-        ss["mv"] = _rt.get("movers") or ss.get("mv")
-        ss["mv_last"] = _rt.get("last_scan") or 0
-        ss["mv_ts_str"] = _rt.get("ts_str") or ss.get("mv_ts_str")
-        if _rt.get("watch"):
-            ss["mv_watch"] = _rt["watch"]
-            ss["mv_names"] = _rt.get("names") or {}
-
-
-def _bc_view_sync(ss):
-    _rt = rt_load().get("bc") or {}
-    if (_rt.get("last_scan") or 0) > ss.get("bc_last", 0):
-        ss["bc_on"] = True
-        ss["bc"] = _rt.get("bounces") or ss.get("bc")
-        ss["bc_last"] = _rt.get("last_scan") or 0
-        ss["bc_ts_str"] = _rt.get("ts_str") or ss.get("bc_ts_str")
-        if _rt.get("watch"):
-            ss["bc_watch"] = _rt["watch"]
-            ss["bc_names"] = _rt.get("names") or {}
-
-
-def _cb_view_sync(ss):
-    _rt = rt_load().get("cb") or {}
-    if (_rt.get("last_scan") or 0) > ss.get("cb_last", 0):
-        ss["cb_on"] = True
-        ss["cb"] = _rt.get("combos") or ss.get("cb")
-        ss["cb_last"] = _rt.get("last_scan") or 0
-        ss["cb_ts_str"] = _rt.get("ts_str") or ss.get("cb_ts_str")
-        if _rt.get("watch"):
-            ss["cb_watch"] = _rt["watch"]
-            ss["cb_names"] = _rt.get("names") or {}
-        if _rt.get("src"):
-            ss["cb_src"] = _rt["src"]
-        if _rt.get("n"):
-            ss["cb_n"] = _rt["n"]
-
-
-def _co_view_sync(ss):
-    _rt = rt_load().get("co") or {}
-    if (_rt.get("last_scan") or 0) > ss.get("co_last", 0):
-        ss["co_on"] = True
-        for _k, _rk in (("co_watch", "watch"), ("co_names", "names"), ("co_pos", "pos"),
-                        ("co_feed", "feed"), ("co_log", "log")):
-            if _rt.get(_rk) is not None:
-                ss[_k] = _rt[_rk]
-        ss["co_last"] = _rt.get("last_scan") or 0
-        ss["co_ts"] = _rt.get("ts_str") or ss.get("co_ts")
-        if _rt.get("cap"):
-            ss["co_cap"] = _rt["cap"]
 
 
 # ── 🔔 TELEGRAM ALERTS — free phone push for climb/bounce alerts ──
@@ -1846,41 +1750,20 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.18 · PRO DARK · AUTOPILOT"
-
-
 def tg_online_ping():
-    """🟢 ONE 'online' ping per trading morning (the day's first start,
-    8 AM–12 PM only). Silent the rest of the day — restarts, refreshes
-    and the autopilot's hourly reloads NEVER re-announce. A separate
-    'PROGRAM UPDATED' notice fires ONLY when the running version really
-    changed (evening deploy)."""
+    """🟢 Tell the owner the app just came online (redeploy / cloud wake-up).
+    Max one message per 30 minutes — page refreshes stay silent."""
     try:
-        fn = f"tg_boot_{_ukey()}.json"
-        _fresh = not _os.path.exists(fn)          # first boot EVER of this app here
-        d = {}
-        if not _fresh:
-            d = _json.load(open(fn, encoding="utf-8")) or {}
-        today = now_ist().strftime("%Y-%m-%d")
-        if d and d.get("ver") != APP_VERSION:
-            tg_send(f"\u2705 <b>PROGRAM UPDATED</b>\n"
-                    f"\U0001F680 Now running <b>{_esc(APP_VERSION)}</b>\n"
-                    f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
-                    f"<i>Same trading logic \u2014 engines and rules unchanged.</i>")
-        elif _fresh:
-            tg_send(f"\U0001F7E2 <b>AI Trader is ONLINE</b> \u00b7 <b>{_esc(APP_VERSION)}</b>\n"
-                    f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
-                    f"<i>Desk started \u2014 engines armed. Morning briefing arrives 8 AM\u201312 PM "
-                    f"on trading days.</i>")
-        d["ver"] = APP_VERSION
-        _trading_day = now_ist().weekday() < 5 and today not in NSE_HOLIDAYS
-        if (d.get("day") != today and _trading_day and 8 <= now_ist().hour < 12
-                and tg_send(f"\U0001F7E2 <b>AI Trader is ONLINE</b>\n"
-                            f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
-                            f"<i>Morning auto-start \u2014 radars begin at 9:20.</i>\n"
-                            f"\U0001F3C5 RESULT 1 ~10:16 \u00b7 RESULT 2 ~10:46 \u2014 right here on Telegram.")):
-            d["day"] = today
-        _json.dump(d, open(fn, "w", encoding="utf-8"))
+        fn = f"tg_online_{_ukey()}.json"
+        last = 0
+        if _os.path.exists(fn):
+            last = _json.load(open(fn, encoding="utf-8")).get("ts", 0)
+        if time.time() - last > 1800:
+            if tg_send(f"\U0001F7E2 <b>AI Trader Pro is ONLINE</b>\n"
+                       f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
+                       f"<i>App just started (redeploy or wake-up) and is ready.</i>\n"
+                       f"Open \u26A1 Movers or \U0001F3AF Coach to begin today's session."):
+                _json.dump({"ts": time.time()}, open(fn, "w", encoding="utf-8"))
     except Exception:
         pass
 
@@ -2513,8 +2396,7 @@ def render_coach_tab(ss, mst_s):
     if (not ss.get("co_on") and mst_s == "open"
             and now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20
             and ss.get("co_stop_day") != now_ist().strftime("%Y-%m-%d")
-            and ss.get("co_auto", True)
-            and _pilot_ok("co", ss)):
+            and ss.get("co_auto", True)):
         try:
             _top, _nm = coach_pick(int(ss.get("co_n") or COACH_N_DEFAULT))
         except Exception:
@@ -2611,24 +2493,8 @@ def render_coach_tab(ss, mst_s):
                        f"{_rg['lab']} · NIFTY {_rg['chg']:+.2f}% — {_rg['tip']} "
                        f"<b>Position size auto-adjusted.</b></div>"), unsafe_allow_html=True)
 
-    if not _pilot_ok("co", ss) and (rt_load().get("co") or {}).get("on"):
-        st.caption("🤖 AUTOPILOT is driving the desk — live read-only view.")
     due = mst_s == "open" and time.time() - ss.get("co_last", 0) > 80
-    _am_pilot = _pilot_ok("co", ss)
-    if not _am_pilot:
-        _co_view_sync(ss)                 # 🤖 autopilot drives — live view only
-        if not ss.get("co_ctx") or time.time() - ss.get("co_ctx_ts", 0) > 300:
-            try:
-                with st.spinner("🎯 Reading live candles (view mode)…"):
-                    _gotv, _ = _sweep(ss.get("co_watch") or [], "5m", "2d",
-                                      with_daily=False, progress=False)
-                ss["co_ctx"] = {s: coach_ctx(s, _gotv.get(s))
-                                for s in (ss.get("co_watch") or [])}
-                ss["co_ctx_ts"] = time.time()
-            except Exception:
-                pass
-    if _am_pilot and (due or not ss.get("co_ctx")):
-        _pilot_beat("co", ss)
+    if due or not ss.get("co_ctx"):
         with st.spinner("🎯 Coach is reading the candles…"):
             got, _ = _sweep(ss["co_watch"], "5m", "2d", with_daily=False, progress=False)
         ctxs = {s: coach_ctx(s, got.get(s)) for s in ss["co_watch"]}
@@ -3167,10 +3033,10 @@ def journal_verify(entry):
         saved_date = entry["saved"][:10]
         d = yf.Ticker(entry["sym"]).history(period="1mo", interval="1d").dropna()
         if d is None or len(d) == 0:
-            return {"status": "NO DATA", "color": "#8fa3bd", "detail": "Couldn't fetch prices."}
+            return {"status": "NO DATA", "color": "#6b7280", "detail": "Couldn't fetch prices."}
         after = d[d.index.strftime("%Y-%m-%d") > saved_date]
         if len(after) == 0:
-            return {"status": "TOO SOON", "color": "#8fa3bd",
+            return {"status": "TOO SOON", "color": "#6b7280",
                     "detail": "No trading day has completed since you saved this — check tomorrow."}
         hi = float(after["High"].max()); lo = float(after["Low"].min())
         last = float(after["Close"].iloc[-1])
@@ -3182,10 +3048,10 @@ def journal_verify(entry):
         want_up = "UP" in entry.get("trend", "") or "BUY" in entry.get("signal", "")
         trend_right = (moved > 0) if want_up else (moved < 0)
         if entry.get("sit") == "BUY_DIP" and lo > buy:
-            status, color = "NO-FILL (never dipped to buy)", "#8fa3bd"
+            status, color = "NO-FILL (never dipped to buy)", "#6b7280"
             detail = f"Price never fell to ₹{buy:.2f}; low since was ₹{lo:.2f}. No trade taken — correct to wait."
         elif hit_t3:
-            status, color = "WIN → T3 🎯", "#4ade80"; detail = f"Hit all targets (high ₹{hi:.2f})."
+            status, color = "WIN → T3 🎯", "#15803d"; detail = f"Hit all targets (high ₹{hi:.2f})."
         elif hit_t2:
             status, color = "WIN → T2 ✅", "#16a34a"; detail = f"Reached T2 ₹{t2:.2f} (high ₹{hi:.2f})."
         elif hit_t1:
@@ -3193,13 +3059,13 @@ def journal_verify(entry):
         elif hit_sl:
             status, color = "LOSS → hit stop ❌", "#dc2626"; detail = f"Fell to stop ₹{sl:.2f} (low ₹{lo:.2f})."
         else:
-            status, color = "OPEN — no target/stop hit yet", "#fbbf24"
+            status, color = "OPEN — no target/stop hit yet", "#b45309"
             detail = f"Since save: high ₹{hi:.2f}, low ₹{lo:.2f}, now ₹{last:.2f}."
         return {"status": status, "color": color, "detail": detail,
                 "moved": round(moved, 2), "trend_right": trend_right,
                 "hi": hi, "lo": lo, "last": last}
     except Exception as e:
-        return {"status": "ERROR", "color": "#8fa3bd", "detail": f"{type(e).__name__}"}
+        return {"status": "ERROR", "color": "#6b7280", "detail": f"{type(e).__name__}"}
 
 
 # ============================================================
@@ -3379,18 +3245,18 @@ def detect_regime(res):
     trending = (not np.isnan(adx)) and adx > 25
     ranging = (not np.isnan(adx)) and adx < 20
     if trending and tr == 'UPTREND':
-        reg, rc = "STRONG UPTREND", "#4ade80"
+        reg, rc = "STRONG UPTREND", "#15803d"
     elif trending and tr == 'DOWNTREND':
-        reg, rc = "STRONG DOWNTREND", "#f87171"
+        reg, rc = "STRONG DOWNTREND", "#b91c1c"
     elif ranging:
-        reg, rc = "RANGING / SIDEWAYS", "#fbbf24"
+        reg, rc = "RANGING / SIDEWAYS", "#b45309"
     else:
         reg, rc = tr.title() if tr != 'SIDEWAYS' else "TRANSITIONING", "#2563eb"
     if not np.isnan(bbw):
         vol = "HIGH VOLATILITY" if bbw > 6 else "LOW VOLATILITY" if bbw < 2 else "MODERATE VOLATILITY"
     else:
         vol = "—"
-    vc = "#dc2626" if "HIGH" in vol else "#16a34a" if "LOW" in vol else "#fbbf24"
+    vc = "#dc2626" if "HIGH" in vol else "#16a34a" if "LOW" in vol else "#b45309"
     return {"regime": reg, "rc": rc, "vol": vol, "vc": vc, "adx": adx}
 
 
@@ -3514,7 +3380,7 @@ def target_probability(price, plan, sym):
             return float(max(0.0, min(1.0, 0.5 - z * 0.2)))
 
         def rate(p):
-            return ("High", "#16a34a") if p >= 0.55 else ("Moderate", "#fbbf24") if p >= 0.35 else ("Low", "#dc2626")
+            return ("High", "#16a34a") if p >= 0.55 else ("Moderate", "#b45309") if p >= 0.35 else ("Low", "#dc2626")
 
         res = {}
         for key, tp in [("T1", plan['t1']), ("T2", plan['t2']), ("T3", plan['t3'])]:
@@ -3740,14 +3606,14 @@ def live_candle_view(df, res):
         elif dn:
             verdict, vc, vico = "DOWNTREND FORMING", "#dc2626", "📉"
         else:
-            verdict, vc, vico = "CHOPPY — NO CLEAR DIRECTION", "#fbbf24", "➡️"
+            verdict, vc, vico = "CHOPPY — NO CLEAR DIRECTION", "#b45309", "➡️"
         blocks = ""
         for i, (_, r) in enumerate(d.iterrows()):
             g = r['Close'] >= r['Open']
             clr = "#16a34a" if g else "#dc2626"
             body = max(abs(r['Close'] - r['Open']), 0.01)
             hgt = 14 + min(int(body / max(price * 0.004, 0.01) * 6), 34)
-            border = "border:2px solid #e2e8f0;" if i == len(d) - 1 else ""
+            border = "border:2px solid #1a1f36;" if i == len(d) - 1 else ""
             blocks += f"<div title='O{r['Open']:.2f} H{r['High']:.2f} L{r['Low']:.2f} C{r['Close']:.2f}' style='width:16px;height:{hgt}px;background:{clr};border-radius:3px;{border}'></div>"
         last = d.iloc[-1]
         chg = (float(last['Close']) - float(last['Open']))
@@ -3770,9 +3636,9 @@ def show_analysis(sym, name, iv, per):
     with st.spinner(f"⏳ Loading {name}..."):
         res = run_analysis(sym, iv, per)
     if res is None:
-        st.markdown(_H(f"""<div style='background:#2a0e0e;border:2px solid #dc2626;border-radius:16px;padding:24px;'>
+        st.markdown(_H(f"""<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:16px;padding:24px;'>
         <div style='font-size:18px;font-weight:800;color:#dc2626;'>❌ Cannot Load {sym}</div>
-        <div style='color:#cbd5e1;font-size:13px;margin-top:8px;'>Try exact NSE symbol · check internet ·
+        <div style='color:#374151;font-size:13px;margin-top:8px;'>Try exact NSE symbol · check internet ·
         best combo: 15m timeframe + 1mo period</div></div>"""), unsafe_allow_html=True)
         return
     mst_s, ml, mm = mkt_status()
@@ -3806,27 +3672,27 @@ def show_analysis(sym, name, iv, per):
 
     gap_text = ""
     if sr:
-        gg = sr['gap_pct']; gclr = "#16a34a" if gg > 0 else "#dc2626" if gg < 0 else "#8fa3bd"
+        gg = sr['gap_pct']; gclr = "#16a34a" if gg > 0 else "#dc2626" if gg < 0 else "#6b7280"
         gap_text = f"<span style='color:{gclr};font-weight:700;font-size:13px;'> {gg:+.1f}% gap</span>"
     mclr = "#16a34a" if mst_s == "open" else "#f59e0b" if mst_s == "pre" else "#dc2626"
-    st.markdown(_H(f"""<div style='background:#0f1a2e;border:1px solid #1e293b;border-radius:18px;padding:18px 24px;
+    st.markdown(_H(f"""<div style='background:white;border:1px solid #e0e7ff;border-radius:18px;padding:18px 24px;
     margin-bottom:18px;box-shadow:0 4px 20px rgba(0,0,0,0.06);display:flex;justify-content:space-between;
     align-items:center;flex-wrap:wrap;gap:10px;'><div>
     <div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>
-    <span style='font-size:26px;font-weight:900;color:#e2e8f0;'>{name}</span>
-    <span style='background:#1e293b;color:#3730a3;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;'>{sym}</span>
+    <span style='font-size:26px;font-weight:900;color:#1a1f36;'>{name}</span>
+    <span style='background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;'>{sym}</span>
     <span style='background:{mclr}22;color:{mclr};font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid {mclr}44;'>{ml}</span>
     {gap_text}</div>
-    <div style='color:#8fa3bd;font-size:12px;margin-top:6px;'>⏱️ {iv} · {per} · {datetime.now().strftime("%d %b %Y %H:%M")}
+    <div style='color:#6b7280;font-size:12px;margin-top:6px;'>⏱️ {iv} · {per} · {datetime.now().strftime("%d %b %Y %H:%M")}
      ·  Trend: <b style='color:{sc};'>{res["trend"]}</b>  ·  52W pos: <b>{res["pos52"]:.1f}%</b>
      ·  Vol: <b>{res["vr"]:.1f}x</b></div></div>
-    <div style='text-align:right;'><div style='font-size:40px;font-weight:900;color:#60a5fa;'>₹{price:,.2f}</div>
-    <div style='font-size:10px;font-weight:700;color:{"#16a34a" if price_src=="NSE live" else "#fbbf24"};'>{"🟢 NSE LIVE" if price_src=="NSE live" else "⚠️ "+price_src.upper()+" · CHECK BROKER FOR EXACT LTP"}</div>
-    <div style='color:#8fa3bd;font-size:12px;'>52W H: ₹{res["hi52"]:.2f} | L: ₹{res["lo52"]:.2f}</div></div></div>"""),
+    <div style='text-align:right;'><div style='font-size:40px;font-weight:900;color:#1d4ed8;'>₹{price:,.2f}</div>
+    <div style='font-size:10px;font-weight:700;color:{"#16a34a" if price_src=="NSE live" else "#b45309"};'>{"🟢 NSE LIVE" if price_src=="NSE live" else "⚠️ "+price_src.upper()+" · CHECK BROKER FOR EXACT LTP"}</div>
+    <div style='color:#6b7280;font-size:12px;'>52W H: ₹{res["hi52"]:.2f} | L: ₹{res["lo52"]:.2f}</div></div></div>"""),
                 unsafe_allow_html=True)
 
-    st.markdown("<div style='background:#3a2a06;border:1px solid #fde68a;border-radius:10px;"
-                "padding:8px 16px;margin-bottom:10px;color:#fbbf24;font-size:12px;'>"
+    st.markdown("<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:10px;"
+                "padding:8px 16px;margin-bottom:10px;color:#92400e;font-size:12px;'>"
                 "<b>Reality check:</b> the levels (price, circuit, support/resistance) are exact — but the "
                 "<b>direction call is a probability, not a prediction</b>. Even good setups fail ~40–50% of "
                 "the time. The stop-loss is your protection; size small enough that a loss doesn't hurt. "
@@ -3843,7 +3709,7 @@ def show_analysis(sym, name, iv, per):
         <div style='font-size:28px;'>{pemoji}</div>
         <div style='flex:1;min-width:220px;'>
         <div style='font-size:13px;font-weight:900;color:{pcol};'>⏰ {stc['left_txt'].upper()} · {stc['phase'].upper()} SESSION</div>
-        <div style='color:#cbd5e1;font-size:13px;margin-top:2px;'>{stc['note']}</div></div></div>"""),
+        <div style='color:#374151;font-size:13px;margin-top:2px;'>{stc['note']}</div></div></div>"""),
                     unsafe_allow_html=True)
 
     buy_c = sum(1 for s in res['sigs'] if s['b']); sell_c = len(res['sigs']) - buy_c
@@ -3854,42 +3720,42 @@ def show_analysis(sym, name, iv, per):
             title = "🔴 LIVE CANDLE ANALYSIS"
             live_tag = ("<span style='background:#dc2626;color:white;border-radius:6px;padding:2px 8px;"
                         "font-size:11px;font-weight:700;'>● LIVE</span>" if live_on else
-                        "<span style='background:#64748b;color:white;border-radius:6px;padding:2px 8px;"
+                        "<span style='background:#9ca3af;color:white;border-radius:6px;padding:2px 8px;"
                         "font-size:11px;font-weight:700;'>turn on 🔴 LIVE auto-refresh below to update live</span>")
         else:
             title = "📊 CANDLE ANALYSIS (last session)"
-            live_tag = ("<span style='background:#8fa3bd;color:white;border-radius:6px;padding:2px 8px;"
+            live_tag = ("<span style='background:#6b7280;color:white;border-radius:6px;padding:2px 8px;"
                         "font-size:11px;font-weight:700;'>market closed — updates live once it opens</span>")
-        st.markdown(_H(f"""<div style='background:#0f1a2e;border:2px solid {lc['vc']};border-radius:16px;
+        st.markdown(_H(f"""<div style='background:white;border:2px solid {lc['vc']};border-radius:16px;
         padding:16px 20px;margin-bottom:14px;'>
         <div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;'>
         <div style='font-size:14px;font-weight:900;color:{lc['vc']};'>{lc['vico']} {title} · {lc['verdict']}</div>
         {live_tag}</div>
         <div style='display:flex;align-items:flex-end;gap:4px;height:52px;margin:12px 0 8px;'>{lc['blocks']}</div>
-        <div style='color:#cbd5e1;font-size:12px;'>Latest candle: <b style='color:{"#16a34a" if lc['last_up'] else "#dc2626"};'>{'UP' if lc['last_up'] else 'DOWN'} {lc['chgp']:+.2f}%</b>
+        <div style='color:#374151;font-size:12px;'>Latest candle: <b style='color:{"#16a34a" if lc['last_up'] else "#dc2626"};'>{'UP' if lc['last_up'] else 'DOWN'} {lc['chgp']:+.2f}%</b>
         · {lc['streak']} in a row · last 14: {lc['greens']}🟢 / {lc['reds']}🔴 · {lc['vwtxt']}</div>
-        <div style='color:#64748b;font-size:11px;margin-top:2px;'>{lc['oc']}</div></div>"""),
+        <div style='color:#9ca3af;font-size:11px;margin-top:2px;'>{lc['oc']}</div></div>"""),
                     unsafe_allow_html=True)
     st.markdown(_H(f"""<div class='{res["bg"]}'><div style='display:flex;justify-content:space-between;
     align-items:flex-start;flex-wrap:wrap;gap:16px;'><div style='flex:1;min-width:260px;'>
-    <div style='font-size:11px;color:#8fa3bd;font-weight:700;letter-spacing:2px;text-transform:uppercase;'>AI Signal · {res["n_sigs"]} Indicators</div>
+    <div style='font-size:11px;color:#6b7280;font-weight:700;letter-spacing:2px;text-transform:uppercase;'>AI Signal · {res["n_sigs"]} Indicators</div>
     <div style='font-size:46px;font-weight:900;color:{sc};line-height:1.1;margin-top:8px;'>{res["sig"]}</div>
     <div style='margin-top:14px;'><span style='background:{plan["ac"]};color:white;font-size:15px;font-weight:800;
     padding:10px 24px;border-radius:24px;'>{plan["act"]}</span></div>
-    <div style='color:#cbd5e1;font-size:14px;margin-top:14px;background:rgba(255,255,255,0.5);border-radius:10px;padding:10px 14px;'>{plan["msg"]}</div></div>
+    <div style='color:#374151;font-size:14px;margin-top:14px;background:rgba(255,255,255,0.5);border-radius:10px;padding:10px 14px;'>{plan["msg"]}</div></div>
     <div><div style='text-align:center;background:rgba(255,255,255,0.6);border-radius:16px;padding:16px 24px;'>
     <div style='font-size:60px;font-weight:900;color:{sc};line-height:1;'>{res["conf"]:.0f}<span style='font-size:24px;'>%</span></div>
-    <div style='color:#8fa3bd;font-size:13px;font-weight:700;margin-top:4px;'>INDICATOR AGREEMENT</div>
-    <div style='color:#fbbf24;font-size:10px;font-weight:700;margin-top:4px;max-width:170px;'>⚠️ NOT win probability.
+    <div style='color:#6b7280;font-size:13px;font-weight:700;margin-top:4px;'>INDICATOR AGREEMENT</div>
+    <div style='color:#b45309;font-size:10px;font-weight:700;margin-top:4px;max-width:170px;'>⚠️ NOT win probability.
 Indicators agreeing ≠ price will move that way.</div>
-    <div style='color:#8fa3bd;font-size:12px;margin-top:8px;'>🟢 {buy_c} buy · 🔴 {sell_c} sell</div></div></div></div>
+    <div style='color:#6b7280;font-size:12px;margin-top:8px;'>🟢 {buy_c} buy · 🔴 {sell_c} sell</div></div></div></div>
     <div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px;'>
     <div style='background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.3);border-radius:12px;padding:12px;'>
-    <div style='display:flex;justify-content:space-between;'><span style='color:#cbd5e1;font-size:13px;font-weight:600;'>BUY STRENGTH</span>
+    <div style='display:flex;justify-content:space-between;'><span style='color:#374151;font-size:13px;font-weight:600;'>BUY STRENGTH</span>
     <span style='color:#16a34a;font-weight:900;font-size:22px;'>{res["bp"]:.0f}%</span></div>
     <div class='pbar-container' style='margin-top:8px;'><div class='pbar-buy' style='width:{res["bp"]}%;'></div></div></div>
     <div style='background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);border-radius:12px;padding:12px;'>
-    <div style='display:flex;justify-content:space-between;'><span style='color:#cbd5e1;font-size:13px;font-weight:600;'>SELL STRENGTH</span>
+    <div style='display:flex;justify-content:space-between;'><span style='color:#374151;font-size:13px;font-weight:600;'>SELL STRENGTH</span>
     <span style='color:#dc2626;font-weight:900;font-size:22px;'>{res["sp"]:.0f}%</span></div>
     <div class='pbar-container' style='margin-top:8px;'><div class='pbar-sell' style='width:{res["sp"]}%;'></div></div></div></div></div>"""),
                 unsafe_allow_html=True)
@@ -3900,27 +3766,27 @@ Indicators agreeing ≠ price will move that way.</div>
         if tim['quality'] == 'GOOD':
             tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("UPTREND — FRESH ENTRY",
                 "Trend is up and price is NOT overextended — a reasonable entry, ideally near support.",
-                "#4ade80", "linear-gradient(135deg,#052e16,#0b3a1f)", "📈")
+                "#15803d", "linear-gradient(135deg,#f0fdf4,#dcfce7)", "📈")
         elif tim['quality'] == 'CAUTION':
             tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("UPTREND — BUT NOT FRESH (wait for dip)",
                 "Trend is up, but this isn't an early entry. Prefer a pullback toward support, or size smaller.",
-                "#fbbf24", "linear-gradient(135deg,#3a2a06,#3a2a06)", "⚠️")
+                "#b45309", "linear-gradient(135deg,#fffbeb,#fef3c7)", "⚠️")
         else:
             tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("UPTREND — LATE / EXTENDED · DON'T CHASE",
                 "The up-move likely already happened — buying here risks catching the top. WAIT for a pullback to support.",
-                "#ea580c", "linear-gradient(135deg,#2b1c0c,#33200a)", "🛑")
+                "#ea580c", "linear-gradient(135deg,#fff7ed,#ffedd5)", "🛑")
     elif tr == 'DOWNTREND' or is_sell:
         tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("DOWNTREND — AVOID BUYING",
             "Lower highs & lower lows. Wrong side for longs — wait for a reversal.",
-            "#f87171", "linear-gradient(135deg,#2a0e0e,#3d1420)", "📉")
+            "#b91c1c", "linear-gradient(135deg,#fff1f2,#ffe4e6)", "📉")
     elif tr == 'VOLATILE':
         tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("VOLATILE — RISKY",
             "Wide swings both ways. Trade small or wait for it to settle.",
-            "#fbbf24", "linear-gradient(135deg,#3a2a06,#3a2a06)", "⚡")
+            "#b45309", "linear-gradient(135deg,#fffbeb,#fef3c7)", "⚡")
     else:
         tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("SIDEWAYS — WAIT",
             "No clear trend yet. Let a direction form before entering.",
-            "#fbbf24", "linear-gradient(135deg,#3a2a06,#3a2a06)", "➡️")
+            "#b45309", "linear-gradient(135deg,#fffbeb,#fef3c7)", "➡️")
     adx_txt = (f" · ADX {res['adx']:.0f} "
                + ("(strong)" if not np.isnan(res.get('adx', np.nan)) and res['adx'] > 25 else "(weak)")) \
               if not np.isnan(res.get('adx', np.nan)) else ""
@@ -3928,7 +3794,7 @@ Indicators agreeing ≠ price will move that way.</div>
     if htf and htf.get("trend"):
         ht = htf["trend"]
         agree = (ht == "UP" and tr == "UPTREND") or (ht == "DOWN" and tr == "DOWNTREND")
-        hclr = "#16a34a" if ht == "UP" else "#dc2626" if ht == "DOWN" else "#fbbf24"
+        hclr = "#16a34a" if ht == "UP" else "#dc2626" if ht == "DOWN" else "#b45309"
         mark = "✓ confirms" if agree else "✗ differs" if ht in ("UP", "DOWN") else "flat"
         htf_chip = (f"<span style='background:{hclr}18;color:{hclr};border:1px solid {hclr}44;"
                     f"font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-left:8px;'>"
@@ -3936,25 +3802,25 @@ Indicators agreeing ≠ price will move that way.</div>
     st.markdown(_H(f"""<div style='background:{tv_bg};border:3px solid {tv_clr};border-radius:18px;
     padding:20px 26px;margin:16px 0;display:flex;align-items:center;gap:18px;flex-wrap:wrap;'>
     <div style='font-size:46px;'>{tv_ico}</div><div style='flex:1;min-width:220px;'>
-    <div style='font-size:12px;color:#8fa3bd;font-weight:700;letter-spacing:1px;'>TREND VERDICT{adx_txt}</div>
+    <div style='font-size:12px;color:#6b7280;font-weight:700;letter-spacing:1px;'>TREND VERDICT{adx_txt}</div>
     <div style='font-size:30px;font-weight:900;color:{tv_clr};line-height:1.1;'>{tv_txt}</div>
-    <div style='color:#cbd5e1;font-size:13px;margin-top:6px;'>{tv_sub} {htf_chip}</div></div></div>"""),
+    <div style='color:#374151;font-size:13px;margin-top:6px;'>{tv_sub} {htf_chip}</div></div></div>"""),
                 unsafe_allow_html=True)
 
-    stage_clr = {"GOOD": "#16a34a", "CAUTION": "#fbbf24", "POOR": "#ea580c",
-                 "AVOID": "#dc2626", "WATCH": "#2563eb", "WAIT": "#fbbf24"}.get(tim['quality'], "#8fa3bd")
+    stage_clr = {"GOOD": "#16a34a", "CAUTION": "#b45309", "POOR": "#ea580c",
+                 "AVOID": "#dc2626", "WATCH": "#2563eb", "WAIT": "#b45309"}.get(tim['quality'], "#6b7280")
     reasons = ""
     if tim['warns']:
-        reasons += "<div style='margin-top:6px;'><b style='color:#fbbf24;'>⚠️ Late/risk signals:</b> " + \
+        reasons += "<div style='margin-top:6px;'><b style='color:#b45309;'>⚠️ Late/risk signals:</b> " + \
                    " · ".join(tim['warns']) + "</div>"
     if tim['goods']:
         reasons += "<div style='margin-top:4px;'><b style='color:#16a34a;'>✓ In favour:</b> " + \
                    " · ".join(tim['goods']) + "</div>"
-    st.markdown(_H(f"""<div style='background:#0f1a2e;border:1px solid #1e293b;border-left:5px solid {stage_clr};
+    st.markdown(_H(f"""<div style='background:white;border:1px solid #e0e7ff;border-left:5px solid {stage_clr};
     border-radius:0 12px 12px 0;padding:12px 18px;margin:-6px 0 14px;'>
     <span style='background:{stage_clr}18;color:{stage_clr};font-weight:800;font-size:12px;
     padding:3px 12px;border-radius:20px;'>ENTRY TIMING: {tim['stage']} · {tim['quality']}</span>
-    <span style='color:#cbd5e1;font-size:13px;margin-left:8px;'>{tim['msg']}</span>{reasons}</div>"""),
+    <span style='color:#374151;font-size:13px;margin-left:8px;'>{tim['msg']}</span>{reasons}</div>"""),
                 unsafe_allow_html=True)
 
     if ema2:
@@ -3968,50 +3834,50 @@ Indicators agreeing ≠ price will move that way.</div>
         border-radius:14px;padding:14px 20px;margin-bottom:14px;'>
         <div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
         <div><span style='font-size:13px;font-weight:900;color:{ema2['vc']};'>{ico} 200 EMA METHOD · {ema2['verdict']}</span>
-        <div style='color:#cbd5e1;font-size:12px;margin-top:3px;'>Daily 200 EMA ₹{ema2['ema200']:.2f}{approx} ·
+        <div style='color:#374151;font-size:12px;margin-top:3px;'>Daily 200 EMA ₹{ema2['ema200']:.2f}{approx} ·
         price is <b>{abs(ema2['dist']):.1f}% {'above' if ema2['above'] else 'below'}</b> it ·
         <span style='color:{gclr};font-weight:700;'>{gc}</span>{near_txt}</div></div></div>
-        <div style='color:#8fa3bd;font-size:11px;margin-top:6px;'>Rule of the 200 EMA method: only take longs when price is
+        <div style='color:#6b7280;font-size:11px;margin-top:6px;'>Rule of the 200 EMA method: only take longs when price is
         <b>above</b> the daily 200 EMA. Below it = bear structure, where 'uptrend' bounces usually fail.</div></div>"""),
                     unsafe_allow_html=True)
 
     if news:
         head = (f"<div style='font-size:13px;font-weight:900;color:{news['vc']};'>📰 NEWS CHECK · {news['verdict']}"
-                f" <span style='color:#64748b;font-weight:600;'>({news['pos']}👍 / {news['neg']}👎)</span></div>")
+                f" <span style='color:#9ca3af;font-weight:600;'>({news['pos']}👍 / {news['neg']}👎)</span></div>")
         rows = ""
         for it in news['items']:
-            sc_ = {"pos": "#16a34a", "neg": "#dc2626", "neu": "#8fa3bd"}[it['sent']]
+            sc_ = {"pos": "#16a34a", "neg": "#dc2626", "neu": "#6b7280"}[it['sent']]
             tag = {"pos": "👍 good", "neg": "👎 bad", "neu": "• neutral"}[it['sent']]
-            link = f"<a href='{it['url']}' target='_blank' style='color:#e2e8f0;text-decoration:none;'>{it['title']}</a>" if it['url'] else it['title']
+            link = f"<a href='{it['url']}' target='_blank' style='color:#1a1f36;text-decoration:none;'>{it['title']}</a>" if it['url'] else it['title']
             rows += (f"<div style='padding:7px 0;border-top:1px solid #f1f5f9;'>"
                      f"<span style='background:{sc_}18;color:{sc_};font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;'>{tag}</span> "
-                     f"<span style='font-size:13px;color:#e2e8f0;'>{link}</span> "
-                     f"<span style='color:#64748b;font-size:11px;'>· {it['pub']}</span></div>")
-        st.markdown(_H(f"""<div style='background:#0f1a2e;border:2px solid {news['vc']};border-radius:14px;
+                     f"<span style='font-size:13px;color:#1a1f36;'>{link}</span> "
+                     f"<span style='color:#9ca3af;font-size:11px;'>· {it['pub']}</span></div>")
+        st.markdown(_H(f"""<div style='background:white;border:2px solid {news['vc']};border-radius:14px;
         padding:14px 20px;margin-bottom:14px;'>{head}{rows}
-        <div style='color:#64748b;font-size:11px;margin-top:8px;'>Headlines are a rough keyword read — open a link to verify.
+        <div style='color:#9ca3af;font-size:11px;margin-top:8px;'>Headlines are a rough keyword read — open a link to verify.
         News can override the chart, so if something big broke, trust the news over the levels.</div></div>"""),
                     unsafe_allow_html=True)
 
     if nse:
         cc = st.columns(3)
         with cc[0]:
-            st.markdown(f"<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>PREV CLOSE</div><div style='font-size:26px;font-weight:900;color:#e2e8f0;'>{'₹%.2f'%nse['prev'] if nse.get('prev') else '—'}</div><div style='color:#64748b;font-size:10px;'>NSE</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>PREV CLOSE</div><div style='font-size:26px;font-weight:900;color:#1a1f36;'>{'₹%.2f'%nse['prev'] if nse.get('prev') else '—'}</div><div style='color:#9ca3af;font-size:10px;'>NSE</div></div>", unsafe_allow_html=True)
         with cc[1]:
             if nse.get("upper"):
-                st.markdown(f"<div class='mc-red'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>🔴 UPPER CIRCUIT</div><div style='font-size:26px;font-weight:900;color:#dc2626;'>₹{nse['upper']:.2f}</div><div style='color:#64748b;font-size:10px;'>max today · {nse.get('band','')}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='mc-red'><div style='color:#6b7280;font-size:11px;font-weight:700;'>🔴 UPPER CIRCUIT</div><div style='font-size:26px;font-weight:900;color:#dc2626;'>₹{nse['upper']:.2f}</div><div style='color:#9ca3af;font-size:10px;'>max today · {nse.get('band','')}</div></div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>UPPER CIRCUIT</div><div style='font-size:18px;font-weight:800;color:#8fa3bd;'>No band</div><div style='color:#64748b;font-size:10px;'>F&amp;O stock</div></div>", unsafe_allow_html=True)
+                st.markdown("<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>UPPER CIRCUIT</div><div style='font-size:18px;font-weight:800;color:#6b7280;'>No band</div><div style='color:#9ca3af;font-size:10px;'>F&amp;O stock</div></div>", unsafe_allow_html=True)
         with cc[2]:
             if nse.get("lower"):
-                st.markdown(f"<div class='mc-green'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>🟢 LOWER CIRCUIT</div><div style='font-size:26px;font-weight:900;color:#16a34a;'>₹{nse['lower']:.2f}</div><div style='color:#64748b;font-size:10px;'>min today · {nse.get('band','')}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='mc-green'><div style='color:#6b7280;font-size:11px;font-weight:700;'>🟢 LOWER CIRCUIT</div><div style='font-size:26px;font-weight:900;color:#16a34a;'>₹{nse['lower']:.2f}</div><div style='color:#9ca3af;font-size:10px;'>min today · {nse.get('band','')}</div></div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>LOWER CIRCUIT</div><div style='font-size:18px;font-weight:800;color:#8fa3bd;'>No band</div><div style='color:#64748b;font-size:10px;'>F&amp;O stock</div></div>", unsafe_allow_html=True)
+                st.markdown("<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>LOWER CIRCUIT</div><div style='font-size:18px;font-weight:800;color:#6b7280;'>No band</div><div style='color:#9ca3af;font-size:10px;'>F&amp;O stock</div></div>", unsafe_allow_html=True)
         if nse.get("iep") and mst_s in ("pre", "closed"):
-            ic = "#16a34a" if (nse.get("iep_chg") or 0) > 0 else "#dc2626" if (nse.get("iep_chg") or 0) < 0 else "#8fa3bd"
-            st.markdown(f"<div style='background:#16233d;border:2px solid #3b82f6;border-radius:12px;padding:12px 18px;margin-top:8px;'><span style='color:#60a5fa;font-weight:800;'>🌅 Pre-open (IEP): ₹{nse['iep']:.2f}</span> <span style='color:{ic};font-weight:700;'>({nse.get('iep_chg',0):+.2f} / {nse.get('iep_pct',0):+.2f}%)</span> <span style='color:#8fa3bd;font-size:12px;'>— NSE's likely opening price, set in the 9:00–9:15 auction.</span></div>", unsafe_allow_html=True)
+            ic = "#16a34a" if (nse.get("iep_chg") or 0) > 0 else "#dc2626" if (nse.get("iep_chg") or 0) < 0 else "#6b7280"
+            st.markdown(f"<div style='background:#eff6ff;border:2px solid #3b82f6;border-radius:12px;padding:12px 18px;margin-top:8px;'><span style='color:#1d4ed8;font-weight:800;'>🌅 Pre-open (IEP): ₹{nse['iep']:.2f}</span> <span style='color:{ic};font-weight:700;'>({nse.get('iep_chg',0):+.2f} / {nse.get('iep_pct',0):+.2f}%)</span> <span style='color:#6b7280;font-size:12px;'>— NSE's likely opening price, set in the 9:00–9:15 auction.</span></div>", unsafe_allow_html=True)
     elif not sym.startswith("^"):
-        st.markdown("<div style='background:#16233d;border:1px solid #334155;border-radius:10px;padding:8px 14px;margin-top:6px;color:#64748b;font-size:12px;'>Circuit limits & pre-open unavailable (NSE not reachable right now).</div>", unsafe_allow_html=True)
+        st.markdown("<div style='background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:8px 14px;margin-top:6px;color:#9ca3af;font-size:12px;'>Circuit limits & pre-open unavailable (NSE not reachable right now).</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sh">💾 SAVE THIS ANALYSIS</div>', unsafe_allow_html=True)
     try:
@@ -4034,7 +3900,7 @@ Indicators agreeing ≠ price will move that way.</div>
                                    file_name=f"{fnbase}.docx",
                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                    **STRETCH)
-        st.markdown("<div style='color:#8fa3bd;font-size:12px;margin-top:4px;'>"
+        st.markdown("<div style='color:#6b7280;font-size:12px;margin-top:4px;'>"
                     "Saves every detail — trend, signal, circuit, levels, all pivots, Fibonacci &amp; "
                     "all indicators. <b>For a PDF:</b> open the HTML file and press <b>Ctrl+P → Save as PDF</b>."
                     + ("" if docx_bytes else " (Install <code>python-docx</code> to also get a Word file.)")
@@ -4058,7 +3924,7 @@ Indicators agreeing ≠ price will move that way.</div>
             else:
                 st.error("Couldn't write journal file.")
     with jc2:
-        st.markdown("<div style='color:#8fa3bd;font-size:12px;margin-top:6px;'>Saves today's plan to "
+        st.markdown("<div style='color:#6b7280;font-size:12px;margin-top:6px;'>Saves today's plan to "
                     "<code>trade_journal_NAME.json</code> (NAME = your memory name). Next day the <b>📓 Journal</b> tab checks whether "
                     "price hit your targets or stop — building your real accuracy record.</div>",
                     unsafe_allow_html=True)
@@ -4083,11 +3949,11 @@ Indicators agreeing ≠ price will move that way.</div>
     ep1, ep2, ep3 = st.columns(3)
     with ep1:
         el = "💰 BUY NOW AT" if plan['sit'] == 'BUY_NOW' else "⏳ BUY WHEN PRICE IS"
-        st.markdown(f"<div style='background:{'#052e16' if plan['sit']=='BUY_NOW' else '#2b1c0c'};border:2px solid {plan['ac']};border-radius:16px;padding:22px;text-align:center;'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>{el}</div><div style='font-size:40px;font-weight:900;color:{plan['ac']};margin:10px 0;'>₹{plan['buy_at']:,.2f}</div><div style='color:{plan['ac']};font-size:12px;font-weight:600;'>{plan['timing']}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:{'#f0fdf4' if plan['sit']=='BUY_NOW' else '#fff7ed'};border:2px solid {plan['ac']};border-radius:16px;padding:22px;text-align:center;'><div style='color:#6b7280;font-size:11px;font-weight:700;'>{el}</div><div style='font-size:40px;font-weight:900;color:{plan['ac']};margin:10px 0;'>₹{plan['buy_at']:,.2f}</div><div style='color:{plan['ac']};font-size:12px;font-weight:600;'>{plan['timing']}</div></div>", unsafe_allow_html=True)
     with ep2:
-        st.markdown(f"<div style='background:#2a0e0e;border:2px solid #dc2626;border-radius:16px;padding:22px;text-align:center;'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>🛑 STOP LOSS</div><div style='font-size:40px;font-weight:900;color:#dc2626;margin:10px 0;'>₹{plan['sl']:,.2f}</div><div style='color:#dc2626;font-size:13px;font-weight:700;'>{plan['sl_pct']:.1f}% below entry</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:16px;padding:22px;text-align:center;'><div style='color:#6b7280;font-size:11px;font-weight:700;'>🛑 STOP LOSS</div><div style='font-size:40px;font-weight:900;color:#dc2626;margin:10px 0;'>₹{plan['sl']:,.2f}</div><div style='color:#dc2626;font-size:13px;font-weight:700;'>{plan['sl_pct']:.1f}% below entry</div></div>", unsafe_allow_html=True)
     with ep3:
-        st.markdown(f"<div style='background:#16233d;border:2px solid #3b82f6;border-radius:16px;padding:22px;text-align:center;'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>⚖️ RISK : REWARD</div><div style='font-size:40px;font-weight:900;color:#60a5fa;margin:10px 0;'>1 : {plan['rr']}</div><div style='color:#3b82f6;font-size:13px;font-weight:700;'>at Target 2</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#eff6ff;border:2px solid #3b82f6;border-radius:16px;padding:22px;text-align:center;'><div style='color:#6b7280;font-size:11px;font-weight:700;'>⚖️ RISK : REWARD</div><div style='font-size:40px;font-weight:900;color:#1d4ed8;margin:10px 0;'>1 : {plan['rr']}</div><div style='color:#3b82f6;font-size:13px;font-weight:700;'>at Target 2</div></div>", unsafe_allow_html=True)
 
     tp1, tp2, tp3 = st.columns(3)
     for col, tprice, tpct, lbl, css, clr in [
@@ -4095,8 +3961,8 @@ Indicators agreeing ≠ price will move that way.</div>
         (tp2, plan['t2'], plan['t2p'], "🥈 TARGET 2 ⭐ main", "mc-green", "#16a34a"),
         (tp3, plan['t3'], plan['t3p'], "🥇 TARGET 3 · runner", "mc-purple", "#9333ea")]:
         with col:
-            st.markdown(f"<div class='{css}'><div style='font-size:12px;font-weight:700;color:#8fa3bd;'>{lbl}</div><div style='font-size:34px;font-weight:900;color:{clr};margin:8px 0;line-height:1;'>₹{tprice:,.2f}</div><div style='font-size:13px;color:#8fa3bd;font-weight:600;'>+{tpct:.2f}% from entry</div></div>", unsafe_allow_html=True)
-    st.markdown(f"<div style='background:#16233d;border:2px solid #3b82f6;border-radius:14px;padding:14px 20px;margin:14px 0;'><span style='color:#60a5fa;font-weight:800;font-size:14px;'>📋 Plan:</span> <span style='color:#cbd5e1;font-size:14px;'>Buy near <b>₹{plan['buy_at']:.2f}</b> · stop <b>₹{plan['sl']:.2f}</b> · book at T1 <b>₹{plan['t1']:.2f}</b>, main exit T2 <b>₹{plan['t2']:.2f}</b>. You decide the quantity based on your own money.</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='{css}'><div style='font-size:12px;font-weight:700;color:#6b7280;'>{lbl}</div><div style='font-size:34px;font-weight:900;color:{clr};margin:8px 0;line-height:1;'>₹{tprice:,.2f}</div><div style='font-size:13px;color:#6b7280;font-weight:600;'>+{tpct:.2f}% from entry</div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:#eff6ff;border:2px solid #3b82f6;border-radius:14px;padding:14px 20px;margin:14px 0;'><span style='color:#1d4ed8;font-weight:800;font-size:14px;'>📋 Plan:</span> <span style='color:#374151;font-size:14px;'>Buy near <b>₹{plan['buy_at']:.2f}</b> · stop <b>₹{plan['sl']:.2f}</b> · book at T1 <b>₹{plan['t1']:.2f}</b>, main exit T2 <b>₹{plan['t2']:.2f}</b>. You decide the quantity based on your own money.</span></div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sh">📐 SUPPORT · RESISTANCE · FIBONACCI · CAMARILLA · WOODIE</div>', unsafe_allow_html=True)
     if sr:
@@ -4104,16 +3970,16 @@ Indicators agreeing ≠ price will move that way.</div>
         with s1:
             ns = sr.get('ns')
             if ns:
-                st.markdown(f"<div style='background:#052e16;border:2px solid #16a34a;border-radius:16px;padding:18px;'><div style='color:#16a34a;font-weight:800;font-size:14px;'>🟢 NEAREST SUPPORT — BUY ZONE</div><div style='font-size:34px;font-weight:900;color:#16a34a;margin:8px 0;'>₹{ns['price']:.2f}</div><div style='color:#cbd5e1;font-size:12px;'>{abs(ns['dist']):.1f}% below · SL ₹{round(ns['price']*0.993,2):.2f}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#f0fdf4;border:2px solid #16a34a;border-radius:16px;padding:18px;'><div style='color:#16a34a;font-weight:800;font-size:14px;'>🟢 NEAREST SUPPORT — BUY ZONE</div><div style='font-size:34px;font-weight:900;color:#16a34a;margin:8px 0;'>₹{ns['price']:.2f}</div><div style='color:#374151;font-size:12px;'>{abs(ns['dist']):.1f}% below · SL ₹{round(ns['price']*0.993,2):.2f}</div></div>", unsafe_allow_html=True)
         with s2:
             nr = sr.get('nr')
             if nr:
-                st.markdown(f"<div style='background:#2a0e0e;border:2px solid #dc2626;border-radius:16px;padding:18px;'><div style='color:#dc2626;font-weight:800;font-size:14px;'>🔴 NEAREST RESISTANCE — BOOK PROFIT</div><div style='font-size:34px;font-weight:900;color:#dc2626;margin:8px 0;'>₹{nr['price']:.2f}</div><div style='color:#cbd5e1;font-size:12px;'>{abs(nr['dist']):.1f}% above · book profit here</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:16px;padding:18px;'><div style='color:#dc2626;font-weight:800;font-size:14px;'>🔴 NEAREST RESISTANCE — BOOK PROFIT</div><div style='font-size:34px;font-weight:900;color:#dc2626;margin:8px 0;'>₹{nr['price']:.2f}</div><div style='color:#374151;font-size:12px;'>{abs(nr['dist']):.1f}% above · book profit here</div></div>", unsafe_allow_html=True)
 
         tab_std, tab_fib, tab_cam, tab_wood = st.tabs(
             ["📐 Standard Pivots", "🌀 Fibonacci", "🎯 Camarilla", "🔷 Woodie"])
         with tab_std:
-            st.markdown("<div style='background:#16233d;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#60a5fa;'>📐 Full level ladder</b> — pivots + swings + 52-week + circuits, typed by position vs current price (a broken support becomes resistance).</div>", unsafe_allow_html=True)
+            st.markdown("<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#1d4ed8;'>📐 Full level ladder</b> — pivots + swings + 52-week + circuits, typed by position vs current price (a broken support becomes resistance).</div>", unsafe_allow_html=True)
             for lvl in sr['levels']:
                 lp = lvl['price']; dist = lvl['dist']; tp = lvl['type']
                 is_cur = abs(dist) < 0.5
@@ -4121,23 +3987,23 @@ Indicators agreeing ≠ price will move that way.</div>
                 elif tp == 'R': css, lbl, clr, dt = "lv-r", f"🔴 {lvl['name']} — RESISTANCE", "#ef4444", f"+{abs(dist):.1f}%"
                 elif tp == 'P': css, lbl, clr, dt = "lv-p", f"🟡 {lvl['name']} — PIVOT", "#f59e0b", f"{abs(dist):.1f}%"
                 else: css, lbl, clr, dt = "lv-s", f"🟢 {lvl['name']} — SUPPORT", "#22c55e", f"{abs(dist):.1f}%"
-                st.markdown(f"<div class='{css}'><div style='display:flex;justify-content:space-between;align-items:center;'><div><span style='color:{clr};font-weight:700;font-size:13px;'>{lbl}</span><span style='color:#64748b;font-size:11px;margin-left:8px;'>{dt}</span></div><div style='font-size:20px;font-weight:900;color:#e2e8f0;'>₹{lp:,.2f}</div></div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='{css}'><div style='display:flex;justify-content:space-between;align-items:center;'><div><span style='color:{clr};font-weight:700;font-size:13px;'>{lbl}</span><span style='color:#9ca3af;font-size:11px;margin-left:8px;'>{dt}</span></div><div style='font-size:20px;font-weight:900;color:#1a1f36;'>₹{lp:,.2f}</div></div></div>", unsafe_allow_html=True)
         with tab_fib:
-            st.markdown(f"<div style='background:#1e1b3a;border:1px solid #d8b4fe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#7e22ce;'>🌀 Fibonacci Retracement</b> — 20-day swing (High ₹{sr['sw20_hi']:.2f} → Low ₹{sr['sw20_lo']:.2f})</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background:#faf5ff;border:1px solid #d8b4fe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#7e22ce;'>🌀 Fibonacci Retracement</b> — 20-day swing (High ₹{sr['sw20_hi']:.2f} → Low ₹{sr['sw20_lo']:.2f})</div>", unsafe_allow_html=True)
             for ln, lp in sr['fib_levels'].items():
                 dist = round((lp - price) / price * 100, 2) if price > 0 else 0
                 is_cur = abs(dist) < 0.5; is_key = ln in ['38.2%', '50%', '61.8%']
                 css = "lv-cur" if is_cur else "lv-fib"; clr = "#3b82f6" if is_cur else "#a855f7"
-                st.markdown(f"<div class='{css}'><div style='display:flex;justify-content:space-between;align-items:center;'><div><span style='color:{clr};font-weight:{'800' if is_key else '700'};font-size:13px;'>🌀 Fib {ln}{' ⭐ KEY' if is_key else ''}</span><span style='color:#64748b;font-size:11px;margin-left:8px;'>{'← HERE' if is_cur else f'{dist:+.1f}%'}</span></div><div style='font-size:20px;font-weight:900;color:#e2e8f0;'>₹{lp:,.2f}</div></div></div>", unsafe_allow_html=True)
-            st.markdown("<div style='background:#16233d;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin:12px 0 8px;'><b style='color:#60a5fa;'>📈 Fibonacci Extensions</b> — profit targets</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='{css}'><div style='display:flex;justify-content:space-between;align-items:center;'><div><span style='color:{clr};font-weight:{'800' if is_key else '700'};font-size:13px;'>🌀 Fib {ln}{' ⭐ KEY' if is_key else ''}</span><span style='color:#9ca3af;font-size:11px;margin-left:8px;'>{'← HERE' if is_cur else f'{dist:+.1f}%'}</span></div><div style='font-size:20px;font-weight:900;color:#1a1f36;'>₹{lp:,.2f}</div></div></div>", unsafe_allow_html=True)
+            st.markdown("<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin:12px 0 8px;'><b style='color:#1d4ed8;'>📈 Fibonacci Extensions</b> — profit targets</div>", unsafe_allow_html=True)
             for en, ep_ in sr['fib_ext'].items():
                 dist = round((ep_ - price) / price * 100, 2) if price > 0 else 0
-                st.markdown(f"<div class='lv-r'><div style='display:flex;justify-content:space-between;align-items:center;'><span style='color:#2563eb;font-weight:700;'>📈 Extension {en}</span><div><span style='font-size:18px;font-weight:900;color:#e2e8f0;'>₹{ep_:,.2f}</span><span style='color:#8fa3bd;font-size:12px;margin-left:8px;'>{dist:+.1f}%</span></div></div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='lv-r'><div style='display:flex;justify-content:space-between;align-items:center;'><span style='color:#2563eb;font-weight:700;'>📈 Extension {en}</span><div><span style='font-size:18px;font-weight:900;color:#1a1f36;'>₹{ep_:,.2f}</span><span style='color:#6b7280;font-size:12px;margin-left:8px;'>{dist:+.1f}%</span></div></div></div>", unsafe_allow_html=True)
         with tab_cam:
-            st.markdown("<div style='background:#16233d;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#60a5fa;'>🎯 Camarilla Pivots</b> — tight intraday levels. R3/S3 are strong reversal zones; a close beyond R4/S4 signals a breakout.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#1d4ed8;'>🎯 Camarilla Pivots</b> — tight intraday levels. R3/S3 are strong reversal zones; a close beyond R4/S4 signals a breakout.</div>", unsafe_allow_html=True)
             st.markdown(pivot_table_html(sr['pivots']['Camarilla'], price), unsafe_allow_html=True)
         with tab_wood:
-            st.markdown("<div style='background:#3a2a06;border:1px solid #fde68a;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#fbbf24;'>🔷 Woodie Pivots</b> — weights yesterday's close more heavily, so it reacts faster to momentum than Standard pivots.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#b45309;'>🔷 Woodie Pivots</b> — weights yesterday's close more heavily, so it reacts faster to momentum than Standard pivots.</div>", unsafe_allow_html=True)
             st.markdown(pivot_table_html(sr['pivots']['Woodie'], price), unsafe_allow_html=True)
 
     # ── ADVANCED ANALYTICS ──
@@ -4147,9 +4013,9 @@ Indicators agreeing ≠ price will move that way.</div>
     st.markdown('<div class="sh">📊 MARKET REGIME</div>', unsafe_allow_html=True)
     rg1, rg2 = st.columns(2)
     with rg1:
-        st.markdown(f"<div style='background:{reg['rc']}12;border:2px solid {reg['rc']};border-radius:14px;padding:18px;text-align:center;'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>CURRENT REGIME</div><div style='font-size:24px;font-weight:900;color:{reg['rc']};margin:6px 0;'>{reg['regime']}</div><div style='color:#8fa3bd;font-size:12px;'>ADX {reg['adx']:.0f}</div></div>" if not np.isnan(reg['adx']) else f"<div style='background:{reg['rc']}12;border:2px solid {reg['rc']};border-radius:14px;padding:18px;text-align:center;'><div style='font-size:24px;font-weight:900;color:{reg['rc']};'>{reg['regime']}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:{reg['rc']}12;border:2px solid {reg['rc']};border-radius:14px;padding:18px;text-align:center;'><div style='color:#6b7280;font-size:11px;font-weight:700;'>CURRENT REGIME</div><div style='font-size:24px;font-weight:900;color:{reg['rc']};margin:6px 0;'>{reg['regime']}</div><div style='color:#6b7280;font-size:12px;'>ADX {reg['adx']:.0f}</div></div>" if not np.isnan(reg['adx']) else f"<div style='background:{reg['rc']}12;border:2px solid {reg['rc']};border-radius:14px;padding:18px;text-align:center;'><div style='font-size:24px;font-weight:900;color:{reg['rc']};'>{reg['regime']}</div></div>", unsafe_allow_html=True)
     with rg2:
-        st.markdown(f"<div style='background:{reg['vc']}12;border:2px solid {reg['vc']};border-radius:14px;padding:18px;text-align:center;'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>VOLATILITY</div><div style='font-size:24px;font-weight:900;color:{reg['vc']};margin:6px 0;'>{reg['vol']}</div><div style='color:#8fa3bd;font-size:12px;'>strategy: {'trend-follow' if 'STRONG' in reg['regime'] else 'range/mean-revert' if 'RANG' in reg['regime'] else 'wait'}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:{reg['vc']}12;border:2px solid {reg['vc']};border-radius:14px;padding:18px;text-align:center;'><div style='color:#6b7280;font-size:11px;font-weight:700;'>VOLATILITY</div><div style='font-size:24px;font-weight:900;color:{reg['vc']};margin:6px 0;'>{reg['vol']}</div><div style='color:#6b7280;font-size:12px;'>strategy: {'trend-follow' if 'STRONG' in reg['regime'] else 'range/mean-revert' if 'RANG' in reg['regime'] else 'wait'}</div></div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sh">🤖 MACHINE LEARNING FORECAST</div>', unsafe_allow_html=True)
     with st.spinner("Training ML models (RF · GB · Linear)…"):
@@ -4159,13 +4025,13 @@ Indicators agreeing ≠ price will move that way.</div>
     elif not ml:
         st.caption("Not enough daily history for ML on this stock.")
     else:
-        st.markdown("<div style='background:#3a2a06;border:1px solid #fde68a;border-radius:10px;padding:10px 16px;margin-bottom:10px;color:#fbbf24;font-size:12px;'>⚠️ ML forecasts are statistical estimates from past patterns — markets are not truly predictable. Use the <b>backtested accuracy %</b> as a reality check: near 50% means little better than a coin flip. Never trade on this alone.</div>", unsafe_allow_html=True)
+        st.markdown("<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 16px;margin-bottom:10px;color:#92400e;font-size:12px;'>⚠️ ML forecasts are statistical estimates from past patterns — markets are not truly predictable. Use the <b>backtested accuracy %</b> as a reality check: near 50% means little better than a coin flip. Never trade on this alone.</div>", unsafe_allow_html=True)
         mlc = st.columns(len(ml))
         for col, (h, v) in zip(mlc, sorted(ml.items())):
             dclr = "#16a34a" if v['dir'] == "UP" else "#dc2626"
-            acc = v['acc']; aclr = "#16a34a" if acc >= 55 else "#fbbf24" if acc >= 50 else "#dc2626"
+            acc = v['acc']; aclr = "#16a34a" if acc >= 55 else "#b45309" if acc >= 50 else "#dc2626"
             with col:
-                st.markdown(f"<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>{h}-DAY</div><div style='font-size:22px;font-weight:900;color:{dclr};margin:4px 0;'>₹{v['price']:.2f}</div><div style='color:{dclr};font-size:12px;font-weight:700;'>{v['ret']:+.2f}% {v['dir']}</div><div style='color:#64748b;font-size:10px;margin-top:4px;'>95% CI ₹{v['lo']:.0f}–{v['hi']:.0f}</div><div style='background:{aclr}18;color:{aclr};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:6px;display:inline-block;'>{acc:.0f}% accuracy</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>{h}-DAY</div><div style='font-size:22px;font-weight:900;color:{dclr};margin:4px 0;'>₹{v['price']:.2f}</div><div style='color:{dclr};font-size:12px;font-weight:700;'>{v['ret']:+.2f}% {v['dir']}</div><div style='color:#9ca3af;font-size:10px;margin-top:4px;'>95% CI ₹{v['lo']:.0f}–{v['hi']:.0f}</div><div style='background:{aclr}18;color:{aclr};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:6px;display:inline-block;'>{acc:.0f}% accuracy</div></div>", unsafe_allow_html=True)
 
     prob = target_probability(price, plan, sym)
     if prob:
@@ -4174,25 +4040,25 @@ Indicators agreeing ≠ price will move that way.</div>
         for col, key in zip(pcols[:3], ["T1", "T2", "T3"]):
             pv = prob[key]
             with col:
-                st.markdown(f"<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>{key} · ₹{pv['price']:.2f}</div><div style='font-size:28px;font-weight:900;color:{pv['color']};margin:4px 0;'>{pv['p']:.0f}%</div><div style='color:{pv['color']};font-size:12px;font-weight:700;'>{pv['rating']} chance</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>{key} · ₹{pv['price']:.2f}</div><div style='font-size:28px;font-weight:900;color:{pv['color']};margin:4px 0;'>{pv['p']:.0f}%</div><div style='color:{pv['color']};font-size:12px;font-weight:700;'>{pv['rating']} chance</div></div>", unsafe_allow_html=True)
         with pcols[3]:
-            st.markdown(f"<div class='mc-red'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>STOP HIT</div><div style='font-size:28px;font-weight:900;color:#dc2626;margin:4px 0;'>{prob['SL']['p']:.0f}%</div><div style='color:#dc2626;font-size:12px;font-weight:700;'>risk of SL</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='mc-red'><div style='color:#6b7280;font-size:11px;font-weight:700;'>STOP HIT</div><div style='font-size:28px;font-weight:900;color:#dc2626;margin:4px 0;'>{prob['SL']['p']:.0f}%</div><div style='color:#dc2626;font-size:12px;font-weight:700;'>risk of SL</div></div>", unsafe_allow_html=True)
         st.caption("Rough estimate from ~3-day return volatility (normal model). Real markets have fat tails — treat as a guide, not a promise.")
 
     vp = volume_profile(daily_df)
     if vp:
         st.markdown('<div class="sh">📊 VOLUME PROFILE</div>', unsafe_allow_html=True)
         v1, v2, v3 = st.columns(3)
-        with v1: st.markdown(f"<div class='mc-purple'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>POINT OF CONTROL</div><div style='font-size:24px;font-weight:900;color:#9333ea;'>₹{vp['poc']:.2f}</div><div style='color:#8fa3bd;font-size:11px;'>highest-volume price</div></div>", unsafe_allow_html=True)
-        with v2: st.markdown(f"<div class='mc-blue'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>VALUE AREA (70%)</div><div style='font-size:20px;font-weight:900;color:#60a5fa;'>₹{vp['va_lo']:.0f}–₹{vp['va_hi']:.0f}</div><div style='color:#8fa3bd;font-size:11px;'>fair-value zone</div></div>", unsafe_allow_html=True)
-        with v3: st.markdown(f"<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>POSITION</div><div style='font-size:13px;font-weight:700;color:#e2e8f0;margin-top:8px;'>{vp['pos']}</div></div>", unsafe_allow_html=True)
+        with v1: st.markdown(f"<div class='mc-purple'><div style='color:#6b7280;font-size:11px;font-weight:700;'>POINT OF CONTROL</div><div style='font-size:24px;font-weight:900;color:#9333ea;'>₹{vp['poc']:.2f}</div><div style='color:#6b7280;font-size:11px;'>highest-volume price</div></div>", unsafe_allow_html=True)
+        with v2: st.markdown(f"<div class='mc-blue'><div style='color:#6b7280;font-size:11px;font-weight:700;'>VALUE AREA (70%)</div><div style='font-size:20px;font-weight:900;color:#1d4ed8;'>₹{vp['va_lo']:.0f}–₹{vp['va_hi']:.0f}</div><div style='color:#6b7280;font-size:11px;'>fair-value zone</div></div>", unsafe_allow_html=True)
+        with v3: st.markdown(f"<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>POSITION</div><div style='font-size:13px;font-weight:700;color:#1a1f36;margin-top:8px;'>{vp['pos']}</div></div>", unsafe_allow_html=True)
 
     pats = detect_patterns(daily_df)
     if pats:
         st.markdown('<div class="sh">🔍 CHART PATTERNS</div>', unsafe_allow_html=True)
         for nm, action, rel in pats:
-            rc = {"High": "#16a34a", "Medium": "#fbbf24", "Low": "#8fa3bd"}[rel]
-            st.markdown(f"<div style='background:#0f1a2e;border:1px solid #1e293b;border-left:5px solid {rc};border-radius:0 12px 12px 0;padding:12px 18px;margin:5px 0;'><b style='color:#e2e8f0;'>{nm}</b> <span style='background:{rc}18;color:{rc};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:8px;'>{rel} reliability</span><div style='color:#8fa3bd;font-size:12px;margin-top:3px;'>{action}</div></div>", unsafe_allow_html=True)
+            rc = {"High": "#16a34a", "Medium": "#b45309", "Low": "#6b7280"}[rel]
+            st.markdown(f"<div style='background:white;border:1px solid #e0e7ff;border-left:5px solid {rc};border-radius:0 12px 12px 0;padding:12px 18px;margin:5px 0;'><b style='color:#1a1f36;'>{nm}</b> <span style='background:{rc}18;color:{rc};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:8px;'>{rel} reliability</span><div style='color:#6b7280;font-size:12px;margin-top:3px;'>{action}</div></div>", unsafe_allow_html=True)
         st.caption("Pattern detection is heuristic — confirm visually on the chart before acting.")
 
     rm = risk_metrics(sym)
@@ -4212,7 +4078,7 @@ Indicators agreeing ≠ price will move that way.</div>
             dm = demark_pivot(float(dd['High'].iloc[-1]), float(dd['Low'].iloc[-1]),
                               float(dd['Close'].iloc[-1]), float(dd['Open'].iloc[-1]))
             if dm:
-                st.markdown(f"<div style='background:#1e1b3a;border:1px solid #d8b4fe;border-radius:10px;padding:10px 16px;margin-top:8px;'><b style='color:#7e22ce;'>🎯 DeMark Pivots:</b> <span style='color:#cbd5e1;'>PP ₹{dm['PP']:.2f} · R1 ₹{dm['R1']:.2f} · S1 ₹{dm['S1']:.2f}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#faf5ff;border:1px solid #d8b4fe;border-radius:10px;padding:10px 16px;margin-top:8px;'><b style='color:#7e22ce;'>🎯 DeMark Pivots:</b> <span style='color:#374151;'>PP ₹{dm['PP']:.2f} · R1 ₹{dm['R1']:.2f} · S1 ₹{dm['S1']:.2f}</span></div>", unsafe_allow_html=True)
         except Exception:
             pass
 
@@ -4232,11 +4098,11 @@ Indicators agreeing ≠ price will move that way.</div>
         for col, s in zip(cols, cat_sigs):
             css = "ind-buy" if s['b'] else "ind-sell"; icon = "🟢" if s['b'] else "🔴"
             with col:
-                st.markdown(f"<div class='{css}'><span style='color:{'#16a34a' if s['b'] else '#dc2626'};font-weight:700;'>{icon} {s['n']}</span> <code style='background:{'#0b3a1f' if s['b'] else '#fee2e2'};color:{'#166534' if s['b'] else '#991b1b'};font-size:11px;padding:2px 8px;border-radius:4px;'>{s['v']}</code><div style='color:#94a3b8;font-size:11px;margin-top:4px;'>{s['t']}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='{css}'><span style='color:{'#16a34a' if s['b'] else '#dc2626'};font-weight:700;'>{icon} {s['n']}</span> <code style='background:{'#dcfce7' if s['b'] else '#fee2e2'};color:{'#166534' if s['b'] else '#991b1b'};font-size:11px;padding:2px 8px;border-radius:4px;'>{s['v']}</code><div style='color:#4b5563;font-size:11px;margin-top:4px;'>{s['t']}</div></div>", unsafe_allow_html=True)
 
     with st.expander("📊 Raw OHLCV Data (Last 50 candles)"):
         st.dataframe(res['df'].tail(50), **STRETCH)
-    st.markdown("<div style='text-align:center;color:#64748b;font-size:10px;padding:14px;border-top:1px solid #1e293b;margin-top:20px;'>⚠️ EDUCATIONAL PURPOSE ONLY · NOT FINANCIAL ADVICE · ALWAYS USE STOP LOSS · TRADE AT YOUR OWN RISK</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center;color:#9ca3af;font-size:10px;padding:14px;border-top:1px solid #e0e7ff;margin-top:20px;'>⚠️ EDUCATIONAL PURPOSE ONLY · NOT FINANCIAL ADVICE · ALWAYS USE STOP LOSS · TRADE AT YOUR OWN RISK</div>", unsafe_allow_html=True)
 
 
 # ============================================================
@@ -4662,7 +4528,7 @@ def spark_fig(r):
     fig.update_layout(height=230, margin=dict(l=8, r=8, t=6, b=6), showlegend=False,
                       paper_bgcolor="white", plot_bgcolor="white",
                       xaxis=dict(showticklabels=False, showgrid=False),
-                      yaxis=dict(showticklabels=True, showgrid=True, gridcolor="#1e293b", tickfont=dict(size=9)))
+                      yaxis=dict(showticklabels=True, showgrid=True, gridcolor="#e0e7ff", tickfont=dict(size=9)))
     return fig
 
 
@@ -4875,11 +4741,7 @@ def live_movers_tab(ss, mst_s):
     names = ss.get("mv_names") or {}
     _sec = int(ss.get("mv_int", "2 min").split()[0]) * 60
     due = mst_s == "open" and time.time() - ss.get("mv_last", 0) > (_sec - 10)
-    if due and not _pilot_ok("mv", ss):
-        due = False
-        _mv_view_sync(ss)                 # 🤖 autopilot drives — live view only
     if rescan or due or not ss.get("mv"):
-        _pilot_beat("mv", ss)
         with st.spinner("⚡ Scanning the board live (5-minute candles)…"):
             got, _ = _sweep(watch, "5m", "2d", with_daily=False, progress=True)
         movers = compute_movers(got)
@@ -5451,11 +5313,7 @@ def bounce_tab(ss, mst_s):
     names = ss.get("bc_names") or {}
     _sec = int(ss.get("bc_int", "3 min").split()[0]) * 60
     due = mst_s == "open" and time.time() - ss.get("bc_last", 0) > (_sec - 10)
-    if due and not _pilot_ok("bc", ss):
-        due = False
-        _bc_view_sync(ss)                 # 🤖 autopilot drives — live view only
     if rescan_bc or due or not ss.get("bc"):
-        _pilot_beat("bc", ss)
         with st.spinner("🚀 Scanning for support bounces (live candles + support levels)…"):
             got, gotd = _sweep(watch, "5m", "2d", with_daily=True, progress=True)
             bounces = compute_bounces(got, gotd)
@@ -5567,8 +5425,7 @@ def combo_tab(ss, mst_s):
     if (not ss.get("cb_on") and mst_s == "open"
             and now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20
             and ss.get("cb_stop_day") != now_ist().strftime("%Y-%m-%d")
-            and ss.get("cb_auto", True)
-            and _pilot_ok("cb", ss)):
+            and ss.get("cb_auto", True)):
         try:
             _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
         except Exception:
@@ -5664,8 +5521,6 @@ def combo_tab(ss, mst_s):
         ss["_cb_resumed"] = False
         st.info("♾️ Combo scan resumed automatically — a page refresh does NOT stop it. "
                 "Press ⏹ Stop to end the session.")
-    if not _pilot_ok("cb", ss) and (rt_load().get("cb") or {}).get("on"):
-        st.caption("🤖 AUTOPILOT is driving the desk — this page is a live read-only view.")
 
     try:
         from streamlit_autorefresh import st_autorefresh
@@ -5679,11 +5534,7 @@ def combo_tab(ss, mst_s):
     names = ss.get("cb_names") or {}
     _sec = int(ss.get("cb_int", "2 min").split()[0]) * 60
     due = mst_s == "open" and time.time() - ss.get("cb_last", 0) > (_sec - 10)
-    if due and not _pilot_ok("cb", ss):
-        due = False
-        _cb_view_sync(ss)                 # 🤖 autopilot drives — live view only
     if rescan_cb or due or not ss.get("cb"):
-        _pilot_beat("cb", ss)
         with st.spinner("🎯 Combo scan — live candles + calculation for the whole board…"):
             ss["cb"] = combo_scan(watch, names)
             cons_capture(ss["cb"])          # 🏅 9:30/9:45/10:00/10:15 TOP-20 snapshots
@@ -6281,11 +6132,11 @@ def dashboard_tab(ss, mst_s, ml, mm):
                     st.plotly_chart(spark_fig(r), **STRETCH)
                 except Exception:
                     pass
-                st.markdown(f"<div class='sc-r'><b style='color:{r['sc']};'>{r['act']}</b><div style='color:#cbd5e1;"
+                st.markdown(f"<div class='sc-r'><b style='color:{r['sc']};'>{r['act']}</b><div style='color:#374151;"
                             f"font-size:12px;margin-top:6px;'>Entry ₹{r['buy_at']:.2f} · Stop ₹{r['sl']:.2f} · "
                             f"T1 ₹{r['t1']:.2f} · T2 ₹{r['t2']:.2f} · R:R 1:{r['rr']} · intraday: {r['itrend'].title()} · "
                             f"RSI {r['rsi']:.0f} · vol {r['vr']:.1f}x avg</div>"
-                            f"<div style='color:#64748b;font-size:11px;margin-top:4px;'>Quick plan from the live board — the full "
+                            f"<div style='color:#9ca3af;font-size:11px;margin-top:4px;'>Quick plan from the live board — the full "
                             f"Analyze tab adds pivots, Fibonacci, circuits, news & ML.</div></div>", unsafe_allow_html=True)
                 if st.button(f"📊 Open FULL analysis → {r['name'][:14]}", key=f"dt_{r['sym']}",
                              **STRETCH, type="primary"):
@@ -6607,8 +6458,8 @@ def run_scan(stocks, iv, per, min_conf, stype, workers=10, cap_n=None, stats_out
             for f in concurrent.futures.as_completed(futs):
                 cnt[0] += 1
                 bar.progress(min(cnt[0] / total, 1.0))
-                stat.markdown(f"<div style='background:#16233d;border:1px solid #bfdbfe;border-radius:8px;"
-                              f"padding:8px 16px;display:inline-block;color:#60a5fa;font-size:13px;font-weight:600;'>"
+                stat.markdown(f"<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;"
+                              f"padding:8px 16px;display:inline-block;color:#1d4ed8;font-size:13px;font-weight:600;'>"
                               f"🔍 {label} {min(cnt[0], total)}/{total} · ✅ data OK {len(results)}</div>",
                               unsafe_allow_html=True)
                 try:
@@ -6658,7 +6509,7 @@ def main():
             ss[k] = v
     mst_s, ml, mm = mkt_status()
     tg_daily_cleanup()   # 🧹 after close: clear today's alert messages from the phones
-    tg_online_ping()   # 🔔 ONE morning "online"/day + "program updated" on version change
+    tg_online_ping()   # 🔔 "app is online" Telegram message (max 1 per 30 min)
     mclr = "#22c55e" if mst_s == "open" else "#f59e0b" if mst_s == "pre" else "#ef4444"
 
     # live breadth badge for the navbar once the dashboard has data
@@ -6674,7 +6525,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.18 · PRO DARK · AUTOPILOT</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.15 · SCAN DIAGNOSIS · FULL</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
@@ -6692,9 +6543,9 @@ def main():
         try:
             dashboard_tab(ss, mst_s, ml, mm)
         except Exception as e:
-            st.markdown(f"<div style='background:#2a0e0e;border:2px solid #dc2626;border-radius:14px;"
+            st.markdown(f"<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:14px;"
                         f"padding:16px 20px;'><b style='color:#dc2626;'>⚠️ Dashboard hit a snag</b>"
-                        f"<div style='color:#cbd5e1;font-size:13px;margin-top:6px;'>Usually a temporary "
+                        f"<div style='color:#374151;font-size:13px;margin-top:6px;'>Usually a temporary "
                         f"data issue — press 🔄 Refresh, reduce the watchlist size, or use ⚡ Light mode. "
                         f"Details: <code>{type(e).__name__}: {e}</code></div></div>", unsafe_allow_html=True)
 
@@ -6736,7 +6587,7 @@ def main():
     # ── TAB 1: ANALYZE ──
     with tab_analyze:
         st.markdown('<div class="input-row">', unsafe_allow_html=True)
-        st.markdown("<div style='font-size:15px;font-weight:800;color:#60a5fa;margin-bottom:14px;'>⚙️ SETTINGS — pick timeframe, then choose a stock &amp; ANALYZE</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:15px;font-weight:800;color:#1d4ed8;margin-bottom:14px;'>⚙️ SETTINGS — pick timeframe, then choose a stock &amp; ANALYZE</div>", unsafe_allow_html=True)
         r3, r4 = st.columns(2)
         with r3:
             iv = st.selectbox("⏱️ Timeframe", ["1m", "5m", "15m", "30m", "1h", "1d"], index=2, key="iv_in"); ss.iv = iv
@@ -6771,7 +6622,7 @@ def main():
                              disabled=not live_on)]
         with lr3:
             if live_on:
-                st.markdown(f"<div style='background:#2a0e0e;border:1px solid #fecaca;border-radius:10px;"
+                st.markdown(f"<div style='background:#fff1f2;border:1px solid #fecaca;border-radius:10px;"
                             f"padding:8px 14px;margin-top:2px;color:#dc2626;font-size:12px;font-weight:600;'>"
                             f"🔴 LIVE — refreshing every {live_secs}s. Best during market hours (9:15–3:30).</div>",
                             unsafe_allow_html=True)
@@ -6784,13 +6635,13 @@ def main():
 
         if ss.analyzed and ss.sym:
             if live_on:
-                st.markdown(f"<div style='background:#2a0e0e;border:1px solid #fecaca;border-radius:10px;padding:8px 16px;margin-bottom:10px;color:#dc2626;font-weight:700;'>🔴 LIVE · {ss.stock_name} · updates every {live_secs}s · {datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:8px 16px;margin-bottom:10px;color:#dc2626;font-weight:700;'>🔴 LIVE · {ss.stock_name} · updates every {live_secs}s · {datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
             try:
                 show_analysis(ss.sym, ss.stock_name, iv, per)
             except Exception as e:
-                st.markdown(f"<div style='background:#2a0e0e;border:2px solid #dc2626;border-radius:14px;"
+                st.markdown(f"<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:14px;"
                             f"padding:18px 22px;'><b style='color:#dc2626;font-size:16px;'>⚠️ Couldn't complete "
-                            f"this analysis</b><div style='color:#cbd5e1;font-size:13px;margin-top:6px;'>"
+                            f"this analysis</b><div style='color:#374151;font-size:13px;margin-top:6px;'>"
                             f"Often a temporary data issue — try again, switch timeframe to 15m + period 1mo, "
                             f"or pick another stock. Details: <code>{type(e).__name__}: {e}</code></div></div>",
                             unsafe_allow_html=True)
@@ -6812,12 +6663,12 @@ def main():
                     except RuntimeError:
                         pass
         else:
-            st.markdown("<div style='background:#0f1a2e;border:2px dashed #bfdbfe;border-radius:20px;padding:60px;text-align:center;margin-top:10px;'><div style='font-size:52px;margin-bottom:16px;'>📊</div><div style='font-size:22px;font-weight:800;color:#60a5fa;'>Select a stock above and click ANALYZE NOW</div><div style='color:#8fa3bd;font-size:14px;margin-top:8px;'>Signal · Fibonacci · Camarilla · Woodie · Chart · All 12 indicators · LIVE mode</div></div>", unsafe_allow_html=True)
+            st.markdown("<div style='background:white;border:2px dashed #bfdbfe;border-radius:20px;padding:60px;text-align:center;margin-top:10px;'><div style='font-size:52px;margin-bottom:16px;'>📊</div><div style='font-size:22px;font-weight:800;color:#1d4ed8;'>Select a stock above and click ANALYZE NOW</div><div style='color:#6b7280;font-size:14px;margin-top:8px;'>Signal · Fibonacci · Camarilla · Woodie · Chart · All 12 indicators · LIVE mode</div></div>", unsafe_allow_html=True)
 
     # ── TAB 2: SCANNER ──
     with tab_scan:
         st.markdown('<div class="input-row">', unsafe_allow_html=True)
-        st.markdown("<div style='font-size:15px;font-weight:800;color:#60a5fa;margin-bottom:14px;'>⚙️ SCANNER SETTINGS — tip: the 🔴 Live Dashboard scans up to 500 stocks far faster (batched)</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:15px;font-weight:800;color:#1d4ed8;margin-bottom:14px;'>⚙️ SCANNER SETTINGS — tip: the 🔴 Live Dashboard scans up to 500 stocks far faster (batched)</div>", unsafe_allow_html=True)
         sc3, sc4, sc5 = st.columns(3)
         with sc3: s_cat = st.selectbox("📂 Category", list(CAT_MAP.keys()), key="sc_cat")
         with sc4: s_sig = st.radio("Signal", ["📈 BUY", "📉 SELL", "🔍 ALL"], key="sc_sig")
@@ -6843,7 +6694,7 @@ def main():
             n_scan = cap_n if cap_n else total_n
             eta = max(1, int(n_scan / 160))
             note = f"Will scan <b>{n_scan:,}</b> stocks (~{eta}–{eta*2} min)" if is_all else f"Will scan <b>{total_n}</b> stocks"
-            st.markdown(f"<div style='background:#16233d;border-radius:10px;padding:10px 16px;margin-top:4px;'><span style='color:#60a5fa;font-size:13px;'>{note} · uptrend + confirmed setups first · keep this tab open while it runs</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background:#eff6ff;border-radius:10px;padding:10px 16px;margin-top:4px;'><span style='color:#1d4ed8;font-size:13px;'>{note} · uptrend + confirmed setups first · keep this tab open while it runs</span></div>", unsafe_allow_html=True)
 
         if scan_btn:
             sm = {"📈 BUY": "BUY", "📉 SELL": "SELL", "🔍 ALL": "ALL"}[s_sig]
@@ -6875,7 +6726,7 @@ def main():
                                      help="Expandable detail cards for the top N. The FULL table + CSV "
                                           "download below always covers everything you selected.")
             results = ss.scan_results[:show_n]
-            st.markdown(f"<div style='background:#052e16;border:1px solid #bbf7d0;border-radius:10px;"
+            st.markdown(f"<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;"
                         f"padding:8px 14px;color:#166534;font-size:12.5px;'>📋 Showing <b>{show_n}</b> of "
                         f"<b>{total_found}</b> matched stocks · full sortable table + ⬇️ CSV download below</div>",
                         unsafe_allow_html=True)
@@ -6884,12 +6735,12 @@ def main():
             for i, (col, r) in enumerate(zip(top3, results[:3])):
                 with col:
                     up = r['tr'] == 'UPTREND'
-                    st.markdown(f"<div style='background:#0f1a2e;border:2px solid {r['sc']};border-radius:18px;padding:20px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,0.08);'><div style='font-size:28px;'>{medals[i]}</div><div style='font-size:15px;font-weight:800;color:#e2e8f0;margin:6px 0;'>{r['name'][:22]}</div><div style='font-size:24px;font-weight:900;color:#60a5fa;'>₹{r['price']:.2f}</div><div style='background:{r['sc']};color:white;border-radius:20px;padding:5px 16px;font-size:12px;font-weight:800;margin:10px auto;display:inline-block;'>{r['sig']}</div><div style='font-size:15px;font-weight:800;color:{'#16a34a' if up else '#8fa3bd'};margin-top:6px;'>{'📈 UPTREND' if up else r['tr'].title()}</div><div style='color:#8fa3bd;font-size:12px;margin-top:4px;'>Conf {r['conf']:.0f}% · Buy ₹{r['buy_at']:.2f}</div></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background:white;border:2px solid {r['sc']};border-radius:18px;padding:20px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,0.08);'><div style='font-size:28px;'>{medals[i]}</div><div style='font-size:15px;font-weight:800;color:#1a1f36;margin:6px 0;'>{r['name'][:22]}</div><div style='font-size:24px;font-weight:900;color:#1d4ed8;'>₹{r['price']:.2f}</div><div style='background:{r['sc']};color:white;border-radius:20px;padding:5px 16px;font-size:12px;font-weight:800;margin:10px auto;display:inline-block;'>{r['sig']}</div><div style='font-size:15px;font-weight:800;color:{'#16a34a' if up else '#6b7280'};margin-top:6px;'>{'📈 UPTREND' if up else r['tr'].title()}</div><div style='color:#6b7280;font-size:12px;margin-top:4px;'>Conf {r['conf']:.0f}% · Buy ₹{r['buy_at']:.2f}</div></div>", unsafe_allow_html=True)
             st.markdown("---"); st.markdown(f"### 📋 Top {min(detail_n, len(results))} — detail cards")
             for i, r in enumerate(results[:detail_n]):
                 up = r['tr'] == 'UPTREND'
                 with st.expander(f"{'📈' if up else '•'} #{i+1} · {r['name'][:26]} · ₹{r['price']:.2f} · {r['sig']} · {r['conf']:.0f}% · {r['tr'].title()} · Gap {r['gap']:+.1f}%", expanded=i < 3):
-                    st.markdown(f"<div class='sc-r'><div style='font-size:15px;font-weight:800;color:{r['ac']};margin-bottom:12px;'>{r['act']}</div><div style='display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center;'><div style='background:#16233d;border-radius:10px;padding:10px;'><div style='color:#8fa3bd;font-size:10px;'>TREND</div><div style='color:{'#16a34a' if up else '#8fa3bd'};font-weight:900;font-size:14px;'>{r['tr'].title()}</div></div><div style='background:#0f1a2e;border:1px solid #1e293b;border-radius:10px;padding:10px;'><div style='color:#8fa3bd;font-size:10px;'>BUY AT</div><div style='color:{r['ac']};font-weight:800;font-size:15px;'>₹{r['buy_at']:.2f}</div></div><div style='background:#2a0e0e;border-radius:10px;padding:10px;'><div style='color:#8fa3bd;font-size:10px;'>STOP</div><div style='color:#dc2626;font-weight:800;font-size:15px;'>₹{r['sl']:.2f}</div></div><div style='background:#052e16;border-radius:10px;padding:10px;'><div style='color:#8fa3bd;font-size:10px;'>TARGET 2</div><div style='color:#16a34a;font-weight:800;font-size:15px;'>₹{r['t2']:.2f}</div><div style='color:#8fa3bd;font-size:9px;'>+{r['t2p']:.1f}%</div></div><div style='background:#16233d;border-radius:10px;padding:10px;'><div style='color:#8fa3bd;font-size:10px;'>RISK:REWARD</div><div style='color:#60a5fa;font-weight:900;font-size:16px;'>1:{r['rr']}</div></div></div><div style='color:#8fa3bd;font-size:11px;margin-top:10px;'>Conf {r['conf']:.0f}% · Vol {r['vr']:.1f}x · Buy strength {r['bp']:.0f}%</div></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='sc-r'><div style='font-size:15px;font-weight:800;color:{r['ac']};margin-bottom:12px;'>{r['act']}</div><div style='display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center;'><div style='background:#eff6ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>TREND</div><div style='color:{'#16a34a' if up else '#6b7280'};font-weight:900;font-size:14px;'>{r['tr'].title()}</div></div><div style='background:white;border:1px solid #e0e7ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>BUY AT</div><div style='color:{r['ac']};font-weight:800;font-size:15px;'>₹{r['buy_at']:.2f}</div></div><div style='background:#fff1f2;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>STOP</div><div style='color:#dc2626;font-weight:800;font-size:15px;'>₹{r['sl']:.2f}</div></div><div style='background:#f0fdf4;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>TARGET 2</div><div style='color:#16a34a;font-weight:800;font-size:15px;'>₹{r['t2']:.2f}</div><div style='color:#6b7280;font-size:9px;'>+{r['t2p']:.1f}%</div></div><div style='background:#eff6ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>RISK:REWARD</div><div style='color:#1d4ed8;font-weight:900;font-size:16px;'>1:{r['rr']}</div></div></div><div style='color:#6b7280;font-size:11px;margin-top:10px;'>Conf {r['conf']:.0f}% · Vol {r['vr']:.1f}x · Buy strength {r['bp']:.0f}%</div></div>", unsafe_allow_html=True)
                     if st.button(f"📊 Full Analysis → {r['name'][:20]}", key=f"scf_{i}_{r['sym']}", **STRETCH, type="primary"):
                         ss.sym = r['sym']; ss.stock_name = r['name']; ss.analyzed = True
                         st.info("✅ Open the '📊 Analyze Stock' tab — it's loaded with this stock.")
@@ -6916,9 +6767,9 @@ def main():
                 pass
 
     # ── TAB 3: SEARCH ──
-        st.markdown("<hr style='border:1px solid #1e3a5f;margin:22px 0 14px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border:1px solid #dbeafe;margin:22px 0 14px 0;'>", unsafe_allow_html=True)
         st.markdown('<div class="input-row">', unsafe_allow_html=True)
-        st.markdown("<div style='font-size:15px;font-weight:800;color:#60a5fa;margin-bottom:12px;'>🔎 SEARCH ANY NSE/BSE STOCK (full live universe)</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:15px;font-weight:800;color:#1d4ed8;margin-bottom:12px;'>🔎 SEARCH ANY NSE/BSE STOCK (full live universe)</div>", unsafe_allow_html=True)
         q1, q2 = st.columns([4, 1])
         with q1:
             sq = st.text_input("Search", placeholder="Zensar Technologies, Oil India, Vedanta, Suzlon, SBIN...", key="sq_in", label_visibility="collapsed")
@@ -6935,7 +6786,7 @@ def main():
                 for i, (label, data) in enumerate(ss.search_results.items()):
                     with cols[i % 3]:
                         p = data['price']
-                        st.markdown(f"<div style='background:#0f1a2e;border:1px solid #1e293b;border-radius:16px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06);margin:4px 0;'><div style='font-weight:800;color:#e2e8f0;font-size:14px;'>{data['name']}</div><div style='font-size:30px;font-weight:900;color:#60a5fa;margin:10px 0;'>₹{p:,.2f}</div><div style='color:#64748b;font-size:11px;'>{data['sym']}</div></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background:white;border:1px solid #e0e7ff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06);margin:4px 0;'><div style='font-weight:800;color:#1a1f36;font-size:14px;'>{data['name']}</div><div style='font-size:30px;font-weight:900;color:#1d4ed8;margin:10px 0;'>₹{p:,.2f}</div><div style='color:#9ca3af;font-size:11px;'>{data['sym']}</div></div>", unsafe_allow_html=True)
                         if st.button("📊 Analyze", key=f"sr_{i}", **STRETCH):
                             ss.sym = data['sym']; ss.stock_name = data['name']; ss.analyzed = True
                             st.success("✅ Open the '📊 Analyze Stock' tab.")
@@ -6955,9 +6806,9 @@ def main():
 
     # ── TAB 5: JOURNAL ──
     with tab_journal:
-        st.markdown("<div style='background:linear-gradient(135deg,#16233d,#1e3a5f);border:2px solid #3b82f6;"
+        st.markdown("<div style='background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #3b82f6;"
                     "border-radius:16px;padding:18px;margin-bottom:16px;'><div style='font-size:18px;font-weight:800;"
-                    "color:#60a5fa;'>📓 Trade Journal — did the plan work?</div><div style='color:#cbd5e1;"
+                    "color:#1d4ed8;'>📓 Trade Journal — did the plan work?</div><div style='color:#374151;"
                     "font-size:13px;margin-top:8px;'>Save any analysis (button under 'Save this analysis'), then come "
                     "back the next day. It checks what price actually did and marks each call a WIN, LOSS, or NO-FILL — "
                     "so you build a real accuracy record and see what to improve.</div></div>", unsafe_allow_html=True)
@@ -6983,7 +6834,7 @@ def main():
             with k3: st.metric("Losses", losses)
             with k4: st.metric("No-fill (waited)", nofill)
             with k5: st.metric("Hit-rate", f"{acc}%", "of resolved")
-            st.markdown("<div style='color:#8fa3bd;font-size:12px;margin:6px 0 14px;'>Hit-rate counts only "
+            st.markdown("<div style='color:#6b7280;font-size:12px;margin:6px 0 14px;'>Hit-rate counts only "
                         "resolved trades (win vs loss). 'No-fill' means price never reached your buy level — "
                         "that's the plan correctly keeping you out.</div>", unsafe_allow_html=True)
             for e, v in rows:
@@ -6992,11 +6843,11 @@ def main():
                 with st.expander(f"{v['status']} · {e['name'][:26]} · saved {e['saved']} · "
                                  f"{e.get('trend','')} {e.get('signal','')}", expanded=False):
                     st.markdown(
-                        f"<div style='background:#0f1a2e;border:1px solid #1e293b;border-left:5px solid {v['color']};"
+                        f"<div style='background:white;border:1px solid #e0e7ff;border-left:5px solid {v['color']};"
                         f"border-radius:0 12px 12px 0;padding:14px 18px;'>"
                         f"<div style='font-size:15px;font-weight:800;color:{v['color']};'>{v['status']}</div>"
-                        f"<div style='color:#cbd5e1;font-size:13px;margin-top:4px;'>{v['detail']}</div>"
-                        f"<div style='color:#8fa3bd;font-size:12px;margin-top:8px;'>Planned: buy ₹{e['buy_at']:.2f} · "
+                        f"<div style='color:#374151;font-size:13px;margin-top:4px;'>{v['detail']}</div>"
+                        f"<div style='color:#6b7280;font-size:12px;margin-top:8px;'>Planned: buy ₹{e['buy_at']:.2f} · "
                         f"stop ₹{e['sl']:.2f} · T1 ₹{e['t1']:.2f} · T2 ₹{e['t2']:.2f} · saved at ₹{e['price']:.2f} · "
                         f"stage {e.get('stage','')} · news: {e.get('news','—')}</div></div>", unsafe_allow_html=True)
                     if st.button("🗑️ Delete this entry", key=f"del_{e.get('id','')}"):
@@ -7004,7 +6855,7 @@ def main():
                         st.rerun()
 
     # ── TAB: EOD REVIEW (before vs after) ──
-        st.markdown("<hr style='border:1px solid #1e3a5f;margin:22px 0 14px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border:1px solid #dbeafe;margin:22px 0 14px 0;'>", unsafe_allow_html=True)
         try:
             eod_review_tab(ss)
         except Exception as e:
@@ -7017,8 +6868,8 @@ def main():
         <div class='tr-g'><b style='color:#16a34a;'>Rule 1 — Target price hit = book &amp; stop.</b> Price reached your target? Take profit, don't get greedy.</div>
         <div class='tr-b'><b style='color:#dc2626;'>Rule 2 — Always use the stop loss.</b> No SL = no trade.</div>
         <div class='tr-b'><b style='color:#dc2626;'>Rule 3 — Never average down.</b> SL hit → exit, don't buy more.</div>
-        <div class='tr-w'><b style='color:#fbbf24;'>Rule 4 — 9:15 AM is not for buying.</b> Wait for the 9:30 first candle.</div>
-        <div class='tr-w'><b style='color:#fbbf24;'>Rule 5 — Gap up > 2%? Don't chase.</b> Wait for a pullback or skip.</div>
+        <div class='tr-w'><b style='color:#b45309;'>Rule 4 — 9:15 AM is not for buying.</b> Wait for the 9:30 first candle.</div>
+        <div class='tr-w'><b style='color:#b45309;'>Rule 5 — Gap up > 2%? Don't chase.</b> Wait for a pullback or skip.</div>
         <div class='tr-i'><b style='color:#2563eb;'>Rule 6 — Trend is your friend.</b> Uptrend → buy dips. Downtrend → avoid longs.</div>
         <div class='tr-i'><b style='color:#2563eb;'>🔴 Live Dashboard workflow:</b> START the board → watch the 🚀 UPTREND panel → open a stock's tab or click Analyze on a top card → confirm with pivots/news/ML in the full analysis → trade only with a stop. The board finds candidates; the deep analysis confirms.</div>
         <div class='tr-i'><b style='color:#2563eb;'>Pivots — which to use:</b> Standard = general S/R · Camarilla = tight intraday reversals (R3/S3) & breakouts (R4/S4) · Woodie = faster, momentum-weighted · Fibonacci = 38.2/50/61.8% pullback zones.</div>
@@ -7031,7 +6882,7 @@ def main():
         <div class='tr-g'><b style='color:#16a34a;'>Honest truth:</b> no tool predicts price. These stack the odds and define your risk — they don't remove it. The stop loss is what actually protects your capital.</div>
         """), unsafe_allow_html=True)
 
-    st.markdown("<div style='text-align:center;color:#64748b;font-size:10px;padding:16px;border-top:2px solid #1e293b;margin-top:20px;'>⚠️ EDUCATIONAL PURPOSE ONLY · NOT FINANCIAL ADVICE · ALWAYS USE STOP LOSS · TRADE AT YOUR OWN RISK · Past performance ≠ future results</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center;color:#9ca3af;font-size:10px;padding:16px;border-top:2px solid #e0e7ff;margin-top:20px;'>⚠️ EDUCATIONAL PURPOSE ONLY · NOT FINANCIAL ADVICE · ALWAYS USE STOP LOSS · TRADE AT YOUR OWN RISK · Past performance ≠ future results</div>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
