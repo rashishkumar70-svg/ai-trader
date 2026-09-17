@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.21.1 · API-FIRST"
+APP_VERSION = "v13.21.2 · ANALYTICS"
 
 
 def tg_online_ping():
@@ -2897,7 +2897,8 @@ def up_file():
 
 
 def up_load():
-    d = {"key": "", "secret": "", "redirect": UP_REDIRECT_DEFAULT, "token": "", "exp": 0}
+    d = {"key": "", "secret": "", "redirect": UP_REDIRECT_DEFAULT, "token": "", "exp": 0,
+         "atok": "", "aexp": ""}
     try:
         if _os.path.exists(up_file()):
             j = _json.load(open(up_file(), encoding="utf-8"))
@@ -2923,10 +2924,44 @@ def up_save(key, secret, redirect=None):
         return False
 
 
+def _atok_live(d):
+    """Is the 1-year analytics token still valid?"""
+    exp = str(d.get("aexp") or "")
+    return bool(d.get("atok")) and (not exp or exp >= now_ist().strftime("%Y-%m-%d"))
+
+
 def up_token_valid():
     try:
         d = up_load()
+        if _atok_live(d):                     # 🎫 ANALYTICS TOKEN — 1-year, no daily login
+            return True
         return bool(d.get("token")) and time.time() < float(d.get("exp") or 0) - 120
+    except Exception:
+        return False
+
+
+def up_auth_token():
+    """A VALID token for the Bearer header — live analytics first, live OAuth
+    second, "" last (never send an expired token)."""
+    try:
+        d = up_load()
+        if _atok_live(d):
+            return d["atok"]
+        if d.get("token") and time.time() < float(d.get("exp") or 0) - 120:
+            return d["token"]
+        return ""
+    except Exception:
+        return ""
+
+
+def up_save_atok(tok):
+    d = up_load()
+    tok = (tok or "").strip()
+    d["atok"] = tok
+    d["aexp"] = (now_ist() + _dtd(days=365)).strftime("%Y-%m-%d") if tok else ""
+    try:
+        _json.dump(d, open(up_file(), "w", encoding="utf-8"))
+        return True
     except Exception:
         return False
 
@@ -3075,7 +3110,7 @@ def up_prefetch(syms):
                 "https://api.upstox.com/v2/market-quote/full?instrument_key="
                 + ",".join(vals[i:i + 500]),
                 headers={"Accept": "application/json", "User-Agent": UP_UA,
-                         "Authorization": f"Bearer {d['token']}"})
+                         "Authorization": f"Bearer {up_auth_token()}"})
             data = (_json.loads(urllib.request.urlopen(req, timeout=8)
                                 .read().decode("utf-8")) or {}).get("data") or {}
             for k, v in data.items():
@@ -3211,12 +3246,23 @@ def up_settings_ui(tag=""):
     with st.expander("📡 UPSTOX LIVE QUOTES (optional — real-time prices)"):
         d = up_load()
         c = up_token_valid()
-        if c:
+        if d.get("atok") and c:
+            st.markdown(f"<div style='background:#052e16;border:1px solid #22c55e;border-radius:10px;"
+                        f"padding:10px 14px;color:#bbf7d0;font-size:13px;'>🎫 <b>ANALYTICS TOKEN LIVE — "
+                        f"real-time quotes ON</b> · valid till <b>{d.get('aexp')}</b> · "
+                        f"<b>NO daily login needed — ever.</b> Read-only market data (quotes + candles) — "
+                        f"exactly what the radar needs.</div>", unsafe_allow_html=True)
+        elif c:
             t = time.gmtime(float(d["exp"]) + 19800)
             st.markdown(f"<div style='background:#052e16;border:1px solid #22c55e;border-radius:10px;"
                         f"padding:10px 14px;color:#bbf7d0;font-size:13px;'>🟢 <b>LIVE — real-time quotes ON</b> "
-                        f"· token valid till {time.strftime('%H:%M', t)} IST (the 3:30 AM reset is Upstox's "
-                        f"rule — quick re-login next morning).</div>", unsafe_allow_html=True)
+                        f"· daily token valid till {time.strftime('%H:%M', t)} IST. 💡 Tip: paste the 1-year "
+                        f"Analytics token below — no more daily logins.</div>", unsafe_allow_html=True)
+        elif d.get("atok"):
+            st.markdown("<div style='background:#422006;border:1px solid #f59e0b;border-radius:10px;"
+                        "padding:10px 14px;color:#fde68a;font-size:13px;'>🟡 <b>Analytics token EXPIRED</b> — "
+                        "generate a fresh one (Developer Apps → Analytics tab) and paste it below.</div>",
+                        unsafe_allow_html=True)
         elif d.get("key"):
             st.markdown("<div style='background:#422006;border:1px solid #f59e0b;border-radius:10px;"
                         "padding:10px 14px;color:#fde68a;font-size:13px;'>🟡 <b>Keys saved — token not active "
@@ -3227,6 +3273,28 @@ def up_settings_ui(tag=""):
                         "padding:10px 14px;color:#cbd5e1;font-size:13px;'>⚪ <b>OFF — using Yahoo "
                         "(works fine).</b> Add your free Upstox Basic keys for tick-fresh prices: "
                         "account.upstox.com/developer/apps</div>", unsafe_allow_html=True)
+        at = st.text_input("🎫 Analytics token (1-year · no daily login) — RECOMMENDED",
+                           value="", key=f"up_at{tag}", type="password",
+                           placeholder="Developer Apps → Analytics tab → Generate Token → copy here")
+        if st.button("💾 Save analytics token", key=f"up_asave{tag}", **STRETCH):
+            if at.strip():
+                up_save_atok(at)
+                try:
+                    if mkt_status()[0] == "open":
+                        st.session_state["up_kick"] = True   # 🚀 engines start NOW
+                        st.rerun()
+                except Exception:
+                    pass
+                st.success("🎫 ANALYTICS TOKEN SAVED — live for 1 year. No daily login. Real-time quotes + "
+                           "uninterrupted fallback are now always on.")
+                try:
+                    st.toast("🎫 Upstox analytics token activated")
+                except Exception:
+                    pass
+            else:
+                st.error("Paste the token first: Upstox → account.upstox.com/developer/apps → Analytics "
+                         "tab → Generate Token → copy icon.")
+        st.caption("⬇️ CLASSIC method (daily login) — optional, the analytics token above is better:")
         c1, c2 = st.columns(2)
         with c1:
             k = st.text_input("Upstox API Key", value=d.get("key", ""), key=f"up_k{tag}")
@@ -7182,7 +7250,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.21.1 · API-FIRST</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.21.2 · ANALYTICS</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
