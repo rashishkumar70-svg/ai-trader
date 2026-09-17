@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.21.3 · ANALYTICS"
+APP_VERSION = "v13.22 · COACH VOLCANO"
 
 
 def tg_online_ping():
@@ -2570,10 +2570,33 @@ def render_fresh_tab(ss, mst_s):
                "If price runs away without the dip — let it go, the next fresh one comes.")
 
 
+def coach_volc_rows(got, watch, names):
+    """🌋 VOLCANO rows from the coach's own live sweep — the eruption radar
+    watches CONTINUOUSLY with the coach (every ~80 s), not just on combo scans."""
+    out = []
+    try:
+        for s in watch or []:
+            df = (got or {}).get(s)
+            if df is None or len(df) < 14:
+                continue
+            out.append({"name": (names or {}).get(s, s.replace(".NS", "")), "sym": s,
+                        "price": round(float(df["Close"].iloc[-1]), 2),
+                        "chg_day": day_chg_from_intraday(df),
+                        "volc": sleeper_detect(df, "live"),
+                        "volc_day": sleeper_detect(df, "day")})
+    except Exception:
+        pass
+    return out
+
+
 def render_coach_tab(ss, mst_s):
     # ♾️ auto-resume
     if not ss.get("co_on"):
         _rt = rt_load().get("co") or {}
+        if _rt.get("on") and _rt.get("watch"):
+            if time.time() - (_rt.get("last_scan") or 0) > 2700:   # 🧹 stale (>45 min) — old data, start clean
+                rt_clear("co")
+                _rt = {}
         if _rt.get("on") and _rt.get("watch"):
             ss["co_on"] = True
             ss["co_watch"] = _rt["watch"]; ss["co_names"] = _rt.get("names") or {}
@@ -2708,6 +2731,9 @@ def render_coach_tab(ss, mst_s):
                 ss["co_ctx"] = {s: coach_ctx(s, _gotv.get(s))
                                 for s in (ss.get("co_watch") or [])}
                 ss["co_ctx_ts"] = time.time()
+                ss["co_volc"] = coach_volc_rows(_gotv, ss.get("co_watch") or [],
+                                                ss.get("co_names"))   # 🌋 continuous watch
+                ss["co_volc_ts"] = time.time()
             except Exception:
                 pass
     if _am_pilot and (due or not ss.get("co_ctx")):
@@ -2716,6 +2742,8 @@ def render_coach_tab(ss, mst_s):
             got, _ = _sweep(ss["co_watch"], "5m", "2d", with_daily=False, progress=False)
         ctxs = {s: coach_ctx(s, got.get(s)) for s in ss["co_watch"]}
         ss["co_ctx"] = ctxs
+        ss["co_volc"] = coach_volc_rows(got, ss["co_watch"], ss.get("co_names"))   # 🌋 continuous watch
+        ss["co_volc_ts"] = time.time()
         feed = ss.get("co_feed") or []
         for s in ss["co_watch"]:
             try:
@@ -2857,6 +2885,19 @@ def render_coach_tab(ss, mst_s):
             except Exception:
                 for t in _log:
                     st.markdown(f"- **{t['name']}** {t.get('res'):+.1f}% ({t.get('outcome')})")
+
+    # ── 🌋 VOLCANO — lives HERE now: the coach watches continuously ──
+    try:
+        _vrows = list(ss.get("co_volc") or [])
+        _cbr = ss.get("cb") or []
+        if _cbr:
+            _seen = {r["sym"] for r in _vrows}
+            _vrows += [c for c in _cbr if c.get("sym") not in _seen
+                       and (c.get("volc") or c.get("volc_day"))]
+        if _vrows:
+            _volc_ui(_vrows, mst_s)
+    except Exception:
+        pass
 
     with st.expander("📖 How the coach decides"):
         st.markdown("""<div style='color:#94a3b8;font-size:12.5px;line-height:1.9;'>
@@ -6145,6 +6186,10 @@ def combo_tab(ss, mst_s):
     if not ss.get("cb_on"):
         _rt = rt_load().get("cb") or {}
         if _rt.get("on") and _rt.get("watch"):
+            if time.time() - (_rt.get("last_scan") or 0) > 2700:   # 🧹 stale (>45 min) — old data, start clean
+                rt_clear("cb")
+                _rt = {}
+        if _rt.get("on") and _rt.get("watch"):
             ss["cb_on"] = True
             ss["cb_watch"] = _rt["watch"]; ss["cb_names"] = _rt.get("names") or {}
             ss["cb"] = _rt.get("combos") or None
@@ -6357,8 +6402,9 @@ def combo_tab(ss, mst_s):
         st.info("No PERFECT/MATCH picks right now — the two engines don't agree on anything this moment. "
                 "That's the system protecting you (no trade is better than a bad trade). Re-scan later.")
 
-    # ── 🌋 VOLCANO — silent stock, sudden BOOM (the Tata-Chemicals pattern) ──
-    _volc_ui(combos, mst_s, _now_map)
+    st.caption("🌋 The VOLCANO eruption radar now lives in the 🎯 Coach tab — it watches "
+               "continuously with the coach engine (every ~80 s), together with the whole "
+               "combo board when this radar runs.")
 
     if liveonly:
         with st.expander(f"⚠️ LIVE ONLY — climbing but calculation neutral ({len(liveonly)}) · higher risk"):
@@ -7255,7 +7301,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.21.3 · ANALYTICS</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.22 · COACH VOLCANO</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
