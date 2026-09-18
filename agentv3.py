@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.25.1 · RANK FIX"
+APP_VERSION = "v13.25.2 · TOP 150"
 
 
 def tg_online_ping():
@@ -6462,13 +6462,13 @@ def combo_tab(ss, mst_s):
             and ss.get("cb_auto", True)
             and _pilot_ok("cb", ss)):
         try:
-            _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
+            _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 150))
         except Exception:
             _w, _nm = [], {}
         if _w:
             ss["cb_watch"] = _w; ss["cb_names"] = _nm
             ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
-            rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=_w, names=_nm)
+            rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 150), watch=_w, names=_nm)
             ss["_cb_autostarted"] = True
             st.rerun()
 
@@ -6488,7 +6488,7 @@ def combo_tab(ss, mst_s):
             if _rt.get("src"):
                 ss["cb_src"] = _rt["src"]
             if _rt.get("n"):
-                ss["cb_n"] = _rt["n"]
+                ss["cb_n"] = min(int(_rt["n"]), 150)   # 🎯 TOP-150 board (old 500s shrink)
             ss["_cb_resumed"] = True
 
     cons_announce()   # 📲 reopen later/evening: today's final result still gets delivered
@@ -6519,9 +6519,11 @@ def combo_tab(ss, mst_s):
             _keys = list(DASH_SRC.keys())
             _def = _keys.index("🌐 Full NSE (auto-fill to your count)") if "🌐 Full NSE (auto-fill to your count)" in _keys else 0
             st.selectbox("Universe", _keys, index=_def, key="cb_src")
-            st.slider("How many stocks", 100, 500, 500, 50, key="cb_n")
+            st.slider("How many stocks", 100, 500, 150, 50, key="cb_n")
         with k2:
             st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=1, key="cb_int")
+            st.caption("🎯 TOP-150 board by design: the PERFECT picks always sit at the TOP of the "
+                       "ranking — 150 gives you every one of them at ~3× the refresh speed of 500.")
             st.caption("One scan = live 5-minute candles + daily history for the whole board (~1–2 min).")
         s1, s2, s3 = st.columns(3)
         with s1:
@@ -6536,10 +6538,10 @@ def combo_tab(ss, mst_s):
         ss["cb_stop_day"] = now_ist().strftime("%Y-%m-%d")
         rt_clear("cb")
     if start_cb:
-        watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
+        watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 150))
         ss["cb_watch"] = watch; ss["cb_names"] = names
         ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
-        rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=watch, names=names)
+        rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 150), watch=watch, names=names)
 
     if not ss.get("cb_on"):
         if mst_s == "open" and up_wait_reason():
@@ -6618,20 +6620,20 @@ def combo_tab(ss, mst_s):
         ss.pop("cb_recheck", None)
         rt_save("cb", on=True, watch=watch, names=names, combos=ss["cb"],
                 last_scan=ss["cb_last"], ts_str=ss.get("cb_ts_str"),
-                src=ss.get("cb_src"), n=ss.get("cb_n", 500))
+                src=ss.get("cb_src"), n=ss.get("cb_n", 150))
     # 🌐 ranked board landed in the background? swap once — only before the
     #    first consensus snapshot, so windows are never disturbed
     try:
         if ss.get("cb_on") and not ss.get("cb_ranked_swapped"):
             _cs = cons_state()
             if not sum(int(w.get("n") or 0) for w in (_cs.get("wins") or {}).values()):
-                _rw, _rn = rank_universe(ss.get("cb_n", 500))
+                _rw, _rn = rank_universe(ss.get("cb_n", 150))
                 if _rw and _rw != ss.get("cb_watch"):
                     ss["cb_watch"] = _rw
                     ss["cb_names"] = _rn
                     ss["cb_ranked_swapped"] = True
                     rt_save("cb", on=True, watch=_rw, names=_rn, combos=ss.get("cb") or [],
-                            src=ss.get("cb_src"), n=ss.get("cb_n", 500))
+                            src=ss.get("cb_src"), n=ss.get("cb_n", 150))
     except Exception:
         pass
     if cb_bg_alive():
@@ -7645,7 +7647,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.25.1 · RANK FIX</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.25.2 · TOP 150</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
