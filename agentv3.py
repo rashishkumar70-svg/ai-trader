@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.22.2 · TRUE FALLBACK"
+APP_VERSION = "v13.23 · FAST FALLBACK"
 
 
 def tg_online_ping():
@@ -2935,6 +2935,7 @@ UP_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
          "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
 _UP_LTP = {}        # {sym: (price, ts)} in-memory live-price cache
 _UP_TICKS = {}      # {sym: [(epoch, price, cum_volume), …]} live tick stream (fallback builder)
+_UP_ID5 = {"ts": {}, "df": {}}   # 📡 5-min fallback candle cache (per symbol, 100 s)
 _UP_CANDLE_CACHE = {"d": None, "df": {}, "saved": 0}   # last-good Yahoo candles, per day
 _UP_KEYS = {"d": None, "m": {}}   # daily instrument-key map, in memory
 
@@ -3279,25 +3280,36 @@ def up_fallback_candles(syms):
 
 def up_intraday_candles(syms):
     """📡 TRUE FALLBACK — today's REAL candles from Upstox (1-min intraday,
-    resampled to 5-min). Used when Yahoo is fully blocked: the board is
-    rebuilt from market open, not just from live ticks. One call per symbol,
-    throttled — ~15-20 s for a 500-stock board, once per scan cycle."""
+    resampled to 5-min), fetched by 6 PARALLEL workers so a 500-stock board
+    rebuilds in ~30 s (the old sequential version was too slow for the page's
+    auto-refresh — that caused the endless 'scanning' loop). Per-symbol cache
+    keeps repeat cycles light."""
     out = {}
     try:
         if not up_token_valid() or not syms:
             return out
-        d = up_load()
-        kmap = up_keys_map(list(syms))
-        for s, k in kmap.items():
+        now = time.time()
+        todo = [s for s in syms
+                if now - (_UP_ID5.get("ts") or {}).get(s, 0) > 100]
+        for s in syms:
+            if s not in todo and s in (_UP_ID5.get("df") or {}):
+                out[s] = _UP_ID5["df"][s]
+        if not todo:
+            return out
+        kmap = up_keys_map(todo)
+        tok = up_auth_token()
+
+        def _pull(item):
+            s, k = item
             try:
                 rq = urllib.request.Request(
                     f"https://api.upstox.com/v2/historical-candle/intraday/{k}/1minute",
                     headers={"Accept": "application/json", "User-Agent": UP_UA,
-                             "Authorization": f"Bearer {up_auth_token()}"})
-                r = _json.loads(urllib.request.urlopen(rq, timeout=6).read().decode("utf-8"))
+                             "Authorization": f"Bearer {tok}"})
+                r = _json.loads(urllib.request.urlopen(rq, timeout=8).read().decode("utf-8"))
                 candles = (r.get("data") or {}).get("candles") or []
                 if not candles:
-                    continue
+                    return s, None
                 df = pd.DataFrame([c[:6] for c in candles],
                                   columns=["ts", "Open", "High", "Low", "Close", "Volume"])
                 df.index = pd.to_datetime(df["ts"])
@@ -3309,14 +3321,88 @@ def up_intraday_candles(syms):
                 agg = df.resample("5min").agg(
                     {"Open": "first", "High": "max", "Low": "min",
                      "Close": "last", "Volume": "sum"}).dropna()
-                if len(agg):
-                    out[s] = agg
+                return s, (agg if len(agg) else None)
             except Exception:
-                continue
+                return s, None
+
+        try:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=6) as ex:
+                for s, df in ex.map(_pull, [it for it in kmap.items()]):
+                    if df is not None:
+                        out[s] = df
+                        _UP_ID5.setdefault("ts", {})[s] = time.time()
+                        _UP_ID5.setdefault("df", {})[s] = df
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return out
+
+
+def up_daily_candles(syms):
+    """📡 daily-history fallback (6mo OHLCV per symbol) — fetched ONCE per day,
+    then disk-cached (pickle) — keeps trend/200EMA/signal verdicts real during
+    a Yahoo outage."""
+    out = {}
+    try:
+        if not up_token_valid() or not syms:
+            return out
+        today = now_ist().strftime("%Y-%m-%d")
+        fn = f"upstox_daily_{_ukey()}_{today}.pkl"
+        cache = {}
+        try:
+            import pickle as _pk
+            if _os.path.exists(fn):
+                cache = _pk.load(open(fn, "rb")) or {}
+        except Exception:
+            cache = {}
+        todo = [s for s in syms if s not in cache]
+        out.update({s: cache[s] for s in syms if s in cache})
+        if not todo:
+            return out
+        kmap = up_keys_map(todo)
+        tok = up_auth_token()
+        _frm = (now_ist() - _dtd(days=200)).strftime("%Y-%m-%d")
+        _to = now_ist().strftime("%Y-%m-%d")
+
+        def _pull(item):
+            s, k = item
             try:
-                time.sleep(0.02)
+                rq = urllib.request.Request(
+                    f"https://api.upstox.com/v2/historical-candle/{k}/day/{_to}/{_frm}",
+                    headers={"Accept": "application/json", "User-Agent": UP_UA,
+                             "Authorization": f"Bearer {tok}"})
+                r = _json.loads(urllib.request.urlopen(rq, timeout=8).read().decode("utf-8"))
+                candles = (r.get("data") or {}).get("candles") or []
+                if not candles:
+                    return s, None
+                df = pd.DataFrame([c[:6] for c in candles],
+                                  columns=["ts", "Open", "High", "Low", "Close", "Volume"])
+                df.index = pd.to_datetime(df["ts"])
+                try:
+                    df.index = df.index.tz_convert("Asia/Calcutta")
+                except Exception:
+                    pass
+                df = df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
+                return s, (df if len(df) >= 30 else None)
             except Exception:
-                pass
+                return s, None
+
+        try:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=6) as ex:
+                for s, df in ex.map(_pull, [it for it in kmap.items()]):
+                    if df is not None:
+                        out[s] = df
+                        cache[s] = df
+        except Exception:
+            pass
+        try:
+            import pickle as _pk
+            _pk.dump(cache, open(fn, "wb"))
+        except Exception:
+            pass
     except Exception:
         pass
     return out
@@ -4804,9 +4890,14 @@ def fetch_chunk(syms, iv, per):
         _miss = [s for s in syms if s not in out]
         _fb = {}
         if _miss and up_token_valid():
-            _fb = up_intraday_candles(_miss) or {}          # 📡 real candles from open
+            if iv == "1d":
+                _fb = up_daily_candles(_miss) or {}          # 📡 6-month daily history (cached/day)
+            else:
+                _fb = up_intraday_candles(_miss) or {}       # 📡 real candles from market open
+                if not _fb:
+                    _fb = up_fallback_candles(_miss) or {}   # 📡 tick-stitch backup
             if not _fb:
-                _fb = up_fallback_candles(_miss) or {}      # 📡 tick-stitch backup
+                _FEED["fb_fail"] = time.time()               # 🩺 honest diagnostic signal
             if _fb:
                 out.update(_fb)
                 _FEED["fb"] = time.time()
@@ -6336,7 +6427,9 @@ def combo_tab(ss, mst_s):
     try:
         from streamlit_autorefresh import st_autorefresh
         _sec = int(ss.get("cb_int", "2 min").split()[0]) * 60
-        if mst_s == "open":          # 🛌 after close: NO auto-refresh (free-CPU saver)
+        if feed_status()[0] == "fallback":
+            _sec = max(_sec, 360)    # 📡 fallback sweeps are heavier — refresh every 6 min,
+        if mst_s == "open":          # so the page never kills a sweep mid-flight again
             st_autorefresh(interval=_sec * 1000, key="cb_tick")
     except Exception:
         pass
@@ -6391,7 +6484,11 @@ def combo_tab(ss, mst_s):
             st.warning(f"⚠️ PARTIAL DATA — connection test got only {_pr}/20 stocks. The server connection is "
                        f"struggling; scores may be incomplete. Auto-retry on the next scan — no action needed.")
         else:
-            if feed_status()[0] == "fallback":
+            if _FEED.get("fb_fail", 0) > _FEED.get("fb", 0) and time.time() - _FEED.get("fb_fail", 0) < 900:
+                st.error("📡 The Upstox fallback tried but returned no candles. Check the 📡 panel — "
+                         "if the green ANALYTICS box is showing, wait for the next scan cycle; if the "
+                         "token expired, paste a fresh one.")
+            elif feed_status()[0] == "fallback":
                 st.info("📡 Yahoo is resting (global throttle) — the Upstox fallback is carrying the "
                         "board. Scores appear within a couple of scan cycles; everything else runs normally.")
             else:
@@ -7372,7 +7469,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.22.2 · TRUE FALLBACK</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.23 · FAST FALLBACK</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
