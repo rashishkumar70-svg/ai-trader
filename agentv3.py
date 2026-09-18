@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.25 · UPSTOX FIRST"
+APP_VERSION = "v13.25.1 · RANK FIX"
 
 
 def tg_online_ping():
@@ -3117,8 +3117,10 @@ def up_keys_map(syms):
                     _UP_KEYS.update({"d": today, "m": j.get("m") or {}})
         except Exception:
             pass
-    want = {s.replace(".NS", ""): s for s in syms}
-    if not set(want).issubset(set(_UP_KEYS["m"])):
+    # 🩹 load ONCE per day. (The old subset check re-downloaded the ENTIRE
+    #    15 MB master on every call whenever a dead ticker was in the list —
+    #    a hidden 10+ minute tax that made every big sweep die.)
+    if _UP_KEYS.get("d") != today:
         try:
             import gzip as _gz
             rq = urllib.request.Request(
@@ -3135,7 +3137,8 @@ def up_keys_map(syms):
             except Exception:
                 pass
         except Exception:
-            pass
+            _UP_KEYS.update({"d": today, "m": _UP_KEYS.get("m") or {}})   # no retry storm
+    want = {s.replace(".NS", ""): s for s in syms}
     return {v: _UP_KEYS["m"].get(k, "") for k, v in want.items() if _UP_KEYS["m"].get(k)}
 
 
@@ -4725,11 +4728,48 @@ SECTORS_FOR_BREADTH = {"💻 IT": IT_S, "🏦 Bank": BANK_S, "⚡ Power": POWER_
                         "🛡️ Defence": DEF_S, "🚗 Auto": AUTO_S, "💊 Pharma": PHARMA_S}
 
 
+_RANK_BG = {"t": None, "day": None, "fin": 0.0}   # 🧵 background universe ranker
+
+
 def rank_universe(n):
-    """🌐 FIRST SCAN OF THE DAY — rank the ENTIRE NSE (2,000+ stocks) by
-    uptrend strength and keep the TOP n. Result is cached to disk for the
-    day, so this heavy scan runs once per morning — then every engine
-    (dashboard · movers · bounces · combo) uses the best 500 board."""
+    """🌐 FIRST SCAN OF THE DAY — TOP n of the whole NSE, cached to disk for
+    the day. The heavy sweep runs in a BACKGROUND thread (the old inline
+    version was killed mid-flight by the page's 2-minute refresh → the
+    endless 'scanning symbols, no result' loop). While it works, callers
+    get (None, None) and use the curated board — the radar never waits."""
+    key = f"universe_rank_{_ukey()}_{now_ist().strftime('%Y-%m-%d')}.json"
+    try:
+        if _os.path.exists(key):
+            d = _json.load(open(key, encoding="utf-8"))
+            if isinstance(d, dict) and d.get("watch") and d.get("n") == n:
+                return d["watch"], d.get("names") or {}
+    except Exception:
+        pass
+    try:
+        import threading
+        today = now_ist().strftime("%Y-%m-%d")
+        _alive = bool(_RANK_BG.get("t") and _RANK_BG["t"].is_alive())
+        if _RANK_BG.get("day") == today and (_alive or time.time() - _RANK_BG.get("fin", 0) < 600):
+            return None, None                     # running / recently failed — don't storm
+        def _work():
+            try:
+                _rank_work(n)
+            except Exception:
+                pass
+            finally:
+                _RANK_BG["fin"] = time.time()
+        _RANK_BG.update(day=today, fin=0.0)
+        _RANK_BG["t"] = threading.Thread(target=_work, daemon=True)
+        _RANK_BG["t"].start()
+    except Exception:
+        pass
+    return None, None
+
+
+def _rank_work(n):
+    """🌐 (background) rank the ENTIRE NSE (2,000+ stocks) by uptrend
+    strength and keep the TOP n — cached to disk for the day, then every
+    engine (dashboard · movers · bounces · combo) uses the best board."""
     key = f"universe_rank_{_ukey()}_{now_ist().strftime('%Y-%m-%d')}.json"
     try:
         if _os.path.exists(key):
@@ -4818,7 +4858,11 @@ def build_watchlist(src_key, n, custom_txt=""):
             uni = {}
         if uni and n < len(uni):
             try:
-                return rank_universe(n)
+                _rw, _rn = rank_universe(n)
+                if _rw:
+                    return _rw, _rn
+                # 🧵 ranking still running in background → curated board for now,
+                # swapped to the ranked board automatically once it lands
             except Exception:
                 pass
         for k, v in ALL_STOCKS.items():
@@ -6575,6 +6619,21 @@ def combo_tab(ss, mst_s):
         rt_save("cb", on=True, watch=watch, names=names, combos=ss["cb"],
                 last_scan=ss["cb_last"], ts_str=ss.get("cb_ts_str"),
                 src=ss.get("cb_src"), n=ss.get("cb_n", 500))
+    # 🌐 ranked board landed in the background? swap once — only before the
+    #    first consensus snapshot, so windows are never disturbed
+    try:
+        if ss.get("cb_on") and not ss.get("cb_ranked_swapped"):
+            _cs = cons_state()
+            if not sum(int(w.get("n") or 0) for w in (_cs.get("wins") or {}).values()):
+                _rw, _rn = rank_universe(ss.get("cb_n", 500))
+                if _rw and _rw != ss.get("cb_watch"):
+                    ss["cb_watch"] = _rw
+                    ss["cb_names"] = _rn
+                    ss["cb_ranked_swapped"] = True
+                    rt_save("cb", on=True, watch=_rw, names=_rn, combos=ss.get("cb") or [],
+                            src=ss.get("cb_src"), n=ss.get("cb_n", 500))
+    except Exception:
+        pass
     if cb_bg_alive():
         st.info("🧵 Full-board scan running in the BACKGROUND — refresh-proof, the board lands by "
                 "itself in ~2–3 minutes. You can refresh or switch tabs freely; this page updates "
@@ -7565,7 +7624,7 @@ def main():
             if _keepcap:
                 rt_save("co", cap=_keepcap)
             for _k in ("co_log", "co_feed", "co_volc", "co_ctx", "mv_alerts", "bc_alerts",
-                       "cb", "co_pos", "dash", "mv", "bc", "bc_prev", "mv_prevform"):
+                       "cb", "co_pos", "dash", "mv", "bc", "bc_prev", "mv_prevform", "cb_ranked_swapped"):
                 ss.pop(_k, None)
             rt_save("dayrst", day=_nd)
     except Exception:
@@ -7586,7 +7645,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.25 · UPSTOX FIRST</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.25.1 · RANK FIX</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
