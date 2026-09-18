@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.24.2 · NO HANG"
+APP_VERSION = "v13.25 · UPSTOX FIRST"
 
 
 def tg_online_ping():
@@ -3363,7 +3363,7 @@ def up_daily_candles(syms):
             return out
         kmap = up_keys_map(todo)
         tok = up_auth_token()
-        _frm = (now_ist() - _dtd(days=200)).strftime("%Y-%m-%d")
+        _frm = (now_ist() - _dtd(days=400)).strftime("%Y-%m-%d")
         _to = now_ist().strftime("%Y-%m-%d")
 
         def _pull(item):
@@ -4891,30 +4891,49 @@ def _yf_ok():
 
 @st.cache_data(ttl=90, max_entries=120, show_spinner=False)
 def fetch_chunk(syms, iv, per):
-    """ONE batched yfinance download for up to ~50 symbols — this is what
-    makes 500-stock live scanning possible (10 requests instead of 500)."""
+    """ONE data pass for a symbol list — 📡 UPSTOX FIRST: the analytics token
+    IS the data line now (real-time candles + 400-day history). Yahoo is a
+    standby for gaps only — watchdog-bounded, so it can never hang the app."""
     try:
         _FEED["req"] += len(syms)
     except Exception:
         pass
     if iv in ("1m", "5m", "15m"):
         up_prefetch(tuple(syms))   # 📡 tick-fresh LTPs into cache (no-op without token)
-    try:
-        if not _yf_ok():
-            data = None           # ⚡ throttled — skip straight to the fallback
-        else:
-            data = _yf_dl(syms, per, iv)     # ⏱ watchdog-bounded (never hangs)
-            if data is None:
-                _YF_THROTTLE["ts"] = time.time()   # ⏱ it hung → cooldown + fallback
-    except Exception:
-        data = None               # 📡 flow on — the UNINTERRUPTED hook below may rescue
     out = {}
+    # ── 📡 UPSTOX FIRST — token live → the whole chunk comes from Upstox ──
+    try:
+        if up_token_valid():
+            _u = (up_daily_candles(tuple(syms)) if iv == "1d"
+                  else up_intraday_candles(tuple(syms)))
+            if _u:
+                out.update(_u)
+            if len(out) >= max(2, int(len(syms) * 0.8)):
+                try:
+                    _FEED["got"] += len(out); _FEED["ts"] = time.time()
+                    _FEED["fb"] = time.time()      # 📡 Upstox is carrying the desk
+                except Exception:
+                    pass
+                return {s: up_patch_df(s, d) for s, d in out.items()}
+    except Exception:
+        out = {}
+    # ── ⏳ YAHOO STANDBY — only for the still-missing symbols ──
+    _miss = [s for s in syms if s not in out]
+    data = None
+    if _miss:
+        try:
+            if _yf_ok():
+                data = _yf_dl(_miss, per, iv)     # ⏱ watchdog-bounded (never hangs)
+                if data is None:
+                    _YF_THROTTLE["ts"] = time.time()
+        except Exception:
+            data = None
     try:
         if data is None or data.empty:
-            data = None          # 📡 flow on — the UNINTERRUPTED hook below may rescue
+            data = None
         single = not isinstance(data.columns, pd.MultiIndex)   # flat cols only (1-symbol yf
         #  downloads can ALSO be MultiIndex — data[s] handles both, so never assume flat)
-        for s in syms:
+        for s in _miss:
             try:
                 df = data if single else data[s]
                 if df is None or len(df) == 0:
@@ -4934,25 +4953,14 @@ def fetch_chunk(syms, iv, per):
         _FEED["got"] += len(out); _FEED["ts"] = time.time()
     except Exception:
         pass
-    # ── 📡 UNINTERRUPTED — Yahoo blocked/thin? → Upstox live fallback ──
+    # ── 📡 last-gap rescue: tick-stitch for anything still missing ──
     try:
-        _miss = [s for s in syms if s not in out]
-        _fb = {}
-        if _miss and up_token_valid():
-            if iv == "1d":
-                _fb = up_daily_candles(_miss) or {}          # 📡 6-month daily history (cached/day)
-            else:
-                _fb = up_intraday_candles(_miss) or {}       # 📡 real candles from market open
-                if not _fb:
-                    _fb = up_fallback_candles(_miss) or {}   # 📡 tick-stitch backup
-            if not _fb:
-                _FEED["fb_fail"] = time.time()               # 🩺 honest diagnostic signal
+        _miss2 = [s for s in syms if s not in out]
+        if _miss2 and up_token_valid() and iv != "1d":
+            _fb = up_fallback_candles(_miss2) or {}
             if _fb:
                 out.update(_fb)
                 _FEED["fb"] = time.time()
-        if len(out) - len(_fb) >= max(2, int(len(syms) * 0.8)):
-            up_cache_save({s: d for s, d in out.items() if s not in _fb})   # yf-sourced only
-            _FEED["yahoo_ok"] = time.time()
     except Exception:
         pass
     return {s: up_patch_df(s, d) for s, d in out.items()}   # 📡 splice live LTP
@@ -6625,10 +6633,9 @@ def combo_tab(ss, mst_s):
     if _fsm == "fallback":
         st.markdown(f"<div style='background:#0b2540;border:1px solid #0ea5e9;border-radius:10px;"
                     f"padding:8px 14px;color:#bae6fd;font-size:12px;margin-bottom:10px;'>"
-                    f"📡 <b>LIVE FALLBACK ACTIVE (since {_fsb} IST)</b> — Yahoo is throttling this "
-                    f"server, so the radar skipped it and is running on <b>Upstox real-time data</b> "
-                    f"instead. The board loads normally; Yahoo is re-checked every 5 minutes. "
-                    f"<b>No interruption.</b></div>", unsafe_allow_html=True)
+                    f"📡 <b>UPSTOX LIVE (since {_fsb} IST)</b> — the desk is running on <b>Upstox "
+                    f"real-time data</b> (your 1-year token). Yahoo is on standby and fills gaps "
+                    f"only when needed. <b>No interruption, ever.</b></div>", unsafe_allow_html=True)
 
     # 🔄 live re-check of the top picks (current price vs scan price)
     _rc = ss.get("cb_recheck") or {}
@@ -7579,7 +7586,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.24.2 · NO HANG</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.25 · UPSTOX FIRST</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
