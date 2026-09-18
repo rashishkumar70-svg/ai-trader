@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.26 · FRESH WIPE"
+APP_VERSION = "v13.27 · MY SCHEDULE"
 
 
 def tg_online_ping():
@@ -1954,7 +1954,7 @@ def tg_online_ping():
                 and tg_send(f"\U0001F7E2 <b>AI Trader is ONLINE</b>\n"
                             f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
                             f"<i>Morning auto-start \u2014 radars begin at 9:20.</i>\n"
-                            f"\U0001F3C5 RESULT 1 ~10:16 \u00b7 RESULT 2 ~10:46 \u2014 right here on Telegram.")):
+                            f"\U0001F3C5 RESULT 1 10:10 \u00b7 RESULT 2 10:17 \u00b7 then every ~15 min till 10:45 \u2014 right here on Telegram.")):
             d["day"] = today
         _json.dump(d, open(fn, "w", encoding="utf-8"))
     except Exception:
@@ -2190,8 +2190,10 @@ def coach_eod_summary(log, cap):
 
 CONS_SLOTS = [("09:30", 9 * 60 + 30), ("09:45", 9 * 60 + 45),
               ("10:00", 10 * 60), ("10:15", 10 * 60 + 15)]   # legacy default
-CONS_CFG_DEFAULT = {"wins": [{"start": "09:30", "end": "10:15", "every": 15},
-                             {"start": "10:15", "end": "10:45", "every": 10}]}
+CONS_CFG_DEFAULT = {"wins": [{"start": "09:30", "end": "10:10", "every": 20},   # 🏅 RESULT 1 ~10:10
+                             {"start": "10:10", "end": "10:17", "every": 7},    # 🏅 RESULT 2 ~10:17 (MUST)
+                             {"start": "10:17", "end": "10:32", "every": 15},   # 🏅 RESULT 3 ~10:32
+                             {"start": "10:32", "end": "10:45", "every": 13}]}  # 🏅 RESULT 4 ~10:45
 
 
 def _hmm(s):
@@ -2375,6 +2377,10 @@ def cons_announce(names=None):
                 ws["announced"] = True
                 ws["result_ts"] = now_ist().strftime("%H:%M")
                 sent_any = True
+                try:
+                    blog(f"🏅 RESULT {wi + 1} delivered · {len(t1 or [])} picks")
+                except Exception:
+                    pass
         if sent_any:
             rt_save("cons", **d)
         return sent_any
@@ -2613,7 +2619,7 @@ def render_coach_tab(ss, mst_s):
             and (now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20 or ss.get("up_kick"))
             and not up_wait_reason()          # ⏳ API-FIRST: hold for the Upstox login (till 9:35)
             and ss.get("co_stop_day") != now_ist().strftime("%Y-%m-%d")
-            and ss.get("co_auto", True)
+            and ss.get("co_auto", False)     # 🚫 OFF by default
             and _pilot_ok("co", ss)):
         try:
             _top, _nm = coach_pick(int(ss.get("co_n") or COACH_N_DEFAULT))
@@ -2656,7 +2662,7 @@ def render_coach_tab(ss, mst_s):
             ss["co_n"] = st.slider("How many perfect stocks to coach", 4, 10,
                                    int(ss.get("co_n") or COACH_N_DEFAULT))
             ss["co_auto"] = st.checkbox("🚀 Auto-start at 9:20 (coach begins by itself when the app is open)",
-                                        value=bool(ss.get("co_auto", True)), key="co_auto_ck")
+                                        value=bool(ss.get("co_auto", False)), key="co_auto_ck")
         if st.button("🎯 START COACH (run after the morning scan)", key="co_start", **STRETCH):
             if mst_s != "open":
                 st.info("🔕 Market is CLOSED right now — the coach runs live only during market hours "
@@ -4949,49 +4955,31 @@ def _yf_ok():
 
 @st.cache_data(ttl=90, max_entries=120, show_spinner=False)
 def fetch_chunk(syms, iv, per):
-    """ONE data pass for a symbol list — 📡 UPSTOX FIRST: the analytics token
-    IS the data line now (real-time candles + 400-day history). Yahoo is a
-    standby for gaps only — watchdog-bounded, so it can never hang the app."""
+    """ONE batched Yahoo download for ~50 symbols (normal data source).
+    Upstox = automatic fallback when Yahoo is slow/blocked — watchdog-
+    bounded, so it can never hang. 500-stock scanning stays possible."""
     try:
         _FEED["req"] += len(syms)
     except Exception:
         pass
     if iv in ("1m", "5m", "15m"):
         up_prefetch(tuple(syms))   # 📡 tick-fresh LTPs into cache (no-op without token)
-    out = {}
-    # ── 📡 UPSTOX FIRST — token live → the whole chunk comes from Upstox ──
     try:
-        if up_token_valid():
-            _u = (up_daily_candles(tuple(syms)) if iv == "1d"
-                  else up_intraday_candles(tuple(syms)))
-            if _u:
-                out.update(_u)
-            if len(out) >= max(2, int(len(syms) * 0.8)):
-                try:
-                    _FEED["got"] += len(out); _FEED["ts"] = time.time()
-                    _FEED["fb"] = time.time()      # 📡 Upstox is carrying the desk
-                except Exception:
-                    pass
-                return {s: up_patch_df(s, d) for s, d in out.items()}
+        if not _yf_ok():
+            data = None           # ⚡ throttled — skip straight to the fallback
+        else:
+            data = _yf_dl(syms, per, iv)     # ⏱ watchdog-bounded (never hangs)
+            if data is None:
+                _YF_THROTTLE["ts"] = time.time()   # ⏱ it hung → cooldown + fallback
     except Exception:
-        out = {}
-    # ── ⏳ YAHOO STANDBY — only for the still-missing symbols ──
-    _miss = [s for s in syms if s not in out]
-    data = None
-    if _miss:
-        try:
-            if _yf_ok():
-                data = _yf_dl(_miss, per, iv)     # ⏱ watchdog-bounded (never hangs)
-                if data is None:
-                    _YF_THROTTLE["ts"] = time.time()
-        except Exception:
-            data = None
+        data = None               # 📡 flow on — the UNINTERRUPTED hook below may rescue
+    out = {}
     try:
         if data is None or data.empty:
             data = None
         single = not isinstance(data.columns, pd.MultiIndex)   # flat cols only (1-symbol yf
         #  downloads can ALSO be MultiIndex — data[s] handles both, so never assume flat)
-        for s in _miss:
+        for s in syms:
             try:
                 df = data if single else data[s]
                 if df is None or len(df) == 0:
@@ -5011,14 +4999,25 @@ def fetch_chunk(syms, iv, per):
         _FEED["got"] += len(out); _FEED["ts"] = time.time()
     except Exception:
         pass
-    # ── 📡 last-gap rescue: tick-stitch for anything still missing ──
+    # ── 📡 UNINTERRUPTED — Yahoo blocked/thin? → Upstox live fallback ──
     try:
-        _miss2 = [s for s in syms if s not in out]
-        if _miss2 and up_token_valid() and iv != "1d":
-            _fb = up_fallback_candles(_miss2) or {}
+        _miss = [s for s in syms if s not in out]
+        _fb = {}
+        if _miss and up_token_valid():
+            if iv == "1d":
+                _fb = up_daily_candles(_miss) or {}          # 📡 6-month daily history (cached/day)
+            else:
+                _fb = up_intraday_candles(_miss) or {}       # 📡 real candles from market open
+                if not _fb:
+                    _fb = up_fallback_candles(_miss) or {}   # 📡 tick-stitch backup
+            if not _fb:
+                _FEED["fb_fail"] = time.time()               # 🩺 honest diagnostic signal
             if _fb:
                 out.update(_fb)
                 _FEED["fb"] = time.time()
+        if len(out) - len(_fb) >= max(2, int(len(syms) * 0.8)):
+            up_cache_save({s: d for s, d in out.items() if s not in _fb})   # yf-sourced only
+            _FEED["yahoo_ok"] = time.time()
     except Exception:
         pass
     return {s: up_patch_df(s, d) for s, d in out.items()}   # 📡 splice live LTP
@@ -6478,7 +6477,7 @@ def combo_tab(ss, mst_s):
             and (now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20 or ss.get("up_kick"))
             and not up_wait_reason()          # ⏳ API-FIRST: hold for the Upstox login (till 9:35)
             and ss.get("cb_stop_day") != now_ist().strftime("%Y-%m-%d")
-            and ss.get("cb_auto", True)
+            and ss.get("cb_auto", False)      # 🚫 OFF by default — YOU press START
             and _pilot_ok("cb", ss)):
         try:
             _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
@@ -6542,8 +6541,12 @@ def combo_tab(ss, mst_s):
             st.slider("How many stocks", 100, 500, 500, 50, key="cb_n")
         with k2:
             st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=1, key="cb_int")
-            st.caption("📡 FULL 500 board — carried by Upstox real-time data. The PERFECT picks "
-                       "always sit at the TOP; if a heavy day ever feels slow, slide to 250 for ~2× speed.")
+            st.caption("📡 Data: Yahoo (normal) · Upstox auto-fallback. 🎯 The radar follows "
+                       "YOUR start — press START whenever you open, scans begin that second.")
+            ss["cb_auto"] = st.checkbox("🚀 Auto-start at 9:20 by itself", value=bool(ss.get("cb_auto", False)),
+                                        key="cb_auto_ck",
+                                        help="OFF by default — press 🎯 START COMBO SCAN yourself. "
+                                             "The radar then runs on YOUR timing, whatever the clock says.")
             st.caption("One scan = live 5-minute candles + daily history for the whole board (~1–2 min).")
         s1, s2, s3 = st.columns(3)
         with s1:
@@ -6582,8 +6585,8 @@ def combo_tab(ss, mst_s):
 
     if ss.get("_cb_autostarted"):
         ss["_cb_autostarted"] = False
-        st.success("🚀 Combo radar AUTO-STARTED (market open) — snapshotting TOP-20 through your ⏱️ "
-                   "analysis windows (9:30–10:15 and 10:15–10:45 by default) — one 🏅 result per window. "
+        st.success("🚀 Combo radar AUTO-STARTED — snapshotting TOP-20 through your ⏱️ windows "
+                   "(RESULT 1 ~10:10 · RESULT 2 ~10:17 · then ~10:32 and ~10:45). "
                    "The 📤 send button is ready whenever you are.")
     if ss.get("_cb_resumed"):
         ss["_cb_resumed"] = False
@@ -6715,9 +6718,9 @@ def combo_tab(ss, mst_s):
     if _fsm == "fallback":
         st.markdown(f"<div style='background:#0b2540;border:1px solid #0ea5e9;border-radius:10px;"
                     f"padding:8px 14px;color:#bae6fd;font-size:12px;margin-bottom:10px;'>"
-                    f"📡 <b>UPSTOX LIVE (since {_fsb} IST)</b> — the desk is running on <b>Upstox "
-                    f"real-time data</b> (your 1-year token). Yahoo is on standby and fills gaps "
-                    f"only when needed. <b>No interruption, ever.</b></div>", unsafe_allow_html=True)
+                    f"📡 <b>LIVE FALLBACK ACTIVE (since {_fsb} IST)</b> — Yahoo is slow right now, so the "
+                    f"radar switched to <b>Upstox real-time data</b> automatically. The board loads "
+                    f"normally; Yahoo is re-checked every 5 minutes. <b>No interruption.</b></div>", unsafe_allow_html=True)
 
     # 🔄 live re-check of the top picks (current price vs scan price)
     _rc = ss.get("cb_recheck") or {}
@@ -6795,7 +6798,7 @@ def combo_tab(ss, mst_s):
         _cc = cons_cfg_load()
         _w1 = _cc["wins"][0]
         _w2 = (_cc["wins"][1] if len(_cc["wins"]) > 1
-               else {"start": "10:15", "end": "10:45", "every": 10})
+               else {"start": "10:10", "end": "10:17", "every": 7})
         st.markdown("**WINDOW 1 — morning consensus**")
         _a1, _b1, _c1 = st.columns(3)
         with _a1:
@@ -7714,7 +7717,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.26 · FRESH WIPE</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.27 · MY SCHEDULE</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
