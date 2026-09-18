@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.23 · FAST FALLBACK"
+APP_VERSION = "v13.24 · BACKGROUND SCAN"
 
 
 def tg_online_ping():
@@ -5011,7 +5011,7 @@ def _sweep(syms, iv, per, with_daily=True, progress=False, label=""):
     """Batched download of a symbol list (chunks of 50)."""
     got, got_d = {}, {}
     CH = 50
-    prog = st.progress(0.0) if progress else None
+    prog = (st.progress(0.0) if progress and not _CB_BG.get("busy") else None)
     for i in range(0, len(syms), CH):
         chunk = tuple(syms[i:i + CH])
         got.update(fetch_chunk(chunk, iv, per))
@@ -6204,6 +6204,51 @@ def bounce_tab(ss, mst_s):
             pass
 
 
+@st.cache_resource
+def _cb_bg_store():
+    """🧵 ONE shared combo-sweep worker for the whole process — st.cache_resource
+    is created once and NEVER re-created, so the background thread and its
+    result survive every page refresh/rerun (a plain module-level dict is
+    re-created on each rerun and would lose the thread)."""
+    return {"t": None, "done": 0.0, "res": None, "key": None, "busy": False}
+
+
+_CB_BG = _cb_bg_store()
+
+
+def cb_bg_alive():
+    try:
+        return bool(_CB_BG["t"] and _CB_BG["t"].is_alive())
+    except Exception:
+        return False
+
+
+def cb_bg_start(watch, names):
+    """🧵 REFRESH-PROOF combo scan — the 500-stock sweep (2–3 min) runs in a
+    background thread that the page's auto-refresh CANNOT kill. The old
+    inline sweep died mid-flight every 2 minutes → the endless 'scanning
+    symbols, no result' loop. The page just polls; the board lands itself."""
+    import threading
+    key = f"{len(watch)}|{'|'.join(watch[:3])}"
+    if cb_bg_alive():
+        return False
+    if _CB_BG.get("key") == key and _CB_BG.get("done") and time.time() - _CB_BG["done"] < 60:
+        return False
+    def _work():
+        _CB_BG["busy"] = True          # suppresses st.progress inside the thread
+        try:
+            _CB_BG["res"] = combo_scan(list(watch), dict(names or {}))
+        except Exception:
+            _CB_BG["res"] = []
+        finally:
+            _CB_BG["busy"] = False
+            _CB_BG["done"] = time.time()
+    _CB_BG.update(done=0.0, res=None, key=key)
+    _CB_BG["t"] = threading.Thread(target=_work, daemon=True)
+    _CB_BG["t"].start()
+    return True
+
+
 def _volc_ui(combos, mst_s, now_map=None):
     """🌋 VOLCANO section — renders the sleeper-eruption radar inside the
     Combo tab. Green = erupting now · amber = loading (magma) · red = trap."""
@@ -6441,37 +6486,52 @@ def combo_tab(ss, mst_s):
     if due and not _pilot_ok("cb", ss):
         due = False
         _cb_view_sync(ss)                 # 🤖 autopilot drives — live view only
-    if rescan_cb or due or (not ss.get("cb") and time.time() - ss.get("cb_last", 0) > 120):
+    _want_scan = (rescan_cb or due
+                  or (not ss.get("cb") and time.time() - ss.get("cb_last", 0) > 90))
+    if _want_scan:
         _pilot_beat("cb", ss)
-        with st.spinner("🎯 Combo scan — live candles + calculation for the whole board…"):
-            ss["cb"] = combo_scan(watch, names)
-            cons_capture(ss["cb"])          # 🏅 9:30/9:45/10:00/10:15 TOP-20 snapshots
-            cons_announce(names)           # 📲 guaranteed Telegram delivery of the final list
-            try:                            # 🏔️ 52-week-high club (cached 30 min)
-                if time.time() - ss.get("cb_52w_ts", 0) > 1800:
-                    ss["cb_52w"] = high52_map([c["sym"] for c in ss["cb"][:48]])
-                    ss["cb_52w_ts"] = time.time()
-                _h52 = ss.get("cb_52w") or {}
-                for c in ss["cb"]:
-                    _hh = _h52.get(c["sym"])
-                    c["near52"] = bool(_hh and _hh["dist"] >= -2.5)
-            except Exception:
-                pass
-            ss["cb_last"] = time.time()
-            ss["cb_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
-            try:                                # 🩺 connection probe (20 stocks)
-                _prb = fetch_chunk(tuple(watch[:20]), "5m", "1d") if watch else {}
-                ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": len(_prb)}
-            except Exception:
-                ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": 0}
-            ss.pop("cb_recheck", None)
+        cb_bg_start(watch, names)          # 🧵 refresh-proof background sweep
+    _bg_done = _CB_BG.get("done") or 0.0
+    if _bg_done and _bg_done > (ss.get("cb_last") or 0):
+        # 🧵 background sweep finished → harvest the board
+        ss["cb"] = _CB_BG.get("res") or []
+        cons_capture(ss["cb"])              # 🏅 9:30/9:45/10:00/10:15 TOP-20 snapshots
+        cons_announce(names)               # 📲 guaranteed Telegram delivery of the final list
+        try:                                # 🏔️ 52-week-high club (cached 30 min)
+            if time.time() - ss.get("cb_52w_ts", 0) > 1800:
+                ss["cb_52w"] = high52_map([c["sym"] for c in ss["cb"][:48]])
+                ss["cb_52w_ts"] = time.time()
+            _h52 = ss.get("cb_52w") or {}
+            for c in ss["cb"]:
+                _hh = _h52.get(c["sym"])
+                c["near52"] = bool(_hh and _hh["dist"] >= -2.5)
+        except Exception:
+            pass
+        ss["cb_last"] = time.time()
+        ss["cb_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
+        try:                                # 🩺 connection probe (20 stocks)
+            _prb = fetch_chunk(tuple(watch[:20]), "5m", "1d") if watch else {}
+            ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": len(_prb)}
+        except Exception:
+            ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": 0}
+        ss.pop("cb_recheck", None)
         rt_save("cb", on=True, watch=watch, names=names, combos=ss["cb"],
                 last_scan=ss["cb_last"], ts_str=ss.get("cb_ts_str"),
                 src=ss.get("cb_src"), n=ss.get("cb_n", 500))
+    if cb_bg_alive():
+        st.info("🧵 Full-board scan running in the BACKGROUND — refresh-proof, the board lands by "
+                "itself in ~2–3 minutes. You can refresh or switch tabs freely; this page updates "
+                "the moment the board is ready.")
+        try:
+            from streamlit_autorefresh import st_autorefresh
+            if mst_s == "open":
+                st_autorefresh(interval=15 * 1000, key="cb_bg_tick")   # quick poll while scanning
+        except Exception:
+            pass
 
     combos = ss.get("cb") or []
     _cbh = ss.get("cb_health") or {}
-    if not combos:
+    if not combos and not cb_bg_alive():
         _pr = int(_cbh.get("probe") or -1)
         if _pr == 0:
             st.markdown("<div style='background:#2a0e0e;border:1px solid #ef4444;border-radius:12px;padding:14px 18px;"
@@ -7469,7 +7529,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.23 · FAST FALLBACK</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.24 · BACKGROUND SCAN</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
