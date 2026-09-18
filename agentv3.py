@@ -79,7 +79,7 @@ import concurrent.futures
 
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="AI Trader Terminal v13.16", page_icon="💹",
+st.set_page_config(page_title="AI Trader Pro v13.6 Pro Terminal", page_icon="💹",
                    layout="wide", initial_sidebar_state="collapsed")
 
 # ============================================================
@@ -89,89 +89,79 @@ st.markdown(_H("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 *{font-family:'Inter',sans-serif;box-sizing:border-box;}
-.stApp{background:#0a1120;color:#dbe4f0;}
-.stApp h1,.stApp h2,.stApp h3,.stApp h4{color:#f1f5f9;}
-.stApp p,.stApp li,.stApp label{color:#cbd5e1;}
-[data-testid="stCaptionContainer"]{color:#8fa3bd;}
+.stApp{background:#f5f7ff;color:#1a1f36;}
 .navbar{background:linear-gradient(135deg,#0d1b6e 0%,#1565c0 60%,#0288d1 100%);
-  border-radius:20px;padding:18px 28px;margin-bottom:22px;box-shadow:0 8px 32px rgba(0,0,0,0.5);
-  border:1px solid #1e3a5f;}
-.input-row{background:#0f1a2e;border-radius:16px;padding:20px 24px;margin-bottom:18px;
-  border:1px solid #1e293b;box-shadow:0 2px 12px rgba(0,0,0,0.35);}
-.sig-buy{background:linear-gradient(135deg,#052e16,#0b3a1f);border:3px solid #16a34a;
-  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(22,163,74,0.2);}
-.sig-sell{background:linear-gradient(135deg,#2a0e0e,#3d1420);border:3px solid #dc2626;
-  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(220,38,38,0.2);}
-.sig-wait{background:linear-gradient(135deg,#3a2a06,#33200a);border:3px solid #d97706;
-  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(217,119,6,0.18);}
-.mc-blue{background:linear-gradient(135deg,#16233d,#1e3a5f);border:2px solid #3b82f6;
-  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(59,130,246,0.15);}
-.mc-green{background:linear-gradient(135deg,#052e16,#0b3a1f);border:2px solid #16a34a;
-  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(22,163,74,0.15);}
-.mc-red{background:linear-gradient(135deg,#2a0e0e,#3d1420);border:2px solid #dc2626;
-  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(220,38,38,0.15);}
-.mc-purple{background:linear-gradient(135deg,#1e1b3a,#241b45);border:2px solid #9333ea;
-  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(147,51,234,0.15);}
-.mc-orange{background:linear-gradient(135deg,#2b1c0c,#33200a);border:2px solid #ea580c;
-  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(234,88,12,0.15);}
-.mc-white{background:#0f1a2e;border:1px solid #1e293b;border-radius:16px;padding:18px;
-  text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.3);}
-.lv-r{background:linear-gradient(90deg,#2a0e0e,#0f1a2e);border-left:5px solid #ef4444;
-  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(0,0,0,0.3);}
-.lv-s{background:linear-gradient(90deg,#052e16,#0f1a2e);border-left:5px solid #22c55e;
-  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(0,0,0,0.3);}
-.lv-p{background:linear-gradient(90deg,#3a2a06,#0f1a2e);border-left:5px solid #f59e0b;
-  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(0,0,0,0.3);}
-.lv-fib{background:linear-gradient(90deg,#1e1b3a,#0f1a2e);border-left:5px solid #a855f7;
-  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(0,0,0,0.3);}
-.lv-cur{background:linear-gradient(90deg,#16233d,#0f1a2e);border-left:5px solid #3b82f6;
-  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
-.sh{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#16233d,transparent);
-  border-left:5px solid #3b82f6;padding:10px 18px;border-radius:0 12px 12px 0;margin:26px 0 14px;
-  font-size:15px;font-weight:800;color:#60a5fa;letter-spacing:0.3px;}
-.sc-r{background:#0f1a2e;border:1px solid #1e293b;border-radius:14px;padding:16px;margin:6px 0;
-  box-shadow:0 2px 8px rgba(0,0,0,0.3);}
-.pbar-container{background:#1e293b;border-radius:20px;height:10px;overflow:hidden;}
+  border-radius:20px;padding:18px 28px;margin-bottom:22px;box-shadow:0 8px 32px rgba(13,27,110,0.25);}
+.input-row{background:white;border-radius:16px;padding:20px 24px;margin-bottom:18px;
+  border:1px solid #e0e7ff;box-shadow:0 2px 12px rgba(0,0,0,0.06);}
+.sig-buy{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:3px solid #16a34a;
+  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(22,163,74,0.15);}
+.sig-sell{background:linear-gradient(135deg,#fff1f2,#ffe4e6);border:3px solid #dc2626;
+  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(220,38,38,0.12);}
+.sig-wait{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:3px solid #d97706;
+  border-radius:20px;padding:28px;box-shadow:0 8px 32px rgba(217,119,6,0.12);}
+.mc-blue{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #3b82f6;
+  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(59,130,246,0.12);}
+.mc-green{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #16a34a;
+  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(22,163,74,0.12);}
+.mc-red{background:linear-gradient(135deg,#fff1f2,#ffe4e6);border:2px solid #dc2626;
+  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(220,38,38,0.1);}
+.mc-purple{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:2px solid #9333ea;
+  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(147,51,234,0.1);}
+.mc-orange{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:2px solid #ea580c;
+  border-radius:16px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(234,88,12,0.1);}
+.mc-white{background:white;border:1px solid #e0e7ff;border-radius:16px;padding:18px;
+  text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.lv-r{background:linear-gradient(90deg,#fff1f2,white);border-left:5px solid #ef4444;
+  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(239,68,68,0.08);}
+.lv-s{background:linear-gradient(90deg,#f0fdf4,white);border-left:5px solid #22c55e;
+  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(34,197,94,0.08);}
+.lv-p{background:linear-gradient(90deg,#fffbeb,white);border-left:5px solid #f59e0b;
+  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;}
+.lv-fib{background:linear-gradient(90deg,#faf5ff,white);border-left:5px solid #a855f7;
+  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 1px 6px rgba(168,85,247,0.08);}
+.lv-cur{background:linear-gradient(90deg,#eff6ff,white);border-left:5px solid #3b82f6;
+  border-radius:0 12px 12px 0;padding:11px 18px;margin:3px 0;box-shadow:0 2px 8px rgba(59,130,246,0.12);}
+.sh{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#eff6ff,transparent);
+  border-left:5px solid #1d4ed8;padding:10px 18px;border-radius:0 12px 12px 0;margin:26px 0 14px;
+  font-size:15px;font-weight:800;color:#1d4ed8;letter-spacing:0.3px;}
+.sc-r{background:white;border:1px solid #e0e7ff;border-radius:14px;padding:16px;margin:6px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04);}
+.pbar-container{background:#e0e7ff;border-radius:20px;height:10px;overflow:hidden;}
 .pbar-buy{background:linear-gradient(90deg,#16a34a,#22c55e);height:10px;border-radius:20px;}
 .pbar-sell{background:linear-gradient(90deg,#dc2626,#ef4444);height:10px;border-radius:20px;}
-[data-testid="stMetric"]{background:#0f1a2e !important;border:1px solid #1e293b !important;border-radius:14px !important;
-  padding:14px !important;box-shadow:0 2px 8px rgba(0,0,0,0.3) !important;}
-[data-testid="stMetricValue"]{color:#f1f5f9 !important;font-weight:800 !important;font-size:22px !important;}
-[data-testid="stMetricLabel"]{color:#8fa3bd !important;font-size:11px !important;font-weight:600 !important;}
-[data-testid="stExpander"]{background:#0f1a2e;border:1px solid #1e293b;border-radius:14px;}
-[data-testid="stExpanderDetails"]{color:#cbd5e1;}
-[data-testid="stDataFrame"]{background:#0f1a2e;border:1px solid #1e293b;border-radius:12px;}
-.stTabs [data-baseweb="tab"]{color:#94a3b8;}
-.stTabs [aria-selected="true"]{color:#60a5fa !important;}
-.stButton>button{background:linear-gradient(135deg,#60a5fa,#3b82f6) !important;color:white !important;
+[data-testid="stMetric"]{background:white !important;border:1px solid #e0e7ff !important;border-radius:14px !important;
+  padding:14px !important;box-shadow:0 2px 8px rgba(0,0,0,0.04) !important;}
+[data-testid="stMetricValue"]{color:#1a1f36 !important;font-weight:800 !important;font-size:22px !important;}
+[data-testid="stMetricLabel"]{color:#6b7280 !important;font-size:11px !important;font-weight:600 !important;}
+.stButton>button{background:linear-gradient(135deg,#1d4ed8,#3b82f6) !important;color:white !important;
   border:none !important;border-radius:12px !important;font-weight:700 !important;padding:10px 24px !important;
-  font-size:14px !important;box-shadow:0 4px 12px rgba(29,78,216,0.4) !important;}
+  font-size:14px !important;box-shadow:0 4px 12px rgba(29,78,216,0.3) !important;}
 .stButton>button:hover{background:linear-gradient(135deg,#1e40af,#2563eb) !important;transform:translateY(-1px) !important;}
-div[data-testid="stTextInput"]>div>div>input{background:#0f1a2e !important;border:2px solid #1e293b !important;
-  border-radius:12px !important;color:#e2e8f0 !important;font-size:14px !important;font-weight:500 !important;}
+div[data-testid="stTextInput"]>div>div>input{background:white !important;border:2px solid #e0e7ff !important;
+  border-radius:12px !important;color:#1a1f36 !important;font-size:14px !important;font-weight:500 !important;}
 [data-testid="stSidebar"]{display:none !important;}
 #MainMenu{visibility:hidden;}footer{visibility:hidden;}header{visibility:hidden;}
-::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-thumb{background:#334155;border-radius:3px;}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-thumb{background:#3b82f6;border-radius:3px;}
 /* ---- dashboard components ---- */
-.breadth{display:flex;height:18px;border-radius:10px;overflow:hidden;border:1px solid #1e293b;background:#0f1a2e;}
+.breadth{display:flex;height:18px;border-radius:10px;overflow:hidden;border:1px solid #e0e7ff;background:white;}
 .b-up{background:linear-gradient(90deg,#16a34a,#22c55e);height:100%;}
 .b-dn{background:linear-gradient(90deg,#dc2626,#ef4444);height:100%;}
-.b-fl{background:#334155;height:100%;}
-.uchip{display:inline-block;background:#052e16;border:1.5px solid #16a34a;color:#4ade80;font-weight:800;
+.b-fl{background:#e5e7eb;height:100%;}
+.uchip{display:inline-block;background:#f0fdf4;border:1.5px solid #16a34a;color:#15803d;font-weight:800;
   font-size:12px;padding:5px 12px;border-radius:20px;margin:3px 3px 3px 0;}
-.dchip{display:inline-block;background:#2a0e0e;border:1.5px solid #dc2626;color:#f87171;font-weight:800;
+.dchip{display:inline-block;background:#fff1f2;border:1.5px solid #dc2626;color:#b91c1c;font-weight:800;
   font-size:12px;padding:5px 12px;border-radius:20px;margin:3px 3px 3px 0;}
-.nchip{display:inline-block;background:#16233d;border:1.5px solid #334155;color:#94a3b8;font-weight:700;
+.nchip{display:inline-block;background:#f9fafb;border:1.5px solid #d1d5db;color:#6b7280;font-weight:700;
   font-size:12px;padding:5px 12px;border-radius:20px;margin:3px 3px 3px 0;}
-.achip{display:inline-block;background:#3a2a06;border:1.5px solid #f59e0b;color:#fbbf24;font-size:11.5px;
+.achip{display:inline-block;background:#fffbeb;border:1.5px solid #f59e0b;color:#92400e;font-size:11.5px;
   padding:4px 10px;border-radius:9px;margin:3px 3px 3px 0;font-weight:700;}
-.ucard{background:#0f1a2e;border:1px solid #14532d;border-left:5px solid #16a34a;border-radius:12px;
-  padding:12px 14px;margin:4px 0;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
-.ucard .nm{font-weight:900;font-size:14px;color:#f1f5f9;}
-.ucard .pr{font-weight:900;font-size:18px;color:#60a5fa;}
+.ucard{background:white;border:1px solid #bbf7d0;border-left:5px solid #16a34a;border-radius:12px;
+  padding:12px 14px;margin:4px 0;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+.ucard .nm{font-weight:900;font-size:14px;color:#1a1f36;}
+.ucard .pr{font-weight:900;font-size:18px;color:#1d4ed8;}
 .badge{display:inline-block;border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:800;color:white;}
-.dashhead{background:linear-gradient(135deg,#7c2d12,#fbbf24,#d97706);border-radius:18px;padding:18px 24px;
-  margin-bottom:16px;box-shadow:0 8px 28px rgba(180,83,9,0.25);border:1px solid #fbbf24;}
+.dashhead{background:linear-gradient(135deg,#7c2d12,#b45309,#d97706);border-radius:18px;padding:18px 24px;
+  margin-bottom:16px;box-shadow:0 8px 28px rgba(180,83,9,0.25);}
 </style>
 """), unsafe_allow_html=True)
 
@@ -518,19 +508,19 @@ def calc_money(price, capital, sl, t1, t2, t3):
 
 def target_feasibility(money, target):
     if not money or money.get('qty', 0) == 0:
-        return {'label': '❌ SKIP', 'color': '#dc2626', 'bg': '#2a0e0e',
+        return {'label': '❌ SKIP', 'color': '#dc2626', 'bg': '#fff1f2',
                 'msg': 'Cannot buy even 1 share. Choose cheaper stock.', 'at': None}
     p1, p2, p3 = money['p1'], money['p2'], money['p3']
     if p1 >= target:
-        return {'label': '🟢 EASY', 'color': '#16a34a', 'bg': '#052e16',
+        return {'label': '🟢 EASY', 'color': '#16a34a', 'bg': '#f0fdf4',
                 'msg': f"T1 gives ₹{p1:.0f}! ₹{round(p1-target,0):.0f} more than target!", 'at': 'T1', 'ap': p1}
     if p2 >= target:
-        return {'label': '🔵 ACHIEVABLE', 'color': '#2563eb', 'bg': '#16233d',
+        return {'label': '🔵 ACHIEVABLE', 'color': '#2563eb', 'bg': '#eff6ff',
                 'msg': f"T2 gives ₹{p2:.0f}. Need {money['pct2']:.1f}% move.", 'at': 'T2', 'ap': p2}
     if p3 >= target:
-        return {'label': '🟣 STRETCH', 'color': '#9333ea', 'bg': '#1e1b3a',
+        return {'label': '🟣 STRETCH', 'color': '#9333ea', 'bg': '#faf5ff',
                 'msg': f"T3 gives ₹{p3:.0f}. Need {money['pct3']:.1f}% move.", 'at': 'T3', 'ap': p3}
-    return {'label': '❌ NOT ENOUGH', 'color': '#dc2626', 'bg': '#2a0e0e',
+    return {'label': '❌ NOT ENOUGH', 'color': '#dc2626', 'bg': '#fff1f2',
             'msg': f"Max profit ₹{p3:.0f}. Need cheaper stock or more capital.", 'at': None, 'ap': p3}
 
 
@@ -856,7 +846,7 @@ def make_plan(price, atr, sr, sig, session='closed', circuit=None):
             timing = "Too late for a fresh intraday entry — square off open trades by 3:15. Plan this for tomorrow instead."
             if 'BUY' in sig:
                 act = "🕒 TOO LATE TODAY — PLAN FOR TOMORROW"
-                ac = "#fbbf24"
+                ac = "#b45309"
                 msg = "Signal is fine, but not enough time left for a fresh intraday trade. Watch it at tomorrow's open."
     elif session == 'pre':
         when = "TODAY (pre-open)"
@@ -1089,13 +1079,13 @@ def compute_signals(df_in):
     bp = bs / tot2 * 100 if tot2 > 0 else 50
     sp = ss / tot2 * 100 if tot2 > 0 else 50
     conf = round(max(bp, sp), 1)
-    if bp >= 80: sig = "STRONG BUY"; sc = "#4ade80"; bg = "sig-buy"
+    if bp >= 80: sig = "STRONG BUY"; sc = "#15803d"; bg = "sig-buy"
     elif bp >= 68: sig = "BUY"; sc = "#16a34a"; bg = "sig-buy"
     elif bp >= 56: sig = "LEAN BUY"; sc = "#2563eb"; bg = "sig-buy"
-    elif sp >= 80: sig = "STRONG SELL"; sc = "#f87171"; bg = "sig-sell"
+    elif sp >= 80: sig = "STRONG SELL"; sc = "#b91c1c"; bg = "sig-sell"
     elif sp >= 68: sig = "SELL"; sc = "#dc2626"; bg = "sig-sell"
     elif sp >= 56: sig = "LEAN SELL"; sc = "#ea580c"; bg = "sig-sell"
-    else: sig = "NEUTRAL"; sc = "#fbbf24"; bg = "sig-wait"
+    else: sig = "NEUTRAL"; sc = "#b45309"; bg = "sig-wait"
 
     atr_v = safe(lat.get('ATR'), price * 0.015)
     if atr_v <= 0: atr_v = price * 0.015
@@ -1146,7 +1136,7 @@ def run_analysis(sym, iv, per):
 # PREMIUM CHART — 5 PANELS
 # ============================================================
 def make_chart(df, name, plan, sr):
-    C = {'bg': '#ffffff', 'plot': '#fafbff', 'grid': '#1e293b', 'up': '#16a34a', 'dn': '#dc2626', 'text': '#e2e8f0'}
+    C = {'bg': '#ffffff', 'plot': '#fafbff', 'grid': '#e0e7ff', 'up': '#16a34a', 'dn': '#dc2626', 'text': '#1a1f36'}
     fig = make_subplots(rows=5, cols=1, shared_xaxes=True, vertical_spacing=0.018,
                         row_heights=[0.42, 0.15, 0.15, 0.13, 0.15],
                         subplot_titles=[f"📈 {name}  |  Candles + EMAs + BB + Supertrend",
@@ -1155,7 +1145,7 @@ def make_chart(df, name, plan, sr):
                       xaxis_rangeslider_visible=False, margin=dict(l=60, r=180, t=55, b=30),
                       font=dict(size=11, color=C['text'], family='Inter'),
                       legend=dict(orientation='h', y=1.03, x=1, xanchor='right',
-                                  bgcolor='rgba(255,255,255,0.95)', bordercolor='#1e293b', borderwidth=1))
+                                  bgcolor='rgba(255,255,255,0.95)', bordercolor='#e0e7ff', borderwidth=1))
     fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'],
                                  name='Price', increasing=dict(line=dict(color=C['up'], width=1), fillcolor='rgba(22,163,74,0.8)'),
                                  decreasing=dict(line=dict(color=C['dn'], width=1), fillcolor='rgba(220,38,38,0.8)')), row=1, col=1)
@@ -1237,8 +1227,8 @@ def pivot_table_html(levels_dict, price):
         typ = "RESISTANCE" if lbl.startswith('R') else "SUPPORT" if lbl.startswith('S') else "PIVOT"
         html += (f"<div class='{css}'><div style='display:flex;justify-content:space-between;align-items:center;'>"
                  f"<div><span style='color:{clr};font-weight:700;font-size:13px;'>{lbl} — {typ}</span>"
-                 f"<span style='color:#64748b;font-size:11px;margin-left:8px;'>{tag}</span></div>"
-                 f"<div style='font-size:20px;font-weight:900;color:#e2e8f0;'>₹{lp:,.2f}</div></div></div>")
+                 f"<span style='color:#9ca3af;font-size:11px;margin-left:8px;'>{tag}</span></div>"
+                 f"<div style='font-size:20px;font-weight:900;color:#1a1f36;'>₹{lp:,.2f}</div></div></div>")
     return html
 
 
@@ -1321,7 +1311,7 @@ def ema200_filter(sym, price):
         near = abs(dist) < 1.2
         slope_up = float(e200.iloc[-1]) > float(e200.iloc[-6]) if len(e200) >= 6 else True
         if above and golden and slope_up:
-            verdict, vc, ok = "BULL STRUCTURE — longs favoured", "#4ade80", True
+            verdict, vc, ok = "BULL STRUCTURE — longs favoured", "#15803d", True
         elif above and not golden:
             verdict, vc, ok = "Above 200 EMA but no golden cross — cautious longs", "#2563eb", True
         elif above:
@@ -1453,13 +1443,13 @@ def get_stock_news(sym, limit=7):
     p = sum(1 for x in out if x["sent"] == "pos")
     n = sum(1 for x in out if x["sent"] == "neg")
     if not out:
-        verdict, vc = "No recent news found", "#8fa3bd"
+        verdict, vc = "No recent news found", "#6b7280"
     elif p > n:
         verdict, vc = "NEWS LEANS POSITIVE", "#16a34a"
     elif n > p:
         verdict, vc = "NEWS LEANS NEGATIVE — be careful", "#dc2626"
     else:
-        verdict, vc = "NEWS MIXED / NEUTRAL", "#fbbf24"
+        verdict, vc = "NEWS MIXED / NEUTRAL", "#b45309"
     return {"items": out, "pos": p, "neg": n, "verdict": verdict, "vc": vc}
 
 
@@ -1524,7 +1514,6 @@ def summarize_news_sentiment(news):
 # ============================================================
 import json as _json
 import os as _os
-import uuid as _uuid
 # ── 🧑‍🤝‍🧑 MULTI-USER MEMORY ──────────────────────────────────────────────
 #   Everyone who opens the app gets their OWN files, so memories never mix:
 #   your key lives in the link (?u=yourname). Default key = "main".
@@ -1597,91 +1586,6 @@ def rt_save(engine, **kw):
         return False
 
 
-# ── 🤖 AUTOPILOT — single-pilot lock: ONE session drives each engine ──
-# The VPS runs a headless browser (autopilot.service) that keeps the app
-# open 24/7 — IT scans, snapshots and sends Telegram RESULTS even when no
-# human is watching. Any tab opened later becomes a LIVE READ-ONLY view
-# (fresh data, zero duplicate scans/alerts).
-def _sid(ss):
-    try:
-        if "_sid" not in ss:
-            ss["_sid"] = _uuid.uuid4().hex[:10]
-        return ss["_sid"]
-    except Exception:
-        return "s0"
-
-
-def _pilot_ok(engine, ss, stale=240):
-    """True if THIS session may drive `engine` (lock free, ours, or stale)."""
-    try:
-        lock = (rt_load().get(engine) or {}).get("_lock") or {}
-        return lock.get("sid") == _sid(ss) or time.time() - (lock.get("ts") or 0) > stale
-    except Exception:
-        return True
-
-
-def _pilot_beat(engine, ss):
-    """Claim/refresh the pilot lock for this session (on every scan)."""
-    try:
-        rt_save(engine, _lock={"sid": _sid(ss), "ts": time.time()})
-    except Exception:
-        pass
-
-
-def _mv_view_sync(ss):
-    _rt = rt_load().get("mv") or {}
-    if (_rt.get("last_scan") or 0) > ss.get("mv_last", 0):
-        ss["mv_on"] = True
-        ss["mv"] = _rt.get("movers") or ss.get("mv")
-        ss["mv_last"] = _rt.get("last_scan") or 0
-        ss["mv_ts_str"] = _rt.get("ts_str") or ss.get("mv_ts_str")
-        if _rt.get("watch"):
-            ss["mv_watch"] = _rt["watch"]
-            ss["mv_names"] = _rt.get("names") or {}
-
-
-def _bc_view_sync(ss):
-    _rt = rt_load().get("bc") or {}
-    if (_rt.get("last_scan") or 0) > ss.get("bc_last", 0):
-        ss["bc_on"] = True
-        ss["bc"] = _rt.get("bounces") or ss.get("bc")
-        ss["bc_last"] = _rt.get("last_scan") or 0
-        ss["bc_ts_str"] = _rt.get("ts_str") or ss.get("bc_ts_str")
-        if _rt.get("watch"):
-            ss["bc_watch"] = _rt["watch"]
-            ss["bc_names"] = _rt.get("names") or {}
-
-
-def _cb_view_sync(ss):
-    _rt = rt_load().get("cb") or {}
-    if (_rt.get("last_scan") or 0) > ss.get("cb_last", 0):
-        ss["cb_on"] = True
-        ss["cb"] = _rt.get("combos") or ss.get("cb")
-        ss["cb_last"] = _rt.get("last_scan") or 0
-        ss["cb_ts_str"] = _rt.get("ts_str") or ss.get("cb_ts_str")
-        if _rt.get("watch"):
-            ss["cb_watch"] = _rt["watch"]
-            ss["cb_names"] = _rt.get("names") or {}
-        if _rt.get("src"):
-            ss["cb_src"] = _rt["src"]
-        if _rt.get("n"):
-            ss["cb_n"] = _rt["n"]
-
-
-def _co_view_sync(ss):
-    _rt = rt_load().get("co") or {}
-    if (_rt.get("last_scan") or 0) > ss.get("co_last", 0):
-        ss["co_on"] = True
-        for _k, _rk in (("co_watch", "watch"), ("co_names", "names"), ("co_pos", "pos"),
-                        ("co_feed", "feed"), ("co_log", "log")):
-            if _rt.get(_rk) is not None:
-                ss[_k] = _rt[_rk]
-        ss["co_last"] = _rt.get("last_scan") or 0
-        ss["co_ts"] = _rt.get("ts_str") or ss.get("co_ts")
-        if _rt.get("cap"):
-            ss["co_cap"] = _rt["cap"]
-
-
 # ── 🔔 TELEGRAM ALERTS — free phone push for climb/bounce alerts ──
 def tg_file():
     return f"tg_{_ukey()}.json"
@@ -1727,64 +1631,27 @@ def _tg_post(token, cid, text, html, buttons=None):
     return ((r.get("result") or {}).get("message_id"))
 
 
-_TG_SENT = {"day": None, "items": []}     # sent messages (EOD cleaner + morning purge)
-try:                                       # 🔄 restart-safe: tracked IDs live on disk,
-    _t = _json.load(open(f"tg_sent_{_ukey()}.json", encoding="utf-8"))   # not in memory —
-    if isinstance(_t, dict):               # a restart/deploy never orphans messages
-        _TG_SENT.update(day=_t.get("day"), items=_t.get("items") or [])
-except Exception:
-    pass
+_TG_SENT = {"day": None, "items": []}     # today's sent messages (for the EOD cleaner)
 
 
-def _tg_norm_items(d):
-    """Normalize tracked items to [cid, mid, date, keep] (old files: [cid, mid])."""
-    out = []
-    for it in (d.get("items") or []):
-        try:
-            if len(it) >= 4:
-                out.append([str(it[0]), int(it[1]), str(it[2]), 1 if it[3] else 0])
-            else:
-                out.append([str(it[0]), int(it[1]),
-                            str(d.get("day") or now_ist().strftime("%Y-%m-%d")), 0])
-        except Exception:
-            continue
-    return out
-
-
-def _tg_track(cid, mid, keep=False):
-    """Remember EVERY sent message (chat, id, DATE, keep-flag). The cleaners
-    delete it later: same-day alerts after close · ALL previous-day messages
-    at the next midnight rollover. Restart-safe — IDs live in the file."""
+def _tg_track(cid, mid):
+    """Remember a sent message so the end-of-day cleaner can delete it after close."""
     try:
         if not mid:
             return
         _today = now_ist().strftime("%Y-%m-%d")
-        _items = _tg_norm_items(_TG_SENT)   # normalize FIRST — old items keep their own date
-        _TG_SENT["day"] = _today
-        _TG_SENT["items"] = _items + [[str(cid), int(mid), _today, 1 if keep else 0]]
+        if _TG_SENT.get("day") != _today:
+            _TG_SENT.update(day=_today, items=[])
+        _TG_SENT["items"].append([str(cid), int(mid)])
         _json.dump(_TG_SENT, open(f"tg_sent_{_ukey()}.json", "w", encoding="utf-8"))
     except Exception:
         pass
 
 
-def _tg_delete(cfg, cid, mid):
-    """Delete one Telegram message (quietly)."""
-    try:
-        req = urllib.request.Request(
-            f"https://api.telegram.org/bot{cfg['token']}/deleteMessage",
-            data=_json.dumps({"chat_id": cid, "message_id": int(mid)}).encode("utf-8"),
-            headers={"Content-Type": "application/json"})
-        urllib.request.urlopen(req, timeout=5).read()
-        time.sleep(0.05)
-        return True
-    except Exception:
-        return False      # already gone / too old — skip quietly
-
-
 def tg_daily_cleanup():
-    """🧹 After close (15:35+): delete TODAY's alert messages (report cards
-    and manual tests stay for the evening review). Telegram only allows
-    deleting messages < 48h old."""
+    """🧹 After close (15:35+): delete today's alert messages from every chat —
+    the phone stays clean for tomorrow. Runs once per day; report cards and
+    manual tests are KEPT. Telegram only allows deleting messages < 48h old."""
     try:
         n = now_ist()
         if n.weekday() >= 5:
@@ -1802,62 +1669,21 @@ def tg_daily_cleanup():
         cfg = tg_load()
         if not cfg.get("token"):
             return 0
-        items = _tg_norm_items(d)
-        keep_items, deleted = [], 0
-        for cid, mid, dstr, keep in items[:300]:
-            if dstr == today and not keep:
-                if _tg_delete(cfg, cid, mid):
-                    deleted += 1
-            else:
-                keep_items.append([cid, mid, dstr, keep])
-        _TG_SENT.update(day=today, items=list(keep_items))
-        try:
-            _json.dump({"cleanup_day": today, "purge_day": d.get("purge_day"),
-                        "day": today, "items": keep_items},
-                       open(fn, "w", encoding="utf-8"))
-        except Exception:
-            pass
-        return deleted
-    except Exception:
-        return 0
-
-
-def tg_morning_purge():
-    """🧹 NEW DAY, CLEAN CHAT: first run of each new day deletes ALL messages
-    still tracked from PREVIOUS days (including report cards) — every trading
-    morning starts with an empty Telegram chat."""
-    try:
-        fn = f"tg_sent_{_ukey()}.json"
-        try:
-            d = _json.load(open(fn, encoding="utf-8"))
-        except Exception:
-            d = {}
-        today = now_ist().strftime("%Y-%m-%d")
-        if d.get("purge_day") == today:
-            return 0
-        items = _tg_norm_items(d)
-        if not any(it[2] < today for it in items):
-            d["purge_day"] = today
+        deleted = 0
+        for cid, mid in (d.get("items") or [])[:300]:
             try:
-                _json.dump(d, open(fn, "w", encoding="utf-8"))
+                req = urllib.request.Request(
+                    f"https://api.telegram.org/bot{cfg['token']}/deleteMessage",
+                    data=_json.dumps({"chat_id": cid, "message_id": int(mid)}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"})
+                urllib.request.urlopen(req, timeout=5).read()
+                deleted += 1
+                time.sleep(0.05)
             except Exception:
-                pass
-            return 0
-        cfg = tg_load()
-        if not cfg.get("token"):
-            return 0
-        keep_items, deleted = [], 0
-        for cid, mid, dstr, keep in items[:300]:
-            if dstr < today:
-                if _tg_delete(cfg, cid, mid):
-                    deleted += 1
-            else:
-                keep_items.append([cid, mid, dstr, keep])
-        _TG_SENT.update(day=today, items=list(keep_items))
+                continue      # already gone / too old — skip quietly
+        _TG_SENT.update(day=today, items=[])
         try:
-            _json.dump({"purge_day": today, "cleanup_day": d.get("cleanup_day"),
-                        "day": today, "items": keep_items},
-                       open(fn, "w", encoding="utf-8"))
+            _json.dump({"cleanup_day": today, "items": []}, open(fn, "w", encoding="utf-8"))
         except Exception:
             pass
         return deleted
@@ -1884,7 +1710,8 @@ def tg_send_one(cid, text, _retry=True, buttons=None, keep=False):
         return False, "no token configured"
     try:
         mid = _tg_post(cfg["token"], cid, text, html=_retry, buttons=buttons)
-        _tg_track(cid, mid, keep)
+        if not keep:
+            _tg_track(cid, mid)
         return True, ""
     except urllib.error.HTTPError as e:
         if e.code == 400 and _retry:      # bad formatting → strip tags, plain resend
@@ -1895,7 +1722,8 @@ def tg_send_one(cid, text, _retry=True, buttons=None, keep=False):
             try:
                 mid = _tg_post(cfg["token"], cid, re.sub(r"<[^>]+>", "", text), html=False,
                                buttons=buttons)
-                _tg_track(cid, mid, keep)
+                if not keep:
+                    _tg_track(cid, mid)
                 return True, ""
             except Exception:
                 pass
@@ -1922,41 +1750,20 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.24 · BACKGROUND SCAN"
-
-
 def tg_online_ping():
-    """🟢 ONE 'online' ping per trading morning (the day's first start,
-    8 AM–12 PM only). Silent the rest of the day — restarts, refreshes
-    and the autopilot's hourly reloads NEVER re-announce. A separate
-    'PROGRAM UPDATED' notice fires ONLY when the running version really
-    changed (evening deploy)."""
+    """🟢 Tell the owner the app just came online (redeploy / cloud wake-up).
+    Max one message per 30 minutes — page refreshes stay silent."""
     try:
-        fn = f"tg_boot_{_ukey()}.json"
-        _fresh = not _os.path.exists(fn)          # first boot EVER of this app here
-        d = {}
-        if not _fresh:
-            d = _json.load(open(fn, encoding="utf-8")) or {}
-        today = now_ist().strftime("%Y-%m-%d")
-        if d and d.get("ver") != APP_VERSION:
-            tg_send(f"\u2705 <b>PROGRAM UPDATED</b>\n"
-                    f"\U0001F680 Now running <b>{_esc(APP_VERSION)}</b>\n"
-                    f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
-                    f"<i>Same trading logic \u2014 engines and rules unchanged.</i>")
-        elif _fresh:
-            tg_send(f"\U0001F7E2 <b>AI Trader is ONLINE</b> \u00b7 <b>{_esc(APP_VERSION)}</b>\n"
-                    f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
-                    f"<i>Desk started \u2014 engines armed. Morning briefing arrives 8 AM\u201312 PM "
-                    f"on trading days.</i>")
-        d["ver"] = APP_VERSION
-        _trading_day = now_ist().weekday() < 5 and today not in NSE_HOLIDAYS
-        if (d.get("day") != today and _trading_day and 8 <= now_ist().hour < 12
-                and tg_send(f"\U0001F7E2 <b>AI Trader is ONLINE</b>\n"
-                            f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
-                            f"<i>Morning auto-start \u2014 radars begin at 9:20.</i>\n"
-                            f"\U0001F3C5 RESULT 1 ~10:16 \u00b7 RESULT 2 ~10:46 \u2014 right here on Telegram.")):
-            d["day"] = today
-        _json.dump(d, open(fn, "w", encoding="utf-8"))
+        fn = f"tg_online_{_ukey()}.json"
+        last = 0
+        if _os.path.exists(fn):
+            last = _json.load(open(fn, encoding="utf-8")).get("ts", 0)
+        if time.time() - last > 1800:
+            if tg_send(f"\U0001F7E2 <b>AI Trader Pro is ONLINE</b>\n"
+                       f"\U0001F552 {now_ist().strftime('%a %d %b %Y \u00b7 %H:%M')} IST\n"
+                       f"<i>App just started (redeploy or wake-up) and is ready.</i>\n"
+                       f"Open \u26A1 Movers or \U0001F3AF Coach to begin today's session."):
+                _json.dump({"ts": time.time()}, open(fn, "w", encoding="utf-8"))
     except Exception:
         pass
 
@@ -2283,7 +2090,7 @@ def cons_capture(combos):
             ws = d["wins"].setdefault(str(wi), {"snaps": {}, "ts": {}, "n": 0})
             for lbl, slot in cons_slots_win(w):
                 if t >= slot and lbl not in (ws.get("snaps") or {}):
-                    ws.setdefault("snaps", {})[lbl] = [c["sym"] for c in combos if not c.get("volc_only")][:20]
+                    ws.setdefault("snaps", {})[lbl] = [c["sym"] for c in combos[:20]]
                     ws.setdefault("ts", {})[lbl] = n.strftime("%H:%M")
                     ws.setdefault("date", n.strftime("%a %d %b %Y"))
                     ws["n"] = len(ws["snaps"])
@@ -2570,33 +2377,10 @@ def render_fresh_tab(ss, mst_s):
                "If price runs away without the dip — let it go, the next fresh one comes.")
 
 
-def coach_volc_rows(got, watch, names):
-    """🌋 VOLCANO rows from the coach's own live sweep — the eruption radar
-    watches CONTINUOUSLY with the coach (every ~80 s), not just on combo scans."""
-    out = []
-    try:
-        for s in watch or []:
-            df = (got or {}).get(s)
-            if df is None or len(df) < 14:
-                continue
-            out.append({"name": (names or {}).get(s, s.replace(".NS", "")), "sym": s,
-                        "price": round(float(df["Close"].iloc[-1]), 2),
-                        "chg_day": day_chg_from_intraday(df),
-                        "volc": sleeper_detect(df, "live"),
-                        "volc_day": sleeper_detect(df, "day")})
-    except Exception:
-        pass
-    return out
-
-
 def render_coach_tab(ss, mst_s):
     # ♾️ auto-resume
     if not ss.get("co_on"):
         _rt = rt_load().get("co") or {}
-        if _rt.get("on") and _rt.get("watch"):
-            if time.time() - (_rt.get("last_scan") or 0) > 2700:   # 🧹 stale (>45 min) — old data, start clean
-                rt_clear("co")
-                _rt = {}
         if _rt.get("on") and _rt.get("watch"):
             ss["co_on"] = True
             ss["co_watch"] = _rt["watch"]; ss["co_names"] = _rt.get("names") or {}
@@ -2610,11 +2394,9 @@ def render_coach_tab(ss, mst_s):
 
     # 🚀 AUTO-START — the coach begins by itself after 9:20 on market days
     if (not ss.get("co_on") and mst_s == "open"
-            and (now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20 or ss.get("up_kick"))
-            and not up_wait_reason()          # ⏳ API-FIRST: hold for the Upstox login (till 9:35)
+            and now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20
             and ss.get("co_stop_day") != now_ist().strftime("%Y-%m-%d")
-            and ss.get("co_auto", True)
-            and _pilot_ok("co", ss)):
+            and ss.get("co_auto", True)):
         try:
             _top, _nm = coach_pick(int(ss.get("co_n") or COACH_N_DEFAULT))
         except Exception:
@@ -2631,12 +2413,6 @@ def render_coach_tab(ss, mst_s):
             st.rerun()
 
     if not ss.get("co_on"):
-        if mst_s == "open" and up_wait_reason():
-            st.markdown("<div style='background:#3a2a06;border:1px solid #f59e0b;border-radius:12px;padding:12px 18px;"
-                        "color:#fde68a;font-size:13px;line-height:1.8;'>⏳ <b>API-FIRST — coach is HOLDING for your "
-                        "Upstox login.</b> Paste today's code in the 📡 panel below and press Activate — the coach "
-                        "starts the same second. (No login today? Everything auto-starts on Yahoo at 9:35.)</div>",
-                        unsafe_allow_html=True)
         st.markdown(_H("""<div style='background:linear-gradient(135deg,#0c4a6e,#164e63);border-radius:18px;
         padding:18px 22px;margin-bottom:14px;'>
         <div style='color:white;font-size:20px;font-weight:900;'>🎯 TRADE COACH — perfect stocks, perfect TIMING</div>
@@ -2677,12 +2453,6 @@ def render_coach_tab(ss, mst_s):
             st.rerun()
         st.caption("Best routine: ~9:05 run the morning scan (⚡/🚀) → 9:20 come here and START. "
                    "The coach does the watching — you do the clicking in your broker app.")
-        st.markdown("<div style='background:#1c1206;border:1px solid #7c2d12;border-radius:12px;padding:10px 16px;"
-                    "color:#fdba74;font-size:13px;line-height:1.8;'>🌋 <b>The VOLCANO eruption radar lives in this "
-                    "tab.</b> It wakes up together with the coach (auto-start 9:20 on market days, or press START "
-                    "above) — within ~1 minute of the first candle read you'll see the <b>🌋 VOLCANO — silent stock, "
-                    "sudden BOOM</b> section right here: 💥 erupting now · 👀 magma building · 🕳️ sinkholes · "
-                    "📜 today's eruption review.</div>", unsafe_allow_html=True)
         up_settings_ui("_co")
         return
 
@@ -2723,33 +2493,12 @@ def render_coach_tab(ss, mst_s):
                        f"{_rg['lab']} · NIFTY {_rg['chg']:+.2f}% — {_rg['tip']} "
                        f"<b>Position size auto-adjusted.</b></div>"), unsafe_allow_html=True)
 
-    if not _pilot_ok("co", ss) and (rt_load().get("co") or {}).get("on"):
-        st.caption("🤖 AUTOPILOT is driving the desk — live read-only view.")
     due = mst_s == "open" and time.time() - ss.get("co_last", 0) > 80
-    _am_pilot = _pilot_ok("co", ss)
-    if not _am_pilot:
-        _co_view_sync(ss)                 # 🤖 autopilot drives — live view only
-        if not ss.get("co_ctx") or time.time() - ss.get("co_ctx_ts", 0) > 300:
-            try:
-                with st.spinner("🎯 Reading live candles (view mode)…"):
-                    _gotv, _ = _sweep(ss.get("co_watch") or [], "5m", "2d",
-                                      with_daily=False, progress=False)
-                ss["co_ctx"] = {s: coach_ctx(s, _gotv.get(s))
-                                for s in (ss.get("co_watch") or [])}
-                ss["co_ctx_ts"] = time.time()
-                ss["co_volc"] = coach_volc_rows(_gotv, ss.get("co_watch") or [],
-                                                ss.get("co_names"))   # 🌋 continuous watch
-                ss["co_volc_ts"] = time.time()
-            except Exception:
-                pass
-    if _am_pilot and (due or not ss.get("co_ctx")):
-        _pilot_beat("co", ss)
+    if due or not ss.get("co_ctx"):
         with st.spinner("🎯 Coach is reading the candles…"):
             got, _ = _sweep(ss["co_watch"], "5m", "2d", with_daily=False, progress=False)
         ctxs = {s: coach_ctx(s, got.get(s)) for s in ss["co_watch"]}
         ss["co_ctx"] = ctxs
-        ss["co_volc"] = coach_volc_rows(got, ss["co_watch"], ss.get("co_names"))   # 🌋 continuous watch
-        ss["co_volc_ts"] = time.time()
         feed = ss.get("co_feed") or []
         for s in ss["co_watch"]:
             try:
@@ -2892,19 +2641,6 @@ def render_coach_tab(ss, mst_s):
                 for t in _log:
                     st.markdown(f"- **{t['name']}** {t.get('res'):+.1f}% ({t.get('outcome')})")
 
-    # ── 🌋 VOLCANO — lives HERE now: the coach watches continuously ──
-    try:
-        _vrows = list(ss.get("co_volc") or [])
-        _cbr = ss.get("cb") or []
-        if _cbr:
-            _seen = {r["sym"] for r in _vrows}
-            _vrows += [c for c in _cbr if c.get("sym") not in _seen
-                       and (c.get("volc") or c.get("volc_day"))]
-        if _vrows:
-            _volc_ui(_vrows, mst_s)
-    except Exception:
-        pass
-
     with st.expander("📖 How the coach decides"):
         st.markdown("""<div style='color:#94a3b8;font-size:12.5px;line-height:1.9;'>
         🟢 <b style='color:#4ade80;'>BUY (morning, till 12:00)</b> — only when a 5-min candle CONFIRMS: session-high breakout
@@ -2934,9 +2670,6 @@ UP_REDIRECT_DEFAULT = "https://api.upstox.com"
 UP_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
          "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
 _UP_LTP = {}        # {sym: (price, ts)} in-memory live-price cache
-_UP_TICKS = {}      # {sym: [(epoch, price, cum_volume), …]} live tick stream (fallback builder)
-_UP_ID5 = {"ts": {}, "df": {}}   # 📡 5-min fallback candle cache (per symbol, 100 s)
-_UP_CANDLE_CACHE = {"d": None, "df": {}, "saved": 0}   # last-good Yahoo candles, per day
 _UP_KEYS = {"d": None, "m": {}}   # daily instrument-key map, in memory
 
 
@@ -2945,8 +2678,7 @@ def up_file():
 
 
 def up_load():
-    d = {"key": "", "secret": "", "redirect": UP_REDIRECT_DEFAULT, "token": "", "exp": 0,
-         "atok": "", "aexp": ""}
+    d = {"key": "", "secret": "", "redirect": UP_REDIRECT_DEFAULT, "token": "", "exp": 0}
     try:
         if _os.path.exists(up_file()):
             j = _json.load(open(up_file(), encoding="utf-8"))
@@ -2972,66 +2704,12 @@ def up_save(key, secret, redirect=None):
         return False
 
 
-def _atok_live(d):
-    """Is the 1-year analytics token still valid?"""
-    exp = str(d.get("aexp") or "")
-    return bool(d.get("atok")) and (not exp or exp >= now_ist().strftime("%Y-%m-%d"))
-
-
 def up_token_valid():
     try:
         d = up_load()
-        if _atok_live(d):                     # 🎫 ANALYTICS TOKEN — 1-year, no daily login
-            return True
         return bool(d.get("token")) and time.time() < float(d.get("exp") or 0) - 120
     except Exception:
         return False
-
-
-def up_auth_token():
-    """A VALID token for the Bearer header — live analytics first, live OAuth
-    second, "" last (never send an expired token)."""
-    try:
-        d = up_load()
-        if _atok_live(d):
-            return d["atok"]
-        if d.get("token") and time.time() < float(d.get("exp") or 0) - 120:
-            return d["token"]
-        return ""
-    except Exception:
-        return ""
-
-
-def up_save_atok(tok):
-    d = up_load()
-    tok = (tok or "").strip()
-    d["atok"] = tok
-    d["aexp"] = (now_ist() + _dtd(days=365)).strftime("%Y-%m-%d") if tok else ""
-    try:
-        _json.dump(d, open(up_file(), "w", encoding="utf-8"))
-        return True
-    except Exception:
-        return False
-
-
-def up_wait_reason():
-    """⏳ API-FIRST — if Upstox keys are saved but today's token isn't activated
-    yet, the 9:20 auto-starts HOLD (window 9:20–9:35 only) so you can paste the
-    login code calmly. Activate → everything starts instantly (up_kick).
-    Skip the login → engines start on Yahoo at 9:35 anyway."""
-    try:
-        d = up_load()
-        if not (d.get("key") and d.get("secret")):
-            return None                      # no keys configured → never wait
-        if up_token_valid():
-            return None
-        n = now_ist()
-        m = n.hour * 60 + n.minute
-        if 9 * 60 + 20 <= m < 9 * 60 + 35:
-            return "upstox_login"
-    except Exception:
-        return None
-    return None
 
 
 def up_login_url():
@@ -3140,8 +2818,7 @@ def up_keys_map(syms):
 
 
 def up_prefetch(syms):
-    """1 batched call per ~500 symbols → tick-fresh prices + day cumulative
-    volume into _UP_LTP/_UP_TICKS (the fallback candle builder's raw material).
+    """1 batched call per ~250 symbols → tick-fresh prices into _UP_LTP.
     No token / any failure → returns False, scans stay on Yahoo untouched."""
     try:
         if not up_token_valid() or not syms:
@@ -3152,29 +2829,22 @@ def up_prefetch(syms):
             return False
         rev = {k: s for s, k in kmap.items()}
         vals = list(kmap.values())
-        got_n, now = 0, time.time()
-        for i in range(0, len(vals), 500):
+        got_n = 0
+        for i in range(0, len(vals), 250):
             req = urllib.request.Request(
-                "https://api.upstox.com/v2/market-quote/full?instrument_key="
-                + ",".join(vals[i:i + 500]),
+                "https://api.upstox.com/v2/market-quote/ltp?instrument_key="
+                + ",".join(vals[i:i + 250]),
                 headers={"Accept": "application/json", "User-Agent": UP_UA,
-                         "Authorization": f"Bearer {up_auth_token()}"})
+                         "Authorization": f"Bearer {d['token']}"})
             data = (_json.loads(urllib.request.urlopen(req, timeout=8)
                                 .read().decode("utf-8")) or {}).get("data") or {}
+            now = time.time()
             for k, v in data.items():
                 s = rev.get(k)
-                if not (s and isinstance(v, dict) and v.get("last_price")):
-                    continue
-                px = float(v["last_price"])
-                try:
-                    cv = float(v.get("volume") or 0)
-                except Exception:
-                    cv = 0.0
-                _UP_LTP[s] = (px, now)
-                _UP_TICKS.setdefault(s, []).append((now, px, cv))
-                if len(_UP_TICKS[s]) > 300:
-                    _UP_TICKS[s] = _UP_TICKS[s][-300:]
-                got_n += 1
+                px = v.get("last_price") if isinstance(v, dict) else None
+                if s and px:
+                    _UP_LTP[s] = (float(px), now)
+                    got_n += 1
         return got_n > 0
     except Exception:
         return False
@@ -3198,249 +2868,16 @@ def up_patch_df(sym, df):
     return df
 
 
-def up_cache_load():
-    """📡 Last-good Yahoo candles for TODAY (pickle, one file per day)."""
-    today = now_ist().strftime("%Y-%m-%d")
-    if _UP_CANDLE_CACHE.get("d") == today:
-        return _UP_CANDLE_CACHE["df"]
-    df = {}
-    try:
-        import pickle as _pk
-        fn = f"candle_cache_{_ukey()}_{today}.pkl"
-        if _os.path.exists(fn):
-            df = _pk.load(open(fn, "rb")) or {}
-    except Exception:
-        df = {}
-    _UP_CANDLE_CACHE.update({"d": today, "df": df})
-    return df
-
-
-def up_cache_save(got):
-    """📡 Healthy Yahoo sweep → remember the candles (disk writes throttled)."""
-    try:
-        if not got:
-            return
-        cache = up_cache_load()
-        cache.update(got)
-        _UP_CANDLE_CACHE["df"] = cache
-        if time.time() - (_UP_CANDLE_CACHE.get("saved") or 0) > 120:
-            _UP_CANDLE_CACHE["saved"] = time.time()
-            import pickle as _pk
-            today = now_ist().strftime("%Y-%m-%d")
-            _pk.dump(cache, open(f"candle_cache_{_ukey()}_{today}.pkl", "wb"))
-    except Exception:
-        pass
-
-
-def up_fallback_candles(syms):
-    """📡 UNINTERRUPTED — 5-minute candles built from the last-good Yahoo
-    cache + the live Upstox tick stream (same-day data only). Candle volume
-    is approximated from cumulative-volume deltas between ticks. Used ONLY
-    when Yahoo is blocked and a valid Upstox token exists."""
-    out = {}
-    try:
-        cache = up_cache_load()
-        for s in syms:
-            try:
-                parts, last_end = [], 0
-                base = cache.get(s)
-                if base is not None and len(base):
-                    b = base[base.index.date == base.index[-1].date()]
-                    if len(b):
-                        parts.append(b[["Open", "High", "Low", "Close", "Volume"]])
-                        last_end = int(b.index[-1].timestamp()) + 300
-                ticks = [t for t in (_UP_TICKS.get(s) or []) if t[0] > last_end]
-                if ticks:
-                    buckets = {}
-                    for ts, px, cv in ticks:
-                        buckets.setdefault(int(ts) - int(ts) % 300, []).append((px, cv))
-                    rows = []
-                    for k in sorted(buckets):
-                        pts = buckets[k]
-                        pxs = [p for p, _ in pts]
-                        cvs = [c for _, c in pts if c and c > 0]
-                        vol = (max(cvs) - min(cvs)) if len(cvs) >= 2 else 0.0
-                        rows.append((k, pxs[0], max(pxs), min(pxs), pxs[-1], max(vol, 0.0)))
-                    if rows:
-                        ts_idx = pd.to_datetime([r[0] for r in rows], unit="s", utc=True)
-                        fb = pd.DataFrame([r[1:] for r in rows],
-                                          columns=["Open", "High", "Low", "Close", "Volume"],
-                                          index=pd.DatetimeIndex(ts_idx).tz_convert("Asia/Calcutta"))
-                        parts.append(fb)
-                if parts:
-                    df = pd.concat(parts).sort_index()
-                    df = df[~df.index.duplicated(keep="last")]
-                    out[s] = df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
-            except Exception:
-                continue
-    except Exception:
-        pass
-    return out
-
-
-def up_intraday_candles(syms):
-    """📡 TRUE FALLBACK — today's REAL candles from Upstox (1-min intraday,
-    resampled to 5-min), fetched by 6 PARALLEL workers so a 500-stock board
-    rebuilds in ~30 s (the old sequential version was too slow for the page's
-    auto-refresh — that caused the endless 'scanning' loop). Per-symbol cache
-    keeps repeat cycles light."""
-    out = {}
-    try:
-        if not up_token_valid() or not syms:
-            return out
-        now = time.time()
-        todo = [s for s in syms
-                if now - (_UP_ID5.get("ts") or {}).get(s, 0) > 100]
-        for s in syms:
-            if s not in todo and s in (_UP_ID5.get("df") or {}):
-                out[s] = _UP_ID5["df"][s]
-        if not todo:
-            return out
-        kmap = up_keys_map(todo)
-        tok = up_auth_token()
-
-        def _pull(item):
-            s, k = item
-            try:
-                rq = urllib.request.Request(
-                    f"https://api.upstox.com/v2/historical-candle/intraday/{k}/1minute",
-                    headers={"Accept": "application/json", "User-Agent": UP_UA,
-                             "Authorization": f"Bearer {tok}"})
-                r = _json.loads(urllib.request.urlopen(rq, timeout=8).read().decode("utf-8"))
-                candles = (r.get("data") or {}).get("candles") or []
-                if not candles:
-                    return s, None
-                df = pd.DataFrame([c[:6] for c in candles],
-                                  columns=["ts", "Open", "High", "Low", "Close", "Volume"])
-                df.index = pd.to_datetime(df["ts"])
-                try:
-                    df.index = df.index.tz_convert("Asia/Calcutta")
-                except Exception:
-                    pass
-                df = df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
-                agg = df.resample("5min").agg(
-                    {"Open": "first", "High": "max", "Low": "min",
-                     "Close": "last", "Volume": "sum"}).dropna()
-                return s, (agg if len(agg) else None)
-            except Exception:
-                return s, None
-
-        try:
-            from concurrent.futures import ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=6) as ex:
-                for s, df in ex.map(_pull, [it for it in kmap.items()]):
-                    if df is not None:
-                        out[s] = df
-                        _UP_ID5.setdefault("ts", {})[s] = time.time()
-                        _UP_ID5.setdefault("df", {})[s] = df
-        except Exception:
-            pass
-    except Exception:
-        pass
-    return out
-
-
-def up_daily_candles(syms):
-    """📡 daily-history fallback (6mo OHLCV per symbol) — fetched ONCE per day,
-    then disk-cached (pickle) — keeps trend/200EMA/signal verdicts real during
-    a Yahoo outage."""
-    out = {}
-    try:
-        if not up_token_valid() or not syms:
-            return out
-        today = now_ist().strftime("%Y-%m-%d")
-        fn = f"upstox_daily_{_ukey()}_{today}.pkl"
-        cache = {}
-        try:
-            import pickle as _pk
-            if _os.path.exists(fn):
-                cache = _pk.load(open(fn, "rb")) or {}
-        except Exception:
-            cache = {}
-        todo = [s for s in syms if s not in cache]
-        out.update({s: cache[s] for s in syms if s in cache})
-        if not todo:
-            return out
-        kmap = up_keys_map(todo)
-        tok = up_auth_token()
-        _frm = (now_ist() - _dtd(days=200)).strftime("%Y-%m-%d")
-        _to = now_ist().strftime("%Y-%m-%d")
-
-        def _pull(item):
-            s, k = item
-            try:
-                rq = urllib.request.Request(
-                    f"https://api.upstox.com/v2/historical-candle/{k}/day/{_to}/{_frm}",
-                    headers={"Accept": "application/json", "User-Agent": UP_UA,
-                             "Authorization": f"Bearer {tok}"})
-                r = _json.loads(urllib.request.urlopen(rq, timeout=8).read().decode("utf-8"))
-                candles = (r.get("data") or {}).get("candles") or []
-                if not candles:
-                    return s, None
-                df = pd.DataFrame([c[:6] for c in candles],
-                                  columns=["ts", "Open", "High", "Low", "Close", "Volume"])
-                df.index = pd.to_datetime(df["ts"])
-                try:
-                    df.index = df.index.tz_convert("Asia/Calcutta")
-                except Exception:
-                    pass
-                df = df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
-                return s, (df if len(df) >= 30 else None)
-            except Exception:
-                return s, None
-
-        try:
-            from concurrent.futures import ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=6) as ex:
-                for s, df in ex.map(_pull, [it for it in kmap.items()]):
-                    if df is not None:
-                        out[s] = df
-                        cache[s] = df
-        except Exception:
-            pass
-        try:
-            import pickle as _pk
-            _pk.dump(cache, open(fn, "wb"))
-        except Exception:
-            pass
-    except Exception:
-        pass
-    return out
-
-
-def feed_status():
-    """('yahoo' | 'fallback', 'HH:MM') — is the Upstox fallback carrying the desk?"""
-    try:
-        fb, yok = _FEED.get("fb") or 0, _FEED.get("yahoo_ok") or 0
-        if fb > yok and time.time() - fb < 900:
-            m = int((fb + 19800) % 86400)
-            return "fallback", f"{m // 3600:02d}:{(m % 3600) // 60:02d}"
-    except Exception:
-        pass
-    return "yahoo", ""
-
-
 def up_settings_ui(tag=""):
     with st.expander("📡 UPSTOX LIVE QUOTES (optional — real-time prices)"):
         d = up_load()
         c = up_token_valid()
-        if d.get("atok") and c:
-            st.markdown(f"<div style='background:#052e16;border:1px solid #22c55e;border-radius:10px;"
-                        f"padding:10px 14px;color:#bbf7d0;font-size:13px;'>🎫 <b>ANALYTICS TOKEN LIVE — "
-                        f"real-time quotes ON</b> · valid till <b>{d.get('aexp')}</b> · "
-                        f"<b>NO daily login needed — ever.</b> Read-only market data (quotes + candles) — "
-                        f"exactly what the radar needs.</div>", unsafe_allow_html=True)
-        elif c:
+        if c:
             t = time.gmtime(float(d["exp"]) + 19800)
             st.markdown(f"<div style='background:#052e16;border:1px solid #22c55e;border-radius:10px;"
                         f"padding:10px 14px;color:#bbf7d0;font-size:13px;'>🟢 <b>LIVE — real-time quotes ON</b> "
-                        f"· daily token valid till {time.strftime('%H:%M', t)} IST. 💡 Tip: paste the 1-year "
-                        f"Analytics token below — no more daily logins.</div>", unsafe_allow_html=True)
-        elif d.get("atok"):
-            st.markdown("<div style='background:#422006;border:1px solid #f59e0b;border-radius:10px;"
-                        "padding:10px 14px;color:#fde68a;font-size:13px;'>🟡 <b>Analytics token EXPIRED</b> — "
-                        "generate a fresh one (Developer Apps → Analytics tab) and paste it below.</div>",
-                        unsafe_allow_html=True)
+                        f"· token valid till {time.strftime('%H:%M', t)} IST (the 3:30 AM reset is Upstox's "
+                        f"rule — quick re-login next morning).</div>", unsafe_allow_html=True)
         elif d.get("key"):
             st.markdown("<div style='background:#422006;border:1px solid #f59e0b;border-radius:10px;"
                         "padding:10px 14px;color:#fde68a;font-size:13px;'>🟡 <b>Keys saved — token not active "
@@ -3451,74 +2888,39 @@ def up_settings_ui(tag=""):
                         "padding:10px 14px;color:#cbd5e1;font-size:13px;'>⚪ <b>OFF — using Yahoo "
                         "(works fine).</b> Add your free Upstox Basic keys for tick-fresh prices: "
                         "account.upstox.com/developer/apps</div>", unsafe_allow_html=True)
-        at = st.text_input("🎫 Analytics token (1-year · no daily login) — RECOMMENDED",
-                           value="", key=f"up_at{tag}", type="password",
-                           placeholder="Developer Apps → Analytics tab → Generate Token → copy here")
-        if st.button("💾 Save analytics token", key=f"up_asave{tag}", **STRETCH):
-            if at.strip():
-                up_save_atok(at)
-                try:
-                    if mkt_status()[0] == "open":
-                        st.session_state["up_kick"] = True   # 🚀 engines start NOW
-                        st.rerun()
-                except Exception:
-                    pass
-                st.success("🎫 ANALYTICS TOKEN SAVED — live for 1 year. No daily login. Real-time quotes + "
-                           "uninterrupted fallback are now always on.")
-                try:
-                    st.toast("🎫 Upstox analytics token activated")
-                except Exception:
-                    pass
-            else:
-                st.error("Paste the token first: Upstox → account.upstox.com/developer/apps → Analytics "
-                         "tab → Generate Token → copy icon.")
-        # 🧹 the classic daily-login flow is HIDDEN while the 1-year analytics
-        # token is live — it reappears by itself ONLY if that token ever
-        # expires/revoked (emergency backup).
-        if not (d.get("atok") and up_token_valid()):
-            st.caption("⬇️ CLASSIC method (daily login) — optional, the analytics token above is better:")
-            c1, c2 = st.columns(2)
-            with c1:
-                k = st.text_input("Upstox API Key", value=d.get("key", ""), key=f"up_k{tag}")
-            with c2:
-                sc = st.text_input("Upstox API Secret", value=d.get("secret", ""), type="password",
-                                   key=f"up_s{tag}")
-            rd = st.text_input("Redirect URI (must EXACTLY match your Upstox app)", value=d.get("redirect", ""),
-                               key=f"up_r{tag}")
-            if st.button("💾 Save Upstox keys", key=f"up_save{tag}", **STRETCH):
-                up_save(k, sc, rd)
-                st.success("Saved ✓ — stored ONLY inside this app instance (never in the GitHub file).")
-            if k.strip() and sc.strip():
-                st.markdown(f"🔐 **Step 1 — [open the Upstox login link]({up_login_url()})** (new tab → login with "
-                            f"mobile+PIN → approve). The browser then lands on a URL containing <code>?code=…</code> "
-                            f"— copy that code.", unsafe_allow_html=True)
-                if st.button("🔑 I have the code — let me paste it", key=f"up_sh{tag}"):
-                    st.session_state[f"up_show{tag}"] = True
-                if st.session_state.get(f"up_show{tag}"):
-                    code = st.text_input("Step 2 — paste the code from the address bar", key=f"up_c{tag}",
-                                         placeholder="e.g. 7c9f2e1a…")
-                    if st.button("🚀 Activate live quotes", key=f"up_go{tag}", **STRETCH):
-                        ok, msg = up_activate(code)
-                        if ok:
-                            try:
-                                if mkt_status()[0] == "open":
-                                    st.session_state["up_kick"] = True   # 🚀 API-FIRST: engines start NOW
-                                    st.rerun()
-                            except Exception:
-                                pass
-                            st.success("🟢 LIVE! Real-time quotes are ON for today — every scan and coach "
-                                       "instruction now uses tick-fresh prices.")
-                            try:
-                                st.toast("📡 Upstox live quotes activated")
-                            except Exception:
-                                pass
-                        else:
-                            st.error(msg)
-
+        c1, c2 = st.columns(2)
+        with c1:
+            k = st.text_input("Upstox API Key", value=d.get("key", ""), key=f"up_k{tag}")
+        with c2:
+            sc = st.text_input("Upstox API Secret", value=d.get("secret", ""), type="password",
+                               key=f"up_s{tag}")
+        rd = st.text_input("Redirect URI (must EXACTLY match your Upstox app)", value=d.get("redirect", ""),
+                           key=f"up_r{tag}")
+        if st.button("💾 Save Upstox keys", key=f"up_save{tag}", **STRETCH):
+            up_save(k, sc, rd)
+            st.success("Saved ✓ — stored ONLY inside this app instance (never in the GitHub file).")
+        if k.strip() and sc.strip():
+            st.markdown(f"🔐 **Step 1 — [open the Upstox login link]({up_login_url()})** (new tab → login with "
+                        f"mobile+PIN → approve). The browser then lands on a URL containing <code>?code=…</code> "
+                        f"— copy that code.", unsafe_allow_html=True)
+            if st.button("🔑 I have the code — let me paste it", key=f"up_sh{tag}"):
+                st.session_state[f"up_show{tag}"] = True
+            if st.session_state.get(f"up_show{tag}"):
+                code = st.text_input("Step 2 — paste the code from the address bar", key=f"up_c{tag}",
+                                     placeholder="e.g. 7c9f2e1a…")
+                if st.button("🚀 Activate live quotes", key=f"up_go{tag}", **STRETCH):
+                    ok, msg = up_activate(code)
+                    if ok:
+                        st.success("🟢 LIVE! Real-time quotes are ON for today — every scan and coach "
+                                   "instruction now uses tick-fresh prices.")
+                        try:
+                            st.toast("📡 Upstox live quotes activated")
+                        except Exception:
+                            pass
+                    else:
+                        st.error(msg)
         st.caption("Free Upstox Basic plan · quotes only · no orders · no funds. Keys + token stay inside "
-                   "your app instance — never in GitHub. Any failure = silent Yahoo fallback, scans never break. "
-                   "🛡️ <b>UNINTERRUPTED MODE:</b> with today's token active, a Yahoo block auto-switches "
-                   "the scans to Upstox live data — the radar never stops.")
+                   "your app instance — never in GitHub. Any failure = silent Yahoo fallback, scans never break.")
 
 
 def tg_settings_ui(tag=""):
@@ -3631,10 +3033,10 @@ def journal_verify(entry):
         saved_date = entry["saved"][:10]
         d = yf.Ticker(entry["sym"]).history(period="1mo", interval="1d").dropna()
         if d is None or len(d) == 0:
-            return {"status": "NO DATA", "color": "#8fa3bd", "detail": "Couldn't fetch prices."}
+            return {"status": "NO DATA", "color": "#6b7280", "detail": "Couldn't fetch prices."}
         after = d[d.index.strftime("%Y-%m-%d") > saved_date]
         if len(after) == 0:
-            return {"status": "TOO SOON", "color": "#8fa3bd",
+            return {"status": "TOO SOON", "color": "#6b7280",
                     "detail": "No trading day has completed since you saved this — check tomorrow."}
         hi = float(after["High"].max()); lo = float(after["Low"].min())
         last = float(after["Close"].iloc[-1])
@@ -3646,10 +3048,10 @@ def journal_verify(entry):
         want_up = "UP" in entry.get("trend", "") or "BUY" in entry.get("signal", "")
         trend_right = (moved > 0) if want_up else (moved < 0)
         if entry.get("sit") == "BUY_DIP" and lo > buy:
-            status, color = "NO-FILL (never dipped to buy)", "#8fa3bd"
+            status, color = "NO-FILL (never dipped to buy)", "#6b7280"
             detail = f"Price never fell to ₹{buy:.2f}; low since was ₹{lo:.2f}. No trade taken — correct to wait."
         elif hit_t3:
-            status, color = "WIN → T3 🎯", "#4ade80"; detail = f"Hit all targets (high ₹{hi:.2f})."
+            status, color = "WIN → T3 🎯", "#15803d"; detail = f"Hit all targets (high ₹{hi:.2f})."
         elif hit_t2:
             status, color = "WIN → T2 ✅", "#16a34a"; detail = f"Reached T2 ₹{t2:.2f} (high ₹{hi:.2f})."
         elif hit_t1:
@@ -3657,13 +3059,13 @@ def journal_verify(entry):
         elif hit_sl:
             status, color = "LOSS → hit stop ❌", "#dc2626"; detail = f"Fell to stop ₹{sl:.2f} (low ₹{lo:.2f})."
         else:
-            status, color = "OPEN — no target/stop hit yet", "#fbbf24"
+            status, color = "OPEN — no target/stop hit yet", "#b45309"
             detail = f"Since save: high ₹{hi:.2f}, low ₹{lo:.2f}, now ₹{last:.2f}."
         return {"status": status, "color": color, "detail": detail,
                 "moved": round(moved, 2), "trend_right": trend_right,
                 "hi": hi, "lo": lo, "last": last}
     except Exception as e:
-        return {"status": "ERROR", "color": "#8fa3bd", "detail": f"{type(e).__name__}"}
+        return {"status": "ERROR", "color": "#6b7280", "detail": f"{type(e).__name__}"}
 
 
 # ============================================================
@@ -3843,18 +3245,18 @@ def detect_regime(res):
     trending = (not np.isnan(adx)) and adx > 25
     ranging = (not np.isnan(adx)) and adx < 20
     if trending and tr == 'UPTREND':
-        reg, rc = "STRONG UPTREND", "#4ade80"
+        reg, rc = "STRONG UPTREND", "#15803d"
     elif trending and tr == 'DOWNTREND':
-        reg, rc = "STRONG DOWNTREND", "#f87171"
+        reg, rc = "STRONG DOWNTREND", "#b91c1c"
     elif ranging:
-        reg, rc = "RANGING / SIDEWAYS", "#fbbf24"
+        reg, rc = "RANGING / SIDEWAYS", "#b45309"
     else:
         reg, rc = tr.title() if tr != 'SIDEWAYS' else "TRANSITIONING", "#2563eb"
     if not np.isnan(bbw):
         vol = "HIGH VOLATILITY" if bbw > 6 else "LOW VOLATILITY" if bbw < 2 else "MODERATE VOLATILITY"
     else:
         vol = "—"
-    vc = "#dc2626" if "HIGH" in vol else "#16a34a" if "LOW" in vol else "#fbbf24"
+    vc = "#dc2626" if "HIGH" in vol else "#16a34a" if "LOW" in vol else "#b45309"
     return {"regime": reg, "rc": rc, "vol": vol, "vc": vc, "adx": adx}
 
 
@@ -3978,7 +3380,7 @@ def target_probability(price, plan, sym):
             return float(max(0.0, min(1.0, 0.5 - z * 0.2)))
 
         def rate(p):
-            return ("High", "#16a34a") if p >= 0.55 else ("Moderate", "#fbbf24") if p >= 0.35 else ("Low", "#dc2626")
+            return ("High", "#16a34a") if p >= 0.55 else ("Moderate", "#b45309") if p >= 0.35 else ("Low", "#dc2626")
 
         res = {}
         for key, tp in [("T1", plan['t1']), ("T2", plan['t2']), ("T3", plan['t3'])]:
@@ -4204,14 +3606,14 @@ def live_candle_view(df, res):
         elif dn:
             verdict, vc, vico = "DOWNTREND FORMING", "#dc2626", "📉"
         else:
-            verdict, vc, vico = "CHOPPY — NO CLEAR DIRECTION", "#fbbf24", "➡️"
+            verdict, vc, vico = "CHOPPY — NO CLEAR DIRECTION", "#b45309", "➡️"
         blocks = ""
         for i, (_, r) in enumerate(d.iterrows()):
             g = r['Close'] >= r['Open']
             clr = "#16a34a" if g else "#dc2626"
             body = max(abs(r['Close'] - r['Open']), 0.01)
             hgt = 14 + min(int(body / max(price * 0.004, 0.01) * 6), 34)
-            border = "border:2px solid #e2e8f0;" if i == len(d) - 1 else ""
+            border = "border:2px solid #1a1f36;" if i == len(d) - 1 else ""
             blocks += f"<div title='O{r['Open']:.2f} H{r['High']:.2f} L{r['Low']:.2f} C{r['Close']:.2f}' style='width:16px;height:{hgt}px;background:{clr};border-radius:3px;{border}'></div>"
         last = d.iloc[-1]
         chg = (float(last['Close']) - float(last['Open']))
@@ -4234,9 +3636,9 @@ def show_analysis(sym, name, iv, per):
     with st.spinner(f"⏳ Loading {name}..."):
         res = run_analysis(sym, iv, per)
     if res is None:
-        st.markdown(_H(f"""<div style='background:#2a0e0e;border:2px solid #dc2626;border-radius:16px;padding:24px;'>
+        st.markdown(_H(f"""<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:16px;padding:24px;'>
         <div style='font-size:18px;font-weight:800;color:#dc2626;'>❌ Cannot Load {sym}</div>
-        <div style='color:#cbd5e1;font-size:13px;margin-top:8px;'>Try exact NSE symbol · check internet ·
+        <div style='color:#374151;font-size:13px;margin-top:8px;'>Try exact NSE symbol · check internet ·
         best combo: 15m timeframe + 1mo period</div></div>"""), unsafe_allow_html=True)
         return
     mst_s, ml, mm = mkt_status()
@@ -4270,27 +3672,27 @@ def show_analysis(sym, name, iv, per):
 
     gap_text = ""
     if sr:
-        gg = sr['gap_pct']; gclr = "#16a34a" if gg > 0 else "#dc2626" if gg < 0 else "#8fa3bd"
+        gg = sr['gap_pct']; gclr = "#16a34a" if gg > 0 else "#dc2626" if gg < 0 else "#6b7280"
         gap_text = f"<span style='color:{gclr};font-weight:700;font-size:13px;'> {gg:+.1f}% gap</span>"
     mclr = "#16a34a" if mst_s == "open" else "#f59e0b" if mst_s == "pre" else "#dc2626"
-    st.markdown(_H(f"""<div style='background:#0f1a2e;border:1px solid #1e293b;border-radius:18px;padding:18px 24px;
+    st.markdown(_H(f"""<div style='background:white;border:1px solid #e0e7ff;border-radius:18px;padding:18px 24px;
     margin-bottom:18px;box-shadow:0 4px 20px rgba(0,0,0,0.06);display:flex;justify-content:space-between;
     align-items:center;flex-wrap:wrap;gap:10px;'><div>
     <div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>
-    <span style='font-size:26px;font-weight:900;color:#e2e8f0;'>{name}</span>
-    <span style='background:#1e293b;color:#3730a3;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;'>{sym}</span>
+    <span style='font-size:26px;font-weight:900;color:#1a1f36;'>{name}</span>
+    <span style='background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;'>{sym}</span>
     <span style='background:{mclr}22;color:{mclr};font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid {mclr}44;'>{ml}</span>
     {gap_text}</div>
-    <div style='color:#8fa3bd;font-size:12px;margin-top:6px;'>⏱️ {iv} · {per} · {datetime.now().strftime("%d %b %Y %H:%M")}
+    <div style='color:#6b7280;font-size:12px;margin-top:6px;'>⏱️ {iv} · {per} · {datetime.now().strftime("%d %b %Y %H:%M")}
      ·  Trend: <b style='color:{sc};'>{res["trend"]}</b>  ·  52W pos: <b>{res["pos52"]:.1f}%</b>
      ·  Vol: <b>{res["vr"]:.1f}x</b></div></div>
-    <div style='text-align:right;'><div style='font-size:40px;font-weight:900;color:#60a5fa;'>₹{price:,.2f}</div>
-    <div style='font-size:10px;font-weight:700;color:{"#16a34a" if price_src=="NSE live" else "#fbbf24"};'>{"🟢 NSE LIVE" if price_src=="NSE live" else "⚠️ "+price_src.upper()+" · CHECK BROKER FOR EXACT LTP"}</div>
-    <div style='color:#8fa3bd;font-size:12px;'>52W H: ₹{res["hi52"]:.2f} | L: ₹{res["lo52"]:.2f}</div></div></div>"""),
+    <div style='text-align:right;'><div style='font-size:40px;font-weight:900;color:#1d4ed8;'>₹{price:,.2f}</div>
+    <div style='font-size:10px;font-weight:700;color:{"#16a34a" if price_src=="NSE live" else "#b45309"};'>{"🟢 NSE LIVE" if price_src=="NSE live" else "⚠️ "+price_src.upper()+" · CHECK BROKER FOR EXACT LTP"}</div>
+    <div style='color:#6b7280;font-size:12px;'>52W H: ₹{res["hi52"]:.2f} | L: ₹{res["lo52"]:.2f}</div></div></div>"""),
                 unsafe_allow_html=True)
 
-    st.markdown("<div style='background:#3a2a06;border:1px solid #fde68a;border-radius:10px;"
-                "padding:8px 16px;margin-bottom:10px;color:#fbbf24;font-size:12px;'>"
+    st.markdown("<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:10px;"
+                "padding:8px 16px;margin-bottom:10px;color:#92400e;font-size:12px;'>"
                 "<b>Reality check:</b> the levels (price, circuit, support/resistance) are exact — but the "
                 "<b>direction call is a probability, not a prediction</b>. Even good setups fail ~40–50% of "
                 "the time. The stop-loss is your protection; size small enough that a loss doesn't hurt. "
@@ -4307,7 +3709,7 @@ def show_analysis(sym, name, iv, per):
         <div style='font-size:28px;'>{pemoji}</div>
         <div style='flex:1;min-width:220px;'>
         <div style='font-size:13px;font-weight:900;color:{pcol};'>⏰ {stc['left_txt'].upper()} · {stc['phase'].upper()} SESSION</div>
-        <div style='color:#cbd5e1;font-size:13px;margin-top:2px;'>{stc['note']}</div></div></div>"""),
+        <div style='color:#374151;font-size:13px;margin-top:2px;'>{stc['note']}</div></div></div>"""),
                     unsafe_allow_html=True)
 
     buy_c = sum(1 for s in res['sigs'] if s['b']); sell_c = len(res['sigs']) - buy_c
@@ -4318,42 +3720,42 @@ def show_analysis(sym, name, iv, per):
             title = "🔴 LIVE CANDLE ANALYSIS"
             live_tag = ("<span style='background:#dc2626;color:white;border-radius:6px;padding:2px 8px;"
                         "font-size:11px;font-weight:700;'>● LIVE</span>" if live_on else
-                        "<span style='background:#64748b;color:white;border-radius:6px;padding:2px 8px;"
+                        "<span style='background:#9ca3af;color:white;border-radius:6px;padding:2px 8px;"
                         "font-size:11px;font-weight:700;'>turn on 🔴 LIVE auto-refresh below to update live</span>")
         else:
             title = "📊 CANDLE ANALYSIS (last session)"
-            live_tag = ("<span style='background:#8fa3bd;color:white;border-radius:6px;padding:2px 8px;"
+            live_tag = ("<span style='background:#6b7280;color:white;border-radius:6px;padding:2px 8px;"
                         "font-size:11px;font-weight:700;'>market closed — updates live once it opens</span>")
-        st.markdown(_H(f"""<div style='background:#0f1a2e;border:2px solid {lc['vc']};border-radius:16px;
+        st.markdown(_H(f"""<div style='background:white;border:2px solid {lc['vc']};border-radius:16px;
         padding:16px 20px;margin-bottom:14px;'>
         <div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;'>
         <div style='font-size:14px;font-weight:900;color:{lc['vc']};'>{lc['vico']} {title} · {lc['verdict']}</div>
         {live_tag}</div>
         <div style='display:flex;align-items:flex-end;gap:4px;height:52px;margin:12px 0 8px;'>{lc['blocks']}</div>
-        <div style='color:#cbd5e1;font-size:12px;'>Latest candle: <b style='color:{"#16a34a" if lc['last_up'] else "#dc2626"};'>{'UP' if lc['last_up'] else 'DOWN'} {lc['chgp']:+.2f}%</b>
+        <div style='color:#374151;font-size:12px;'>Latest candle: <b style='color:{"#16a34a" if lc['last_up'] else "#dc2626"};'>{'UP' if lc['last_up'] else 'DOWN'} {lc['chgp']:+.2f}%</b>
         · {lc['streak']} in a row · last 14: {lc['greens']}🟢 / {lc['reds']}🔴 · {lc['vwtxt']}</div>
-        <div style='color:#64748b;font-size:11px;margin-top:2px;'>{lc['oc']}</div></div>"""),
+        <div style='color:#9ca3af;font-size:11px;margin-top:2px;'>{lc['oc']}</div></div>"""),
                     unsafe_allow_html=True)
     st.markdown(_H(f"""<div class='{res["bg"]}'><div style='display:flex;justify-content:space-between;
     align-items:flex-start;flex-wrap:wrap;gap:16px;'><div style='flex:1;min-width:260px;'>
-    <div style='font-size:11px;color:#8fa3bd;font-weight:700;letter-spacing:2px;text-transform:uppercase;'>AI Signal · {res["n_sigs"]} Indicators</div>
+    <div style='font-size:11px;color:#6b7280;font-weight:700;letter-spacing:2px;text-transform:uppercase;'>AI Signal · {res["n_sigs"]} Indicators</div>
     <div style='font-size:46px;font-weight:900;color:{sc};line-height:1.1;margin-top:8px;'>{res["sig"]}</div>
     <div style='margin-top:14px;'><span style='background:{plan["ac"]};color:white;font-size:15px;font-weight:800;
     padding:10px 24px;border-radius:24px;'>{plan["act"]}</span></div>
-    <div style='color:#cbd5e1;font-size:14px;margin-top:14px;background:rgba(255,255,255,0.5);border-radius:10px;padding:10px 14px;'>{plan["msg"]}</div></div>
+    <div style='color:#374151;font-size:14px;margin-top:14px;background:rgba(255,255,255,0.5);border-radius:10px;padding:10px 14px;'>{plan["msg"]}</div></div>
     <div><div style='text-align:center;background:rgba(255,255,255,0.6);border-radius:16px;padding:16px 24px;'>
     <div style='font-size:60px;font-weight:900;color:{sc};line-height:1;'>{res["conf"]:.0f}<span style='font-size:24px;'>%</span></div>
-    <div style='color:#8fa3bd;font-size:13px;font-weight:700;margin-top:4px;'>INDICATOR AGREEMENT</div>
-    <div style='color:#fbbf24;font-size:10px;font-weight:700;margin-top:4px;max-width:170px;'>⚠️ NOT win probability.
+    <div style='color:#6b7280;font-size:13px;font-weight:700;margin-top:4px;'>INDICATOR AGREEMENT</div>
+    <div style='color:#b45309;font-size:10px;font-weight:700;margin-top:4px;max-width:170px;'>⚠️ NOT win probability.
 Indicators agreeing ≠ price will move that way.</div>
-    <div style='color:#8fa3bd;font-size:12px;margin-top:8px;'>🟢 {buy_c} buy · 🔴 {sell_c} sell</div></div></div></div>
+    <div style='color:#6b7280;font-size:12px;margin-top:8px;'>🟢 {buy_c} buy · 🔴 {sell_c} sell</div></div></div></div>
     <div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px;'>
     <div style='background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.3);border-radius:12px;padding:12px;'>
-    <div style='display:flex;justify-content:space-between;'><span style='color:#cbd5e1;font-size:13px;font-weight:600;'>BUY STRENGTH</span>
+    <div style='display:flex;justify-content:space-between;'><span style='color:#374151;font-size:13px;font-weight:600;'>BUY STRENGTH</span>
     <span style='color:#16a34a;font-weight:900;font-size:22px;'>{res["bp"]:.0f}%</span></div>
     <div class='pbar-container' style='margin-top:8px;'><div class='pbar-buy' style='width:{res["bp"]}%;'></div></div></div>
     <div style='background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);border-radius:12px;padding:12px;'>
-    <div style='display:flex;justify-content:space-between;'><span style='color:#cbd5e1;font-size:13px;font-weight:600;'>SELL STRENGTH</span>
+    <div style='display:flex;justify-content:space-between;'><span style='color:#374151;font-size:13px;font-weight:600;'>SELL STRENGTH</span>
     <span style='color:#dc2626;font-weight:900;font-size:22px;'>{res["sp"]:.0f}%</span></div>
     <div class='pbar-container' style='margin-top:8px;'><div class='pbar-sell' style='width:{res["sp"]}%;'></div></div></div></div></div>"""),
                 unsafe_allow_html=True)
@@ -4364,27 +3766,27 @@ Indicators agreeing ≠ price will move that way.</div>
         if tim['quality'] == 'GOOD':
             tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("UPTREND — FRESH ENTRY",
                 "Trend is up and price is NOT overextended — a reasonable entry, ideally near support.",
-                "#4ade80", "linear-gradient(135deg,#052e16,#0b3a1f)", "📈")
+                "#15803d", "linear-gradient(135deg,#f0fdf4,#dcfce7)", "📈")
         elif tim['quality'] == 'CAUTION':
             tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("UPTREND — BUT NOT FRESH (wait for dip)",
                 "Trend is up, but this isn't an early entry. Prefer a pullback toward support, or size smaller.",
-                "#fbbf24", "linear-gradient(135deg,#3a2a06,#3a2a06)", "⚠️")
+                "#b45309", "linear-gradient(135deg,#fffbeb,#fef3c7)", "⚠️")
         else:
             tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("UPTREND — LATE / EXTENDED · DON'T CHASE",
                 "The up-move likely already happened — buying here risks catching the top. WAIT for a pullback to support.",
-                "#ea580c", "linear-gradient(135deg,#2b1c0c,#33200a)", "🛑")
+                "#ea580c", "linear-gradient(135deg,#fff7ed,#ffedd5)", "🛑")
     elif tr == 'DOWNTREND' or is_sell:
         tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("DOWNTREND — AVOID BUYING",
             "Lower highs & lower lows. Wrong side for longs — wait for a reversal.",
-            "#f87171", "linear-gradient(135deg,#2a0e0e,#3d1420)", "📉")
+            "#b91c1c", "linear-gradient(135deg,#fff1f2,#ffe4e6)", "📉")
     elif tr == 'VOLATILE':
         tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("VOLATILE — RISKY",
             "Wide swings both ways. Trade small or wait for it to settle.",
-            "#fbbf24", "linear-gradient(135deg,#3a2a06,#3a2a06)", "⚡")
+            "#b45309", "linear-gradient(135deg,#fffbeb,#fef3c7)", "⚡")
     else:
         tv_txt, tv_sub, tv_clr, tv_bg, tv_ico = ("SIDEWAYS — WAIT",
             "No clear trend yet. Let a direction form before entering.",
-            "#fbbf24", "linear-gradient(135deg,#3a2a06,#3a2a06)", "➡️")
+            "#b45309", "linear-gradient(135deg,#fffbeb,#fef3c7)", "➡️")
     adx_txt = (f" · ADX {res['adx']:.0f} "
                + ("(strong)" if not np.isnan(res.get('adx', np.nan)) and res['adx'] > 25 else "(weak)")) \
               if not np.isnan(res.get('adx', np.nan)) else ""
@@ -4392,7 +3794,7 @@ Indicators agreeing ≠ price will move that way.</div>
     if htf and htf.get("trend"):
         ht = htf["trend"]
         agree = (ht == "UP" and tr == "UPTREND") or (ht == "DOWN" and tr == "DOWNTREND")
-        hclr = "#16a34a" if ht == "UP" else "#dc2626" if ht == "DOWN" else "#fbbf24"
+        hclr = "#16a34a" if ht == "UP" else "#dc2626" if ht == "DOWN" else "#b45309"
         mark = "✓ confirms" if agree else "✗ differs" if ht in ("UP", "DOWN") else "flat"
         htf_chip = (f"<span style='background:{hclr}18;color:{hclr};border:1px solid {hclr}44;"
                     f"font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-left:8px;'>"
@@ -4400,25 +3802,25 @@ Indicators agreeing ≠ price will move that way.</div>
     st.markdown(_H(f"""<div style='background:{tv_bg};border:3px solid {tv_clr};border-radius:18px;
     padding:20px 26px;margin:16px 0;display:flex;align-items:center;gap:18px;flex-wrap:wrap;'>
     <div style='font-size:46px;'>{tv_ico}</div><div style='flex:1;min-width:220px;'>
-    <div style='font-size:12px;color:#8fa3bd;font-weight:700;letter-spacing:1px;'>TREND VERDICT{adx_txt}</div>
+    <div style='font-size:12px;color:#6b7280;font-weight:700;letter-spacing:1px;'>TREND VERDICT{adx_txt}</div>
     <div style='font-size:30px;font-weight:900;color:{tv_clr};line-height:1.1;'>{tv_txt}</div>
-    <div style='color:#cbd5e1;font-size:13px;margin-top:6px;'>{tv_sub} {htf_chip}</div></div></div>"""),
+    <div style='color:#374151;font-size:13px;margin-top:6px;'>{tv_sub} {htf_chip}</div></div></div>"""),
                 unsafe_allow_html=True)
 
-    stage_clr = {"GOOD": "#16a34a", "CAUTION": "#fbbf24", "POOR": "#ea580c",
-                 "AVOID": "#dc2626", "WATCH": "#2563eb", "WAIT": "#fbbf24"}.get(tim['quality'], "#8fa3bd")
+    stage_clr = {"GOOD": "#16a34a", "CAUTION": "#b45309", "POOR": "#ea580c",
+                 "AVOID": "#dc2626", "WATCH": "#2563eb", "WAIT": "#b45309"}.get(tim['quality'], "#6b7280")
     reasons = ""
     if tim['warns']:
-        reasons += "<div style='margin-top:6px;'><b style='color:#fbbf24;'>⚠️ Late/risk signals:</b> " + \
+        reasons += "<div style='margin-top:6px;'><b style='color:#b45309;'>⚠️ Late/risk signals:</b> " + \
                    " · ".join(tim['warns']) + "</div>"
     if tim['goods']:
         reasons += "<div style='margin-top:4px;'><b style='color:#16a34a;'>✓ In favour:</b> " + \
                    " · ".join(tim['goods']) + "</div>"
-    st.markdown(_H(f"""<div style='background:#0f1a2e;border:1px solid #1e293b;border-left:5px solid {stage_clr};
+    st.markdown(_H(f"""<div style='background:white;border:1px solid #e0e7ff;border-left:5px solid {stage_clr};
     border-radius:0 12px 12px 0;padding:12px 18px;margin:-6px 0 14px;'>
     <span style='background:{stage_clr}18;color:{stage_clr};font-weight:800;font-size:12px;
     padding:3px 12px;border-radius:20px;'>ENTRY TIMING: {tim['stage']} · {tim['quality']}</span>
-    <span style='color:#cbd5e1;font-size:13px;margin-left:8px;'>{tim['msg']}</span>{reasons}</div>"""),
+    <span style='color:#374151;font-size:13px;margin-left:8px;'>{tim['msg']}</span>{reasons}</div>"""),
                 unsafe_allow_html=True)
 
     if ema2:
@@ -4432,50 +3834,50 @@ Indicators agreeing ≠ price will move that way.</div>
         border-radius:14px;padding:14px 20px;margin-bottom:14px;'>
         <div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
         <div><span style='font-size:13px;font-weight:900;color:{ema2['vc']};'>{ico} 200 EMA METHOD · {ema2['verdict']}</span>
-        <div style='color:#cbd5e1;font-size:12px;margin-top:3px;'>Daily 200 EMA ₹{ema2['ema200']:.2f}{approx} ·
+        <div style='color:#374151;font-size:12px;margin-top:3px;'>Daily 200 EMA ₹{ema2['ema200']:.2f}{approx} ·
         price is <b>{abs(ema2['dist']):.1f}% {'above' if ema2['above'] else 'below'}</b> it ·
         <span style='color:{gclr};font-weight:700;'>{gc}</span>{near_txt}</div></div></div>
-        <div style='color:#8fa3bd;font-size:11px;margin-top:6px;'>Rule of the 200 EMA method: only take longs when price is
+        <div style='color:#6b7280;font-size:11px;margin-top:6px;'>Rule of the 200 EMA method: only take longs when price is
         <b>above</b> the daily 200 EMA. Below it = bear structure, where 'uptrend' bounces usually fail.</div></div>"""),
                     unsafe_allow_html=True)
 
     if news:
         head = (f"<div style='font-size:13px;font-weight:900;color:{news['vc']};'>📰 NEWS CHECK · {news['verdict']}"
-                f" <span style='color:#64748b;font-weight:600;'>({news['pos']}👍 / {news['neg']}👎)</span></div>")
+                f" <span style='color:#9ca3af;font-weight:600;'>({news['pos']}👍 / {news['neg']}👎)</span></div>")
         rows = ""
         for it in news['items']:
-            sc_ = {"pos": "#16a34a", "neg": "#dc2626", "neu": "#8fa3bd"}[it['sent']]
+            sc_ = {"pos": "#16a34a", "neg": "#dc2626", "neu": "#6b7280"}[it['sent']]
             tag = {"pos": "👍 good", "neg": "👎 bad", "neu": "• neutral"}[it['sent']]
-            link = f"<a href='{it['url']}' target='_blank' style='color:#e2e8f0;text-decoration:none;'>{it['title']}</a>" if it['url'] else it['title']
+            link = f"<a href='{it['url']}' target='_blank' style='color:#1a1f36;text-decoration:none;'>{it['title']}</a>" if it['url'] else it['title']
             rows += (f"<div style='padding:7px 0;border-top:1px solid #f1f5f9;'>"
                      f"<span style='background:{sc_}18;color:{sc_};font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;'>{tag}</span> "
-                     f"<span style='font-size:13px;color:#e2e8f0;'>{link}</span> "
-                     f"<span style='color:#64748b;font-size:11px;'>· {it['pub']}</span></div>")
-        st.markdown(_H(f"""<div style='background:#0f1a2e;border:2px solid {news['vc']};border-radius:14px;
+                     f"<span style='font-size:13px;color:#1a1f36;'>{link}</span> "
+                     f"<span style='color:#9ca3af;font-size:11px;'>· {it['pub']}</span></div>")
+        st.markdown(_H(f"""<div style='background:white;border:2px solid {news['vc']};border-radius:14px;
         padding:14px 20px;margin-bottom:14px;'>{head}{rows}
-        <div style='color:#64748b;font-size:11px;margin-top:8px;'>Headlines are a rough keyword read — open a link to verify.
+        <div style='color:#9ca3af;font-size:11px;margin-top:8px;'>Headlines are a rough keyword read — open a link to verify.
         News can override the chart, so if something big broke, trust the news over the levels.</div></div>"""),
                     unsafe_allow_html=True)
 
     if nse:
         cc = st.columns(3)
         with cc[0]:
-            st.markdown(f"<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>PREV CLOSE</div><div style='font-size:26px;font-weight:900;color:#e2e8f0;'>{'₹%.2f'%nse['prev'] if nse.get('prev') else '—'}</div><div style='color:#64748b;font-size:10px;'>NSE</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>PREV CLOSE</div><div style='font-size:26px;font-weight:900;color:#1a1f36;'>{'₹%.2f'%nse['prev'] if nse.get('prev') else '—'}</div><div style='color:#9ca3af;font-size:10px;'>NSE</div></div>", unsafe_allow_html=True)
         with cc[1]:
             if nse.get("upper"):
-                st.markdown(f"<div class='mc-red'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>🔴 UPPER CIRCUIT</div><div style='font-size:26px;font-weight:900;color:#dc2626;'>₹{nse['upper']:.2f}</div><div style='color:#64748b;font-size:10px;'>max today · {nse.get('band','')}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='mc-red'><div style='color:#6b7280;font-size:11px;font-weight:700;'>🔴 UPPER CIRCUIT</div><div style='font-size:26px;font-weight:900;color:#dc2626;'>₹{nse['upper']:.2f}</div><div style='color:#9ca3af;font-size:10px;'>max today · {nse.get('band','')}</div></div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>UPPER CIRCUIT</div><div style='font-size:18px;font-weight:800;color:#8fa3bd;'>No band</div><div style='color:#64748b;font-size:10px;'>F&amp;O stock</div></div>", unsafe_allow_html=True)
+                st.markdown("<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>UPPER CIRCUIT</div><div style='font-size:18px;font-weight:800;color:#6b7280;'>No band</div><div style='color:#9ca3af;font-size:10px;'>F&amp;O stock</div></div>", unsafe_allow_html=True)
         with cc[2]:
             if nse.get("lower"):
-                st.markdown(f"<div class='mc-green'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>🟢 LOWER CIRCUIT</div><div style='font-size:26px;font-weight:900;color:#16a34a;'>₹{nse['lower']:.2f}</div><div style='color:#64748b;font-size:10px;'>min today · {nse.get('band','')}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='mc-green'><div style='color:#6b7280;font-size:11px;font-weight:700;'>🟢 LOWER CIRCUIT</div><div style='font-size:26px;font-weight:900;color:#16a34a;'>₹{nse['lower']:.2f}</div><div style='color:#9ca3af;font-size:10px;'>min today · {nse.get('band','')}</div></div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>LOWER CIRCUIT</div><div style='font-size:18px;font-weight:800;color:#8fa3bd;'>No band</div><div style='color:#64748b;font-size:10px;'>F&amp;O stock</div></div>", unsafe_allow_html=True)
+                st.markdown("<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>LOWER CIRCUIT</div><div style='font-size:18px;font-weight:800;color:#6b7280;'>No band</div><div style='color:#9ca3af;font-size:10px;'>F&amp;O stock</div></div>", unsafe_allow_html=True)
         if nse.get("iep") and mst_s in ("pre", "closed"):
-            ic = "#16a34a" if (nse.get("iep_chg") or 0) > 0 else "#dc2626" if (nse.get("iep_chg") or 0) < 0 else "#8fa3bd"
-            st.markdown(f"<div style='background:#16233d;border:2px solid #3b82f6;border-radius:12px;padding:12px 18px;margin-top:8px;'><span style='color:#60a5fa;font-weight:800;'>🌅 Pre-open (IEP): ₹{nse['iep']:.2f}</span> <span style='color:{ic};font-weight:700;'>({nse.get('iep_chg',0):+.2f} / {nse.get('iep_pct',0):+.2f}%)</span> <span style='color:#8fa3bd;font-size:12px;'>— NSE's likely opening price, set in the 9:00–9:15 auction.</span></div>", unsafe_allow_html=True)
+            ic = "#16a34a" if (nse.get("iep_chg") or 0) > 0 else "#dc2626" if (nse.get("iep_chg") or 0) < 0 else "#6b7280"
+            st.markdown(f"<div style='background:#eff6ff;border:2px solid #3b82f6;border-radius:12px;padding:12px 18px;margin-top:8px;'><span style='color:#1d4ed8;font-weight:800;'>🌅 Pre-open (IEP): ₹{nse['iep']:.2f}</span> <span style='color:{ic};font-weight:700;'>({nse.get('iep_chg',0):+.2f} / {nse.get('iep_pct',0):+.2f}%)</span> <span style='color:#6b7280;font-size:12px;'>— NSE's likely opening price, set in the 9:00–9:15 auction.</span></div>", unsafe_allow_html=True)
     elif not sym.startswith("^"):
-        st.markdown("<div style='background:#16233d;border:1px solid #334155;border-radius:10px;padding:8px 14px;margin-top:6px;color:#64748b;font-size:12px;'>Circuit limits & pre-open unavailable (NSE not reachable right now).</div>", unsafe_allow_html=True)
+        st.markdown("<div style='background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:8px 14px;margin-top:6px;color:#9ca3af;font-size:12px;'>Circuit limits & pre-open unavailable (NSE not reachable right now).</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sh">💾 SAVE THIS ANALYSIS</div>', unsafe_allow_html=True)
     try:
@@ -4498,7 +3900,7 @@ Indicators agreeing ≠ price will move that way.</div>
                                    file_name=f"{fnbase}.docx",
                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                    **STRETCH)
-        st.markdown("<div style='color:#8fa3bd;font-size:12px;margin-top:4px;'>"
+        st.markdown("<div style='color:#6b7280;font-size:12px;margin-top:4px;'>"
                     "Saves every detail — trend, signal, circuit, levels, all pivots, Fibonacci &amp; "
                     "all indicators. <b>For a PDF:</b> open the HTML file and press <b>Ctrl+P → Save as PDF</b>."
                     + ("" if docx_bytes else " (Install <code>python-docx</code> to also get a Word file.)")
@@ -4522,7 +3924,7 @@ Indicators agreeing ≠ price will move that way.</div>
             else:
                 st.error("Couldn't write journal file.")
     with jc2:
-        st.markdown("<div style='color:#8fa3bd;font-size:12px;margin-top:6px;'>Saves today's plan to "
+        st.markdown("<div style='color:#6b7280;font-size:12px;margin-top:6px;'>Saves today's plan to "
                     "<code>trade_journal_NAME.json</code> (NAME = your memory name). Next day the <b>📓 Journal</b> tab checks whether "
                     "price hit your targets or stop — building your real accuracy record.</div>",
                     unsafe_allow_html=True)
@@ -4547,11 +3949,11 @@ Indicators agreeing ≠ price will move that way.</div>
     ep1, ep2, ep3 = st.columns(3)
     with ep1:
         el = "💰 BUY NOW AT" if plan['sit'] == 'BUY_NOW' else "⏳ BUY WHEN PRICE IS"
-        st.markdown(f"<div style='background:{'#052e16' if plan['sit']=='BUY_NOW' else '#2b1c0c'};border:2px solid {plan['ac']};border-radius:16px;padding:22px;text-align:center;'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>{el}</div><div style='font-size:40px;font-weight:900;color:{plan['ac']};margin:10px 0;'>₹{plan['buy_at']:,.2f}</div><div style='color:{plan['ac']};font-size:12px;font-weight:600;'>{plan['timing']}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:{'#f0fdf4' if plan['sit']=='BUY_NOW' else '#fff7ed'};border:2px solid {plan['ac']};border-radius:16px;padding:22px;text-align:center;'><div style='color:#6b7280;font-size:11px;font-weight:700;'>{el}</div><div style='font-size:40px;font-weight:900;color:{plan['ac']};margin:10px 0;'>₹{plan['buy_at']:,.2f}</div><div style='color:{plan['ac']};font-size:12px;font-weight:600;'>{plan['timing']}</div></div>", unsafe_allow_html=True)
     with ep2:
-        st.markdown(f"<div style='background:#2a0e0e;border:2px solid #dc2626;border-radius:16px;padding:22px;text-align:center;'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>🛑 STOP LOSS</div><div style='font-size:40px;font-weight:900;color:#dc2626;margin:10px 0;'>₹{plan['sl']:,.2f}</div><div style='color:#dc2626;font-size:13px;font-weight:700;'>{plan['sl_pct']:.1f}% below entry</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:16px;padding:22px;text-align:center;'><div style='color:#6b7280;font-size:11px;font-weight:700;'>🛑 STOP LOSS</div><div style='font-size:40px;font-weight:900;color:#dc2626;margin:10px 0;'>₹{plan['sl']:,.2f}</div><div style='color:#dc2626;font-size:13px;font-weight:700;'>{plan['sl_pct']:.1f}% below entry</div></div>", unsafe_allow_html=True)
     with ep3:
-        st.markdown(f"<div style='background:#16233d;border:2px solid #3b82f6;border-radius:16px;padding:22px;text-align:center;'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>⚖️ RISK : REWARD</div><div style='font-size:40px;font-weight:900;color:#60a5fa;margin:10px 0;'>1 : {plan['rr']}</div><div style='color:#3b82f6;font-size:13px;font-weight:700;'>at Target 2</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#eff6ff;border:2px solid #3b82f6;border-radius:16px;padding:22px;text-align:center;'><div style='color:#6b7280;font-size:11px;font-weight:700;'>⚖️ RISK : REWARD</div><div style='font-size:40px;font-weight:900;color:#1d4ed8;margin:10px 0;'>1 : {plan['rr']}</div><div style='color:#3b82f6;font-size:13px;font-weight:700;'>at Target 2</div></div>", unsafe_allow_html=True)
 
     tp1, tp2, tp3 = st.columns(3)
     for col, tprice, tpct, lbl, css, clr in [
@@ -4559,8 +3961,8 @@ Indicators agreeing ≠ price will move that way.</div>
         (tp2, plan['t2'], plan['t2p'], "🥈 TARGET 2 ⭐ main", "mc-green", "#16a34a"),
         (tp3, plan['t3'], plan['t3p'], "🥇 TARGET 3 · runner", "mc-purple", "#9333ea")]:
         with col:
-            st.markdown(f"<div class='{css}'><div style='font-size:12px;font-weight:700;color:#8fa3bd;'>{lbl}</div><div style='font-size:34px;font-weight:900;color:{clr};margin:8px 0;line-height:1;'>₹{tprice:,.2f}</div><div style='font-size:13px;color:#8fa3bd;font-weight:600;'>+{tpct:.2f}% from entry</div></div>", unsafe_allow_html=True)
-    st.markdown(f"<div style='background:#16233d;border:2px solid #3b82f6;border-radius:14px;padding:14px 20px;margin:14px 0;'><span style='color:#60a5fa;font-weight:800;font-size:14px;'>📋 Plan:</span> <span style='color:#cbd5e1;font-size:14px;'>Buy near <b>₹{plan['buy_at']:.2f}</b> · stop <b>₹{plan['sl']:.2f}</b> · book at T1 <b>₹{plan['t1']:.2f}</b>, main exit T2 <b>₹{plan['t2']:.2f}</b>. You decide the quantity based on your own money.</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='{css}'><div style='font-size:12px;font-weight:700;color:#6b7280;'>{lbl}</div><div style='font-size:34px;font-weight:900;color:{clr};margin:8px 0;line-height:1;'>₹{tprice:,.2f}</div><div style='font-size:13px;color:#6b7280;font-weight:600;'>+{tpct:.2f}% from entry</div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:#eff6ff;border:2px solid #3b82f6;border-radius:14px;padding:14px 20px;margin:14px 0;'><span style='color:#1d4ed8;font-weight:800;font-size:14px;'>📋 Plan:</span> <span style='color:#374151;font-size:14px;'>Buy near <b>₹{plan['buy_at']:.2f}</b> · stop <b>₹{plan['sl']:.2f}</b> · book at T1 <b>₹{plan['t1']:.2f}</b>, main exit T2 <b>₹{plan['t2']:.2f}</b>. You decide the quantity based on your own money.</span></div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sh">📐 SUPPORT · RESISTANCE · FIBONACCI · CAMARILLA · WOODIE</div>', unsafe_allow_html=True)
     if sr:
@@ -4568,16 +3970,16 @@ Indicators agreeing ≠ price will move that way.</div>
         with s1:
             ns = sr.get('ns')
             if ns:
-                st.markdown(f"<div style='background:#052e16;border:2px solid #16a34a;border-radius:16px;padding:18px;'><div style='color:#16a34a;font-weight:800;font-size:14px;'>🟢 NEAREST SUPPORT — BUY ZONE</div><div style='font-size:34px;font-weight:900;color:#16a34a;margin:8px 0;'>₹{ns['price']:.2f}</div><div style='color:#cbd5e1;font-size:12px;'>{abs(ns['dist']):.1f}% below · SL ₹{round(ns['price']*0.993,2):.2f}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#f0fdf4;border:2px solid #16a34a;border-radius:16px;padding:18px;'><div style='color:#16a34a;font-weight:800;font-size:14px;'>🟢 NEAREST SUPPORT — BUY ZONE</div><div style='font-size:34px;font-weight:900;color:#16a34a;margin:8px 0;'>₹{ns['price']:.2f}</div><div style='color:#374151;font-size:12px;'>{abs(ns['dist']):.1f}% below · SL ₹{round(ns['price']*0.993,2):.2f}</div></div>", unsafe_allow_html=True)
         with s2:
             nr = sr.get('nr')
             if nr:
-                st.markdown(f"<div style='background:#2a0e0e;border:2px solid #dc2626;border-radius:16px;padding:18px;'><div style='color:#dc2626;font-weight:800;font-size:14px;'>🔴 NEAREST RESISTANCE — BOOK PROFIT</div><div style='font-size:34px;font-weight:900;color:#dc2626;margin:8px 0;'>₹{nr['price']:.2f}</div><div style='color:#cbd5e1;font-size:12px;'>{abs(nr['dist']):.1f}% above · book profit here</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:16px;padding:18px;'><div style='color:#dc2626;font-weight:800;font-size:14px;'>🔴 NEAREST RESISTANCE — BOOK PROFIT</div><div style='font-size:34px;font-weight:900;color:#dc2626;margin:8px 0;'>₹{nr['price']:.2f}</div><div style='color:#374151;font-size:12px;'>{abs(nr['dist']):.1f}% above · book profit here</div></div>", unsafe_allow_html=True)
 
         tab_std, tab_fib, tab_cam, tab_wood = st.tabs(
             ["📐 Standard Pivots", "🌀 Fibonacci", "🎯 Camarilla", "🔷 Woodie"])
         with tab_std:
-            st.markdown("<div style='background:#16233d;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#60a5fa;'>📐 Full level ladder</b> — pivots + swings + 52-week + circuits, typed by position vs current price (a broken support becomes resistance).</div>", unsafe_allow_html=True)
+            st.markdown("<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#1d4ed8;'>📐 Full level ladder</b> — pivots + swings + 52-week + circuits, typed by position vs current price (a broken support becomes resistance).</div>", unsafe_allow_html=True)
             for lvl in sr['levels']:
                 lp = lvl['price']; dist = lvl['dist']; tp = lvl['type']
                 is_cur = abs(dist) < 0.5
@@ -4585,23 +3987,23 @@ Indicators agreeing ≠ price will move that way.</div>
                 elif tp == 'R': css, lbl, clr, dt = "lv-r", f"🔴 {lvl['name']} — RESISTANCE", "#ef4444", f"+{abs(dist):.1f}%"
                 elif tp == 'P': css, lbl, clr, dt = "lv-p", f"🟡 {lvl['name']} — PIVOT", "#f59e0b", f"{abs(dist):.1f}%"
                 else: css, lbl, clr, dt = "lv-s", f"🟢 {lvl['name']} — SUPPORT", "#22c55e", f"{abs(dist):.1f}%"
-                st.markdown(f"<div class='{css}'><div style='display:flex;justify-content:space-between;align-items:center;'><div><span style='color:{clr};font-weight:700;font-size:13px;'>{lbl}</span><span style='color:#64748b;font-size:11px;margin-left:8px;'>{dt}</span></div><div style='font-size:20px;font-weight:900;color:#e2e8f0;'>₹{lp:,.2f}</div></div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='{css}'><div style='display:flex;justify-content:space-between;align-items:center;'><div><span style='color:{clr};font-weight:700;font-size:13px;'>{lbl}</span><span style='color:#9ca3af;font-size:11px;margin-left:8px;'>{dt}</span></div><div style='font-size:20px;font-weight:900;color:#1a1f36;'>₹{lp:,.2f}</div></div></div>", unsafe_allow_html=True)
         with tab_fib:
-            st.markdown(f"<div style='background:#1e1b3a;border:1px solid #d8b4fe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#7e22ce;'>🌀 Fibonacci Retracement</b> — 20-day swing (High ₹{sr['sw20_hi']:.2f} → Low ₹{sr['sw20_lo']:.2f})</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background:#faf5ff;border:1px solid #d8b4fe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#7e22ce;'>🌀 Fibonacci Retracement</b> — 20-day swing (High ₹{sr['sw20_hi']:.2f} → Low ₹{sr['sw20_lo']:.2f})</div>", unsafe_allow_html=True)
             for ln, lp in sr['fib_levels'].items():
                 dist = round((lp - price) / price * 100, 2) if price > 0 else 0
                 is_cur = abs(dist) < 0.5; is_key = ln in ['38.2%', '50%', '61.8%']
                 css = "lv-cur" if is_cur else "lv-fib"; clr = "#3b82f6" if is_cur else "#a855f7"
-                st.markdown(f"<div class='{css}'><div style='display:flex;justify-content:space-between;align-items:center;'><div><span style='color:{clr};font-weight:{'800' if is_key else '700'};font-size:13px;'>🌀 Fib {ln}{' ⭐ KEY' if is_key else ''}</span><span style='color:#64748b;font-size:11px;margin-left:8px;'>{'← HERE' if is_cur else f'{dist:+.1f}%'}</span></div><div style='font-size:20px;font-weight:900;color:#e2e8f0;'>₹{lp:,.2f}</div></div></div>", unsafe_allow_html=True)
-            st.markdown("<div style='background:#16233d;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin:12px 0 8px;'><b style='color:#60a5fa;'>📈 Fibonacci Extensions</b> — profit targets</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='{css}'><div style='display:flex;justify-content:space-between;align-items:center;'><div><span style='color:{clr};font-weight:{'800' if is_key else '700'};font-size:13px;'>🌀 Fib {ln}{' ⭐ KEY' if is_key else ''}</span><span style='color:#9ca3af;font-size:11px;margin-left:8px;'>{'← HERE' if is_cur else f'{dist:+.1f}%'}</span></div><div style='font-size:20px;font-weight:900;color:#1a1f36;'>₹{lp:,.2f}</div></div></div>", unsafe_allow_html=True)
+            st.markdown("<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin:12px 0 8px;'><b style='color:#1d4ed8;'>📈 Fibonacci Extensions</b> — profit targets</div>", unsafe_allow_html=True)
             for en, ep_ in sr['fib_ext'].items():
                 dist = round((ep_ - price) / price * 100, 2) if price > 0 else 0
-                st.markdown(f"<div class='lv-r'><div style='display:flex;justify-content:space-between;align-items:center;'><span style='color:#2563eb;font-weight:700;'>📈 Extension {en}</span><div><span style='font-size:18px;font-weight:900;color:#e2e8f0;'>₹{ep_:,.2f}</span><span style='color:#8fa3bd;font-size:12px;margin-left:8px;'>{dist:+.1f}%</span></div></div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='lv-r'><div style='display:flex;justify-content:space-between;align-items:center;'><span style='color:#2563eb;font-weight:700;'>📈 Extension {en}</span><div><span style='font-size:18px;font-weight:900;color:#1a1f36;'>₹{ep_:,.2f}</span><span style='color:#6b7280;font-size:12px;margin-left:8px;'>{dist:+.1f}%</span></div></div></div>", unsafe_allow_html=True)
         with tab_cam:
-            st.markdown("<div style='background:#16233d;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#60a5fa;'>🎯 Camarilla Pivots</b> — tight intraday levels. R3/S3 are strong reversal zones; a close beyond R4/S4 signals a breakout.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#1d4ed8;'>🎯 Camarilla Pivots</b> — tight intraday levels. R3/S3 are strong reversal zones; a close beyond R4/S4 signals a breakout.</div>", unsafe_allow_html=True)
             st.markdown(pivot_table_html(sr['pivots']['Camarilla'], price), unsafe_allow_html=True)
         with tab_wood:
-            st.markdown("<div style='background:#3a2a06;border:1px solid #fde68a;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#fbbf24;'>🔷 Woodie Pivots</b> — weights yesterday's close more heavily, so it reacts faster to momentum than Standard pivots.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 16px;margin-bottom:12px;'><b style='color:#b45309;'>🔷 Woodie Pivots</b> — weights yesterday's close more heavily, so it reacts faster to momentum than Standard pivots.</div>", unsafe_allow_html=True)
             st.markdown(pivot_table_html(sr['pivots']['Woodie'], price), unsafe_allow_html=True)
 
     # ── ADVANCED ANALYTICS ──
@@ -4611,9 +4013,9 @@ Indicators agreeing ≠ price will move that way.</div>
     st.markdown('<div class="sh">📊 MARKET REGIME</div>', unsafe_allow_html=True)
     rg1, rg2 = st.columns(2)
     with rg1:
-        st.markdown(f"<div style='background:{reg['rc']}12;border:2px solid {reg['rc']};border-radius:14px;padding:18px;text-align:center;'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>CURRENT REGIME</div><div style='font-size:24px;font-weight:900;color:{reg['rc']};margin:6px 0;'>{reg['regime']}</div><div style='color:#8fa3bd;font-size:12px;'>ADX {reg['adx']:.0f}</div></div>" if not np.isnan(reg['adx']) else f"<div style='background:{reg['rc']}12;border:2px solid {reg['rc']};border-radius:14px;padding:18px;text-align:center;'><div style='font-size:24px;font-weight:900;color:{reg['rc']};'>{reg['regime']}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:{reg['rc']}12;border:2px solid {reg['rc']};border-radius:14px;padding:18px;text-align:center;'><div style='color:#6b7280;font-size:11px;font-weight:700;'>CURRENT REGIME</div><div style='font-size:24px;font-weight:900;color:{reg['rc']};margin:6px 0;'>{reg['regime']}</div><div style='color:#6b7280;font-size:12px;'>ADX {reg['adx']:.0f}</div></div>" if not np.isnan(reg['adx']) else f"<div style='background:{reg['rc']}12;border:2px solid {reg['rc']};border-radius:14px;padding:18px;text-align:center;'><div style='font-size:24px;font-weight:900;color:{reg['rc']};'>{reg['regime']}</div></div>", unsafe_allow_html=True)
     with rg2:
-        st.markdown(f"<div style='background:{reg['vc']}12;border:2px solid {reg['vc']};border-radius:14px;padding:18px;text-align:center;'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>VOLATILITY</div><div style='font-size:24px;font-weight:900;color:{reg['vc']};margin:6px 0;'>{reg['vol']}</div><div style='color:#8fa3bd;font-size:12px;'>strategy: {'trend-follow' if 'STRONG' in reg['regime'] else 'range/mean-revert' if 'RANG' in reg['regime'] else 'wait'}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:{reg['vc']}12;border:2px solid {reg['vc']};border-radius:14px;padding:18px;text-align:center;'><div style='color:#6b7280;font-size:11px;font-weight:700;'>VOLATILITY</div><div style='font-size:24px;font-weight:900;color:{reg['vc']};margin:6px 0;'>{reg['vol']}</div><div style='color:#6b7280;font-size:12px;'>strategy: {'trend-follow' if 'STRONG' in reg['regime'] else 'range/mean-revert' if 'RANG' in reg['regime'] else 'wait'}</div></div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sh">🤖 MACHINE LEARNING FORECAST</div>', unsafe_allow_html=True)
     with st.spinner("Training ML models (RF · GB · Linear)…"):
@@ -4623,13 +4025,13 @@ Indicators agreeing ≠ price will move that way.</div>
     elif not ml:
         st.caption("Not enough daily history for ML on this stock.")
     else:
-        st.markdown("<div style='background:#3a2a06;border:1px solid #fde68a;border-radius:10px;padding:10px 16px;margin-bottom:10px;color:#fbbf24;font-size:12px;'>⚠️ ML forecasts are statistical estimates from past patterns — markets are not truly predictable. Use the <b>backtested accuracy %</b> as a reality check: near 50% means little better than a coin flip. Never trade on this alone.</div>", unsafe_allow_html=True)
+        st.markdown("<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 16px;margin-bottom:10px;color:#92400e;font-size:12px;'>⚠️ ML forecasts are statistical estimates from past patterns — markets are not truly predictable. Use the <b>backtested accuracy %</b> as a reality check: near 50% means little better than a coin flip. Never trade on this alone.</div>", unsafe_allow_html=True)
         mlc = st.columns(len(ml))
         for col, (h, v) in zip(mlc, sorted(ml.items())):
             dclr = "#16a34a" if v['dir'] == "UP" else "#dc2626"
-            acc = v['acc']; aclr = "#16a34a" if acc >= 55 else "#fbbf24" if acc >= 50 else "#dc2626"
+            acc = v['acc']; aclr = "#16a34a" if acc >= 55 else "#b45309" if acc >= 50 else "#dc2626"
             with col:
-                st.markdown(f"<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>{h}-DAY</div><div style='font-size:22px;font-weight:900;color:{dclr};margin:4px 0;'>₹{v['price']:.2f}</div><div style='color:{dclr};font-size:12px;font-weight:700;'>{v['ret']:+.2f}% {v['dir']}</div><div style='color:#64748b;font-size:10px;margin-top:4px;'>95% CI ₹{v['lo']:.0f}–{v['hi']:.0f}</div><div style='background:{aclr}18;color:{aclr};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:6px;display:inline-block;'>{acc:.0f}% accuracy</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>{h}-DAY</div><div style='font-size:22px;font-weight:900;color:{dclr};margin:4px 0;'>₹{v['price']:.2f}</div><div style='color:{dclr};font-size:12px;font-weight:700;'>{v['ret']:+.2f}% {v['dir']}</div><div style='color:#9ca3af;font-size:10px;margin-top:4px;'>95% CI ₹{v['lo']:.0f}–{v['hi']:.0f}</div><div style='background:{aclr}18;color:{aclr};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:6px;display:inline-block;'>{acc:.0f}% accuracy</div></div>", unsafe_allow_html=True)
 
     prob = target_probability(price, plan, sym)
     if prob:
@@ -4638,25 +4040,25 @@ Indicators agreeing ≠ price will move that way.</div>
         for col, key in zip(pcols[:3], ["T1", "T2", "T3"]):
             pv = prob[key]
             with col:
-                st.markdown(f"<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>{key} · ₹{pv['price']:.2f}</div><div style='font-size:28px;font-weight:900;color:{pv['color']};margin:4px 0;'>{pv['p']:.0f}%</div><div style='color:{pv['color']};font-size:12px;font-weight:700;'>{pv['rating']} chance</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>{key} · ₹{pv['price']:.2f}</div><div style='font-size:28px;font-weight:900;color:{pv['color']};margin:4px 0;'>{pv['p']:.0f}%</div><div style='color:{pv['color']};font-size:12px;font-weight:700;'>{pv['rating']} chance</div></div>", unsafe_allow_html=True)
         with pcols[3]:
-            st.markdown(f"<div class='mc-red'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>STOP HIT</div><div style='font-size:28px;font-weight:900;color:#dc2626;margin:4px 0;'>{prob['SL']['p']:.0f}%</div><div style='color:#dc2626;font-size:12px;font-weight:700;'>risk of SL</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='mc-red'><div style='color:#6b7280;font-size:11px;font-weight:700;'>STOP HIT</div><div style='font-size:28px;font-weight:900;color:#dc2626;margin:4px 0;'>{prob['SL']['p']:.0f}%</div><div style='color:#dc2626;font-size:12px;font-weight:700;'>risk of SL</div></div>", unsafe_allow_html=True)
         st.caption("Rough estimate from ~3-day return volatility (normal model). Real markets have fat tails — treat as a guide, not a promise.")
 
     vp = volume_profile(daily_df)
     if vp:
         st.markdown('<div class="sh">📊 VOLUME PROFILE</div>', unsafe_allow_html=True)
         v1, v2, v3 = st.columns(3)
-        with v1: st.markdown(f"<div class='mc-purple'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>POINT OF CONTROL</div><div style='font-size:24px;font-weight:900;color:#9333ea;'>₹{vp['poc']:.2f}</div><div style='color:#8fa3bd;font-size:11px;'>highest-volume price</div></div>", unsafe_allow_html=True)
-        with v2: st.markdown(f"<div class='mc-blue'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>VALUE AREA (70%)</div><div style='font-size:20px;font-weight:900;color:#60a5fa;'>₹{vp['va_lo']:.0f}–₹{vp['va_hi']:.0f}</div><div style='color:#8fa3bd;font-size:11px;'>fair-value zone</div></div>", unsafe_allow_html=True)
-        with v3: st.markdown(f"<div class='mc-white'><div style='color:#8fa3bd;font-size:11px;font-weight:700;'>POSITION</div><div style='font-size:13px;font-weight:700;color:#e2e8f0;margin-top:8px;'>{vp['pos']}</div></div>", unsafe_allow_html=True)
+        with v1: st.markdown(f"<div class='mc-purple'><div style='color:#6b7280;font-size:11px;font-weight:700;'>POINT OF CONTROL</div><div style='font-size:24px;font-weight:900;color:#9333ea;'>₹{vp['poc']:.2f}</div><div style='color:#6b7280;font-size:11px;'>highest-volume price</div></div>", unsafe_allow_html=True)
+        with v2: st.markdown(f"<div class='mc-blue'><div style='color:#6b7280;font-size:11px;font-weight:700;'>VALUE AREA (70%)</div><div style='font-size:20px;font-weight:900;color:#1d4ed8;'>₹{vp['va_lo']:.0f}–₹{vp['va_hi']:.0f}</div><div style='color:#6b7280;font-size:11px;'>fair-value zone</div></div>", unsafe_allow_html=True)
+        with v3: st.markdown(f"<div class='mc-white'><div style='color:#6b7280;font-size:11px;font-weight:700;'>POSITION</div><div style='font-size:13px;font-weight:700;color:#1a1f36;margin-top:8px;'>{vp['pos']}</div></div>", unsafe_allow_html=True)
 
     pats = detect_patterns(daily_df)
     if pats:
         st.markdown('<div class="sh">🔍 CHART PATTERNS</div>', unsafe_allow_html=True)
         for nm, action, rel in pats:
-            rc = {"High": "#16a34a", "Medium": "#fbbf24", "Low": "#8fa3bd"}[rel]
-            st.markdown(f"<div style='background:#0f1a2e;border:1px solid #1e293b;border-left:5px solid {rc};border-radius:0 12px 12px 0;padding:12px 18px;margin:5px 0;'><b style='color:#e2e8f0;'>{nm}</b> <span style='background:{rc}18;color:{rc};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:8px;'>{rel} reliability</span><div style='color:#8fa3bd;font-size:12px;margin-top:3px;'>{action}</div></div>", unsafe_allow_html=True)
+            rc = {"High": "#16a34a", "Medium": "#b45309", "Low": "#6b7280"}[rel]
+            st.markdown(f"<div style='background:white;border:1px solid #e0e7ff;border-left:5px solid {rc};border-radius:0 12px 12px 0;padding:12px 18px;margin:5px 0;'><b style='color:#1a1f36;'>{nm}</b> <span style='background:{rc}18;color:{rc};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:8px;'>{rel} reliability</span><div style='color:#6b7280;font-size:12px;margin-top:3px;'>{action}</div></div>", unsafe_allow_html=True)
         st.caption("Pattern detection is heuristic — confirm visually on the chart before acting.")
 
     rm = risk_metrics(sym)
@@ -4676,7 +4078,7 @@ Indicators agreeing ≠ price will move that way.</div>
             dm = demark_pivot(float(dd['High'].iloc[-1]), float(dd['Low'].iloc[-1]),
                               float(dd['Close'].iloc[-1]), float(dd['Open'].iloc[-1]))
             if dm:
-                st.markdown(f"<div style='background:#1e1b3a;border:1px solid #d8b4fe;border-radius:10px;padding:10px 16px;margin-top:8px;'><b style='color:#7e22ce;'>🎯 DeMark Pivots:</b> <span style='color:#cbd5e1;'>PP ₹{dm['PP']:.2f} · R1 ₹{dm['R1']:.2f} · S1 ₹{dm['S1']:.2f}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#faf5ff;border:1px solid #d8b4fe;border-radius:10px;padding:10px 16px;margin-top:8px;'><b style='color:#7e22ce;'>🎯 DeMark Pivots:</b> <span style='color:#374151;'>PP ₹{dm['PP']:.2f} · R1 ₹{dm['R1']:.2f} · S1 ₹{dm['S1']:.2f}</span></div>", unsafe_allow_html=True)
         except Exception:
             pass
 
@@ -4696,11 +4098,11 @@ Indicators agreeing ≠ price will move that way.</div>
         for col, s in zip(cols, cat_sigs):
             css = "ind-buy" if s['b'] else "ind-sell"; icon = "🟢" if s['b'] else "🔴"
             with col:
-                st.markdown(f"<div class='{css}'><span style='color:{'#16a34a' if s['b'] else '#dc2626'};font-weight:700;'>{icon} {s['n']}</span> <code style='background:{'#0b3a1f' if s['b'] else '#fee2e2'};color:{'#166534' if s['b'] else '#991b1b'};font-size:11px;padding:2px 8px;border-radius:4px;'>{s['v']}</code><div style='color:#94a3b8;font-size:11px;margin-top:4px;'>{s['t']}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='{css}'><span style='color:{'#16a34a' if s['b'] else '#dc2626'};font-weight:700;'>{icon} {s['n']}</span> <code style='background:{'#dcfce7' if s['b'] else '#fee2e2'};color:{'#166534' if s['b'] else '#991b1b'};font-size:11px;padding:2px 8px;border-radius:4px;'>{s['v']}</code><div style='color:#4b5563;font-size:11px;margin-top:4px;'>{s['t']}</div></div>", unsafe_allow_html=True)
 
     with st.expander("📊 Raw OHLCV Data (Last 50 candles)"):
         st.dataframe(res['df'].tail(50), **STRETCH)
-    st.markdown("<div style='text-align:center;color:#64748b;font-size:10px;padding:14px;border-top:1px solid #1e293b;margin-top:20px;'>⚠️ EDUCATIONAL PURPOSE ONLY · NOT FINANCIAL ADVICE · ALWAYS USE STOP LOSS · TRADE AT YOUR OWN RISK</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center;color:#9ca3af;font-size:10px;padding:14px;border-top:1px solid #e0e7ff;margin-top:20px;'>⚠️ EDUCATIONAL PURPOSE ONLY · NOT FINANCIAL ADVICE · ALWAYS USE STOP LOSS · TRADE AT YOUR OWN RISK</div>", unsafe_allow_html=True)
 
 
 # ============================================================
@@ -4837,7 +4239,7 @@ def build_watchlist(src_key, n, custom_txt=""):
     return out, nm
 
 
-_FEED = {"req": 0, "got": 0, "ts": 0.0, "fb": 0.0, "yahoo_ok": 0.0}   # 🩺 feed health + fallback state
+_FEED = {"req": 0, "got": 0, "ts": 0.0}   # 🩺 data-feed health (requested vs received)
 
 
 @st.cache_data(ttl=90, max_entries=120, show_spinner=False)
@@ -4858,11 +4260,11 @@ def fetch_chunk(syms, iv, per):
             data = yf.download(list(syms), period=per, interval=iv, group_by='ticker',
                                threads=False, progress=False, auto_adjust=True)
     except Exception:
-        data = None               # 📡 flow on — the UNINTERRUPTED hook below may rescue
+        return {}
     out = {}
     try:
         if data is None or data.empty:
-            data = None          # 📡 flow on — the UNINTERRUPTED hook below may rescue
+            return {}
         single = not isinstance(data.columns, pd.MultiIndex)   # flat cols only (1-symbol yf
         #  downloads can ALSO be MultiIndex — data[s] handles both, so never assume flat)
         for s in syms:
@@ -4883,27 +4285,6 @@ def fetch_chunk(syms, iv, per):
         pass
     try:
         _FEED["got"] += len(out); _FEED["ts"] = time.time()
-    except Exception:
-        pass
-    # ── 📡 UNINTERRUPTED — Yahoo blocked/thin? → Upstox live fallback ──
-    try:
-        _miss = [s for s in syms if s not in out]
-        _fb = {}
-        if _miss and up_token_valid():
-            if iv == "1d":
-                _fb = up_daily_candles(_miss) or {}          # 📡 6-month daily history (cached/day)
-            else:
-                _fb = up_intraday_candles(_miss) or {}       # 📡 real candles from market open
-                if not _fb:
-                    _fb = up_fallback_candles(_miss) or {}   # 📡 tick-stitch backup
-            if not _fb:
-                _FEED["fb_fail"] = time.time()               # 🩺 honest diagnostic signal
-            if _fb:
-                out.update(_fb)
-                _FEED["fb"] = time.time()
-        if len(out) - len(_fb) >= max(2, int(len(syms) * 0.8)):
-            up_cache_save({s: d for s, d in out.items() if s not in _fb})   # yf-sourced only
-            _FEED["yahoo_ok"] = time.time()
     except Exception:
         pass
     return {s: up_patch_df(s, d) for s, d in out.items()}   # 📡 splice live LTP
@@ -5011,7 +4392,7 @@ def _sweep(syms, iv, per, with_daily=True, progress=False, label=""):
     """Batched download of a symbol list (chunks of 50)."""
     got, got_d = {}, {}
     CH = 50
-    prog = (st.progress(0.0) if progress and not _CB_BG.get("busy") else None)
+    prog = st.progress(0.0) if progress else None
     for i in range(0, len(syms), CH):
         chunk = tuple(syms[i:i + CH])
         got.update(fetch_chunk(chunk, iv, per))
@@ -5147,7 +4528,7 @@ def spark_fig(r):
     fig.update_layout(height=230, margin=dict(l=8, r=8, t=6, b=6), showlegend=False,
                       paper_bgcolor="white", plot_bgcolor="white",
                       xaxis=dict(showticklabels=False, showgrid=False),
-                      yaxis=dict(showticklabels=True, showgrid=True, gridcolor="#1e293b", tickfont=dict(size=9)))
+                      yaxis=dict(showticklabels=True, showgrid=True, gridcolor="#e0e7ff", tickfont=dict(size=9)))
     return fig
 
 
@@ -5360,11 +4741,7 @@ def live_movers_tab(ss, mst_s):
     names = ss.get("mv_names") or {}
     _sec = int(ss.get("mv_int", "2 min").split()[0]) * 60
     due = mst_s == "open" and time.time() - ss.get("mv_last", 0) > (_sec - 10)
-    if due and not _pilot_ok("mv", ss):
-        due = False
-        _mv_view_sync(ss)                 # 🤖 autopilot drives — live view only
     if rescan or due or not ss.get("mv"):
-        _pilot_beat("mv", ss)
         with st.spinner("⚡ Scanning the board live (5-minute candles)…"):
             got, _ = _sweep(watch, "5m", "2d", with_daily=False, progress=True)
         movers = compute_movers(got)
@@ -5435,10 +4812,8 @@ def live_movers_tab(ss, mst_s):
         _hr, _hg = int(_mvh.get("req") or 0), int(_mvh.get("got") or 0)
         _pct = int(_hg * 100 / _hr) if _hr else 0
         if _hr:
-            _fsx = (f" · 📡 LIVE FALLBACK on Upstox since {feed_status()[1]} IST"
-                    if feed_status()[0] == "fallback" else "")
             st.caption(f"🩺 SCAN DIAGNOSIS · data feed {_hg}/{_hr} stocks ({_pct}%) · "
-                       f"last scan {_mvh.get('ts', '—')}{_fsx}")
+                       f"last scan {_mvh.get('ts', '—')}")
         if mst_s == "open" and _hr and _hg == 0:
             st.markdown("<div style='background:#2a0e0e;border:1px solid #ef4444;border-radius:12px;padding:14px 18px;"
                         "color:#fecaca;font-size:13px;line-height:1.8;'>❌ <b>DATA FEED FAILED — downloaded 0 of "
@@ -5544,139 +4919,15 @@ def live_movers_tab(ss, mst_s):
 #   (⚡ climb score) AND the calculation agrees (uptrend / BUY /
 #   above 200EMA / confidence). Both green = highest-probability.
 # ============================================================
-# 🌋 VOLCANO — the sleeper-eruption detector (the 'Tata Chemicals
-#   pattern'): a tight box of tiny candles → ONE big candle + volume
-#   burst. Piggybacks the combo scan's candles — ZERO extra Yahoo calls.
-# ============================================================
-def sleeper_detect(df, mode="live"):
-    """🌋 VOLCANO detector — the 'Tata Chemicals pattern': a stock drifting in a
-    tight box of tiny candles suddenly prints ONE BIG candle.
-      mode='live' → check the last 2 candles vs the 10 before → dict | None
-      mode='day'  → every eruption in today's session (+ aftermath) → list
-    A candle is an ERUPTION when: 10 quiet candles before it (avg body ≤0.30%,
-    box ≤1.8% wide) → then one candle ≥ max(0.75%, 3× quiet) that CLOSES
-    outside the box. BOOM = green breakout · TRAP = red breakdown.
-    LOADING = still inside a tight box but volume building (pre-eruption)."""
-    def _one(d, e, hold_now):
-        if e < 10:
-            return None
-        q = d.iloc[e-10:e]                                  # the silence box
-        qo, qc = q["Open"].astype(float), q["Close"].astype(float)
-        if (qo <= 0).any():
-            return None
-        bodies = (qc - qo).abs() / qo * 100
-        qavg = float(bodies.mean())
-        box_hi, box_lo = float(q["High"].max()), float(q["Low"].min())
-        if box_hi <= 0:
-            return None
-        tight = (box_hi - box_lo) / box_hi * 100
-        if qavg > 0.30 or tight > 1.8:                      # not silent enough
-            return None
-        eo, ec = float(d["Open"].iloc[e]), float(d["Close"].iloc[e])
-        eh, el = float(d["High"].iloc[e]), float(d["Low"].iloc[e])
-        if eo <= 0:
-            return None
-        body = (ec - eo) / eo * 100
-        thr = max(0.75, 3 * max(qavg, 0.12))
-        if hold_now and not (float(d["Close"].iloc[-1]) > box_hi if body > 0
-                             else float(d["Close"].iloc[-1]) < box_lo):
-            return None                                      # live: must still hold
-        vol_mult = None
-        try:
-            qv = float(d["Volume"].astype(float).iloc[e-10:e].mean())
-            if qv > 0:
-                vol_mult = round(float(d["Volume"].iloc[e]) / qv, 1)
-        except Exception:
-            pass
-        ev = "BOOM" if (body >= thr and ec > box_hi) else ("TRAP" if (body <= -thr and ec < box_lo) else None)
-        if not ev:
-            return None
-        risk = eh - box_lo
-        return {"state": ev, "ts": d.index[e].strftime("%H:%M"),
-                "body": round(body, 2), "quiet_avg": round(qavg, 2),
-                "box_hi": round(box_hi, 2), "box_lo": round(box_lo, 2),
-                "tight": round(tight, 2), "vol_mult": vol_mult,
-                "buy": round(eh, 2), "sl": round(box_lo, 2),
-                "t1": round(eh + 1.5 * risk, 2) if risk > 0 else None,
-                "fading": bool(eh - el > 0 and (eh - max(eo, ec)) / (eh - el) >= 0.45),
-                "strong": bool(body >= 1.5 or (vol_mult or 99) >= 5),
-                "age": len(d) - 1 - e}
-
-    def _after(d, e, box_hi):
-        """What happened AFTER the eruption — did it run or fade? (day review)"""
-        try:
-            nxt = d.iloc[e+1:e+7]
-            if not len(nxt):
-                return None, None
-            ran = round((float(nxt["High"].max()) / float(d["Close"].iloc[e]) - 1) * 100, 1) + 0.0
-            faded = len(nxt) >= 2 and float(nxt["Close"].iloc[1]) < float(d["Close"].iloc[e])
-            return ran, bool(faded)
-        except Exception:
-            return None, None
-
-    try:
-        if df is None or len(df) < 14:
-            return None if mode == "live" else []
-        d = df[df.index.date == df.index[-1].date()]         # today's candles only
-        if len(d) < 14:
-            return None if mode == "live" else []
-        if mode == "day":
-            out, last_min = [], -99
-            for e in range(10, len(d)):
-                r = _one(d, e, hold_now=False)
-                if not r:
-                    continue
-                m = d.index[e].hour * 60 + d.index[e].minute
-                if m - last_min < 15:                        # same burst — keep first
-                    continue
-                last_min = m
-                r["ran"], r["faded_after"] = _after(d, e, r["box_hi"])
-                out.append(r)
-            return out
-        for e in (len(d) - 1, len(d) - 2):                   # live: last 2 candles
-            r = _one(d, e, hold_now=True)
-            if r:
-                return r
-        q = d.iloc[-11:-1]                                   # still quiet → magma check
-        qo, qc = q["Open"].astype(float), q["Close"].astype(float)
-        if (qo <= 0).any():
-            return None
-        qavg = float(((qc - qo).abs() / qo * 100).mean())
-        box_hi, box_lo = float(q["High"].max()), float(q["Low"].min())
-        lc = float(d["Close"].iloc[-1])
-        if qavg <= 0.22 and box_hi > box_lo and lc >= box_lo + 0.6 * (box_hi - box_lo):
-            try:
-                v = d["Volume"].astype(float)
-                early, rec = float(v.iloc[-14:-4].mean()), float(v.iloc[-4:].mean())
-                if early > 0 and rec / early >= 2.0:
-                    return {"state": "LOADING", "vol_build": round(rec / early, 1),
-                            "box_hi": round(box_hi, 2), "box_lo": round(box_lo, 2),
-                            "tight": round((box_hi - box_lo) / box_hi * 100, 2)}
-            except Exception:
-                pass
-        return None
-    except Exception:
-        return None if mode == "live" else []
-
-
-# ============================================================
-# 🎯 COMBO — the accuracy booster: LIVE climb ∩ CALCULATION.
-#   A stock qualifies only if REAL money is moving it up now
-#   (⚡ climb score) AND the calculation agrees (uptrend / BUY /
-#   above 200EMA / confidence). Both green = highest-probability.
-# ============================================================
 def combo_scan(watch, names):
     """One sweep → both engines: live movers + dashboard calculation."""
     got, gotd = _sweep(watch, "5m", "2d", with_daily=True, progress=True)
     movers = {m["sym"]: m for m in compute_movers(got)}
     rows = {}
-    volcs = {}
     for sym in watch:
         intra = got.get(sym)
         if intra is None:
             continue
-        volcs[sym] = (sleeper_detect(intra, "live"),    # 🌋 erupting now?
-                      sleeper_detect(intra, "day"))      # 📜 today's eruptions
         try:
             r = dash_row(names.get(sym, sym.replace(".NS", "")), sym, intra, gotd.get(sym))
         except Exception:
@@ -5688,7 +4939,6 @@ def combo_scan(watch, names):
         mv = movers.get(sym)
         if not mv:
             continue
-        volc, volc_day = volcs.get(sym, (None, []))   # 🌋 THIS stock's volcano state
         sup = res = sup_dist = res_dist = None
         try:
             d = gotd.get(sym)
@@ -5726,41 +4976,9 @@ def combo_scan(watch, names):
                     "buy_at": r.get("buy_at"), "sl": r.get("sl"), "t1": r.get("t1"), "t2": r.get("t2"),
                     "support": sup, "resistance": res, "sup_dist": sup_dist, "res_dist": res_dist,
                     "from_support": sup_dist is not None and sup_dist <= 1.5,
-                    "at_resistance": res_dist is not None and res_dist <= 1.0,
-                    "volc": volc, "volc_day": volc_day})
+                    "at_resistance": res_dist is not None and res_dist <= 1.0})
     order = {"🎯 PERFECT": 0, "✅ MATCH": 1, "⚠️ LIVE ONLY": 2, "🧮 CALC ONLY": 3, "—": 4}
     out.sort(key=lambda x: (order.get(x["verdict"], 9), -x["combo"]))
-    # 🌋 WIDE VOLCANO — the eruption radar watches the WHOLE board, not just the
-    # ₹100–₹600 trading band (17 Sep study: 8 of 10 eruptions were above ₹600 —
-    # Tata Chemicals ₹736, TCS ₹2,190). Out-of-band stocks get volcano-only rows:
-    # they appear in the 🌋 section + CSV, NEVER in the picks board or Telegram.
-    try:
-        _seen = {o["sym"] for o in out}
-        for sym in watch:
-            if sym in _seen:
-                continue
-            v, vd = volcs.get(sym, (None, []))
-            if not v and not vd:
-                continue
-            intra = got.get(sym)
-            if intra is None or not len(intra):
-                continue
-            try:
-                _last = float(intra["Close"].iloc[-1])
-            except Exception:
-                continue
-            if _last < MIN_PRICE:            # skip penny noise below ₹100
-                continue
-            out.append({"name": names.get(sym, sym.replace(".NS", "")), "sym": sym,
-                        "price": round(_last, 2), "chg_day": day_chg_from_intraday(intra),
-                        "climb": 0, "green": 0, "slope1h": 0.0, "vr": 1.0, "steady": False,
-                        "sig": "—", "dtr": "—", "conf": 0, "above200": False, "score": None,
-                        "combo": 0, "verdict": "🌋 VOLCANO", "buy_at": None, "sl": None,
-                        "t1": None, "t2": None, "support": None, "resistance": None,
-                        "sup_dist": None, "res_dist": None, "from_support": False,
-                        "at_resistance": False, "volc": v, "volc_day": vd, "volc_only": True})
-    except Exception:
-        pass
     return out
 
 
@@ -6095,11 +5313,7 @@ def bounce_tab(ss, mst_s):
     names = ss.get("bc_names") or {}
     _sec = int(ss.get("bc_int", "3 min").split()[0]) * 60
     due = mst_s == "open" and time.time() - ss.get("bc_last", 0) > (_sec - 10)
-    if due and not _pilot_ok("bc", ss):
-        due = False
-        _bc_view_sync(ss)                 # 🤖 autopilot drives — live view only
     if rescan_bc or due or not ss.get("bc"):
-        _pilot_beat("bc", ss)
         with st.spinner("🚀 Scanning for support bounces (live candles + support levels)…"):
             got, gotd = _sweep(watch, "5m", "2d", with_daily=True, progress=True)
             bounces = compute_bounces(got, gotd)
@@ -6204,162 +5418,14 @@ def bounce_tab(ss, mst_s):
             pass
 
 
-@st.cache_resource
-def _cb_bg_store():
-    """🧵 ONE shared combo-sweep worker for the whole process — st.cache_resource
-    is created once and NEVER re-created, so the background thread and its
-    result survive every page refresh/rerun (a plain module-level dict is
-    re-created on each rerun and would lose the thread)."""
-    return {"t": None, "done": 0.0, "res": None, "key": None, "busy": False}
-
-
-_CB_BG = _cb_bg_store()
-
-
-def cb_bg_alive():
-    try:
-        return bool(_CB_BG["t"] and _CB_BG["t"].is_alive())
-    except Exception:
-        return False
-
-
-def cb_bg_start(watch, names):
-    """🧵 REFRESH-PROOF combo scan — the 500-stock sweep (2–3 min) runs in a
-    background thread that the page's auto-refresh CANNOT kill. The old
-    inline sweep died mid-flight every 2 minutes → the endless 'scanning
-    symbols, no result' loop. The page just polls; the board lands itself."""
-    import threading
-    key = f"{len(watch)}|{'|'.join(watch[:3])}"
-    if cb_bg_alive():
-        return False
-    if _CB_BG.get("key") == key and _CB_BG.get("done") and time.time() - _CB_BG["done"] < 60:
-        return False
-    def _work():
-        _CB_BG["busy"] = True          # suppresses st.progress inside the thread
-        try:
-            _CB_BG["res"] = combo_scan(list(watch), dict(names or {}))
-        except Exception:
-            _CB_BG["res"] = []
-        finally:
-            _CB_BG["busy"] = False
-            _CB_BG["done"] = time.time()
-    _CB_BG.update(done=0.0, res=None, key=key)
-    _CB_BG["t"] = threading.Thread(target=_work, daemon=True)
-    _CB_BG["t"].start()
-    return True
-
-
-def _volc_ui(combos, mst_s, now_map=None):
-    """🌋 VOLCANO section — renders the sleeper-eruption radar inside the
-    Combo tab. Green = erupting now · amber = loading (magma) · red = trap."""
-    now_map = now_map or {}
-    boom, load, trap = [], [], []
-    for c in combos:
-        v = c.get("volc") or {}
-        if v.get("state") == "BOOM" and v.get("body", 0) >= 1.0 and (v.get("vol_mult") or 99) >= 2.0:
-            boom.append((c, v))
-        elif v.get("state") == "LOADING":
-            load.append((c, v))
-        elif v.get("state") == "TRAP" and abs(v.get("body", 0)) >= 1.0:
-            trap.append((c, v))
-    st.markdown(_H("<div style='color:#fdba74;font-size:15px;font-weight:900;margin:16px 0 2px;'>"
-                   "🌋 VOLCANO — silent stock, sudden BOOM</div>"), unsafe_allow_html=True)
-    st.caption("The Tata-Chemicals pattern (17 Sep: quiet ±0.1% all day → +5.5% in ONE 5-min candle, "
-               "52× volume): a stock drifts inside a tiny box, then erupts. Every combo scan re-checks "
-               "the whole board automatically — zero extra data calls — at ANY price (the picks board keeps "
-               "your ₹100–₹600 trading band; the volcano watches everything above ₹100, so a ₹736 Tata "
-               "Chemicals or a ₹2,190 TCS can never slip past again).")
-    if not (boom or load or trap):
-        st.info("🌋 No eruptions on the board right now. Quiet boxes with volume starting to build "
-                "(👀 MAGMA) appear here BEFORE the big candle fires — keep the radar running.")
-    for c, v in boom:
-        age = v.get("age", 0)
-        np_now = now_map.get(c["sym"])
-        badges = (["💪 STRONG"] if v.get("strong") else []) + \
-                 (["⚡ LIVE CANDLE" if age == 0 else "🔁 2nd candle"]) + \
-                 (["⚠️ FADING WICK"] if v.get("fading") else []) + \
-                 (["🔇 THIN VOLUME"] if (v.get("vol_mult") or 99) < 2.5 else []) + \
-                 (["🐢 LATE — day already ran"] if (c.get("chg_day") or 0) > 3 else [])
-        st.markdown(_H(
-            f"<div style='display:flex;align-items:center;gap:12px;background:#1c1206;border:1px solid #7c2d12;"
-            f"border-left:3px solid #f97316;border-radius:12px;padding:8px 14px;margin:5px 0;flex-wrap:wrap;'>"
-            f"<div style='min-width:150px;'><div style='color:#fdba74;font-weight:800;font-size:14px;'>💥 {c['name'][:19]}</div>"
-            f"<div style='color:#64748b;font-size:10px;'>{c['sym'].replace('.NS','')} · erupted <b>{v['ts']}</b> IST</div></div>"
-            f"<div style='min-width:88px;'><div style='color:#64748b;font-size:9px;'>PRICE</div>"
-            f"<div style='color:#e2e8f0;font-weight:800;font-size:14px;font-family:monospace;'>₹{(np_now or c['price']):,.2f}</div></div>"
-            f"<div style='min-width:118px;'><div style='color:#64748b;font-size:9px;'>💥 BIG CANDLE</div>"
-            f"<div style='color:#f97316;font-size:13px;font-family:monospace;font-weight:900;'>+{v['body']:.2f}% in 5 min</div>"
-            f"<div style='color:#94a3b8;font-size:9.5px;'>after ±{v['quiet_avg']:.2f}% drift</div></div>"
-            f"<div style='min-width:112px;'><div style='color:#64748b;font-size:9px;'>📦 THE BOX</div>"
-            f"<div style='color:#e2e8f0;font-size:10.5px;font-family:monospace;'>₹{v['box_lo']:,.1f}–{v['box_hi']:,.1f}</div>"
-            f"<div style='color:#94a3b8;font-size:9.5px;'>only {v['tight']:.1f}% wide</div></div>"
-            + (f"<div style='min-width:76px;'><div style='color:#64748b;font-size:9px;'>📊 VOLUME</div>"
-               f"<div style='color:#22c55e;font-size:13px;font-family:monospace;font-weight:900;'>×{v['vol_mult']}</div>"
-               f"<div style='color:#94a3b8;font-size:9.5px;'>vs quiet avg</div></div>" if v.get("vol_mult") else "")
-            + (f"<div style='min-width:150px;'><div style='color:#64748b;font-size:9px;'>💰 TRADE (breakout style)</div>"
-               f"<div style='font-size:10.5px;font-family:monospace;line-height:1.5;'>"
-               f"<span style='color:#4ade80;font-weight:900;'>BUY ₹{v['buy']:,.2f}</span> · "
-               f"<span style='color:#f87171;'>SL ₹{v['sl']:,.2f}</span><br>"
-               f"<span style='color:#22c55e;font-weight:900;'>T1 ₹{v['t1']:,.2f}</span></div></div>" if v.get("t1") else "")
-            + "<div style='min-width:160px;'>" + "".join(
-                f"<span style='background:rgba(249,115,22,.15);color:#fdba74;font-size:9px;font-weight:900;"
-                f"padding:2px 7px;border-radius:8px;margin:1px 2px;display:inline-block;'>{b}</span>" for b in badges)
-            + "</div></div>"), unsafe_allow_html=True)
-    if boom:
-        st.caption("⚠️ BE CAREFUL — the exact thing you noticed: an eruption can FADE in the very next "
-                   "candle (Tata Chemicals fired a FAKE eruption 11:45 that died instantly; the real one "
-                   "came at 14:35). Rules: wait for the candle to CLOSE above the box · volume must be "
-                   "≥2× · if price already ran more than 2× the box height, NEVER chase — wait for a "
-                   "pullback to the box top.")
-    if load:
-        items = "".join(
-            f"<span style='background:#1c1206;border:1px solid #7c2d12;color:#fdba74;font-size:10.5px;"
-            f"padding:3px 9px;border-radius:8px;margin:2px;display:inline-block;'>👀 {c['name'][:16]} · "
-            f"₹{c['price']:,.1f} · box ₹{v['box_lo']:,.0f}–{v['box_hi']:,.0f} · vol building ×{v.get('vol_build')}</span>"
-            for c, v in load[:12])
-        st.markdown(_H(f"<div style='color:#fdba74;font-size:11px;font-weight:800;margin:8px 0 3px;'>"
-                       f"👀 MAGMA — quiet boxes with volume building ({len(load)}) · pre-eruption watch</div>"
-                       f"<div>{items}</div>"), unsafe_allow_html=True)
-    for c, v in trap:
-        st.markdown(_H(
-            f"<div style='display:flex;align-items:center;gap:12px;background:#1a0d0d;border:1px solid #7f1d1d;"
-            f"border-left:3px solid #ef4444;border-radius:12px;padding:7px 14px;margin:5px 0;flex-wrap:wrap;'>"
-            f"<div style='color:#fca5a5;font-weight:800;font-size:13px;min-width:150px;'>🕳️ {c['name'][:19]}</div>"
-            f"<div style='color:#ef4444;font-weight:900;font-family:monospace;font-size:13px;'>{v['body']:.2f}% in 5 min</div>"
-            f"<div style='color:#94a3b8;font-size:11px;'>fell out of a quiet box (₹{v['box_lo']:,.1f}–₹{v['box_hi']:,.1f}) at {v['ts']}</div>"
-            f"<div style='color:#f87171;font-size:11px;font-weight:900;'>❌ DO NOT BUY today · holding? tighten SL</div></div>"),
-            unsafe_allow_html=True)
-    evs = sorted(((c, e) for c in combos for e in (c.get("volc_day") or [])),
-                 key=lambda x: -abs(x[1].get("body") or 0))
-    if evs:
-        with st.expander(f"📜 Today's eruptions — full review ({len(evs)})"):
-            rows = "".join(
-                f"<div style='display:flex;gap:10px;background:#0b1220;border:1px solid #1e293b;border-radius:8px;"
-                f"padding:5px 10px;margin:3px 0;font-size:11px;flex-wrap:wrap;align-items:center;'>"
-                f"<b style='color:#e2e8f0;min-width:110px;'>{c['name'][:14]}</b>"
-                f"<span style='color:#64748b;min-width:44px;'>{e['ts']}</span>"
-                f"<span style='color:{'#22c55e' if e['body'] > 0 else '#ef4444'};font-weight:900;min-width:64px;"
-                f"font-family:monospace;'>{e['body']:+.2f}%</span>"
-                + (f"<span style='color:#94a3b8;min-width:56px;'>vol ×{e['vol_mult']}</span>" if e.get("vol_mult") else "")
-                + (f"<span style='color:#94a3b8;min-width:96px;'>ran +{e['ran']}% after</span>" if e.get("ran") is not None else "")
-                + ("<span style='color:#f87171;font-weight:900;'>❌ FADED — trap</span>" if e.get("faded_after")
-                   else "<span style='color:#4ade80;font-weight:900;'>✅ HELD</span>")
-                + "</div>" for c, e in evs[:25])
-            st.markdown(_H(rows), unsafe_allow_html=True)
-            st.caption("HELD = the move extended after the eruption candle · FADED = the next candles gave "
-                       "it straight back — that is the 'be careful' side of this pattern.")
-
-
 def combo_tab(ss, mst_s):
     # 🚀 AUTO-START — the combo radar begins BY ITSELF at 9:20 on market days
     # (the 🏅 consensus snapshots 9:30–10:15 depend on it running). Pressing
     # ⏹ Stop keeps it stopped for the rest of the day.
     if (not ss.get("cb_on") and mst_s == "open"
-            and (now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20 or ss.get("up_kick"))
-            and not up_wait_reason()          # ⏳ API-FIRST: hold for the Upstox login (till 9:35)
+            and now_ist().hour * 60 + now_ist().minute >= 9 * 60 + 20
             and ss.get("cb_stop_day") != now_ist().strftime("%Y-%m-%d")
-            and ss.get("cb_auto", True)
-            and _pilot_ok("cb", ss)):
+            and ss.get("cb_auto", True)):
         try:
             _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
         except Exception:
@@ -6374,10 +5440,6 @@ def combo_tab(ss, mst_s):
     # ♾️ AUTO-RESUME — the combo scan keeps running across page refreshes
     if not ss.get("cb_on"):
         _rt = rt_load().get("cb") or {}
-        if _rt.get("on") and _rt.get("watch"):
-            if time.time() - (_rt.get("last_scan") or 0) > 2700:   # 🧹 stale (>45 min) — old data, start clean
-                rt_clear("cb")
-                _rt = {}
         if _rt.get("on") and _rt.get("watch"):
             ss["cb_on"] = True
             ss["cb_watch"] = _rt["watch"]; ss["cb_names"] = _rt.get("names") or {}
@@ -6441,12 +5503,6 @@ def combo_tab(ss, mst_s):
         rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=watch, names=names)
 
     if not ss.get("cb_on"):
-        if mst_s == "open" and up_wait_reason():
-            st.markdown("<div style='background:#3a2a06;border:1px solid #f59e0b;border-radius:12px;padding:12px 18px;"
-                        "color:#fde68a;font-size:13px;line-height:1.8;'>⏳ <b>API-FIRST — the radar is HOLDING for your "
-                        "Upstox login.</b> Open the 📡 panel below → login → paste the code → <b>Activate</b> — the "
-                        "radar + coach start the same second, snapshots begin 9:30. (Skipping today? Auto-start on "
-                        "Yahoo at 9:35.)</div>", unsafe_allow_html=True)
         st.markdown("<div style='background:#0b1220;border-radius:20px;padding:44px;text-align:center;'>"
                     "<div style='font-size:44px;'>🎯</div>"
                     "<div style='font-size:20px;font-weight:900;color:#f1f5f9;margin-top:10px;'>COMBO SCANNER</div>"
@@ -6454,7 +5510,6 @@ def combo_tab(ss, mst_s):
                     "calculation agreement · 🎯 PERFECT picks · 🐢 slow-steady riders</div>"
                     "<div style='color:#94a3b8;font-size:12px;margin-top:12px;'>↑ Best at <b>9:45–11:00 AM IST</b> · "
                     "press <b style='color:#22c55e;'>🎯 START COMBO SCAN</b></div></div>", unsafe_allow_html=True)
-        up_settings_ui("_cb2")     # 📡 API-FIRST: activate right here → radar starts instantly
         return
 
     if ss.get("_cb_autostarted"):
@@ -6466,15 +5521,11 @@ def combo_tab(ss, mst_s):
         ss["_cb_resumed"] = False
         st.info("♾️ Combo scan resumed automatically — a page refresh does NOT stop it. "
                 "Press ⏹ Stop to end the session.")
-    if not _pilot_ok("cb", ss) and (rt_load().get("cb") or {}).get("on"):
-        st.caption("🤖 AUTOPILOT is driving the desk — this page is a live read-only view.")
 
     try:
         from streamlit_autorefresh import st_autorefresh
         _sec = int(ss.get("cb_int", "2 min").split()[0]) * 60
-        if feed_status()[0] == "fallback":
-            _sec = max(_sec, 360)    # 📡 fallback sweeps are heavier — refresh every 6 min,
-        if mst_s == "open":          # so the page never kills a sweep mid-flight again
+        if mst_s == "open":          # 🛌 after close: NO auto-refresh (free-CPU saver)
             st_autorefresh(interval=_sec * 1000, key="cb_tick")
     except Exception:
         pass
@@ -6483,55 +5534,36 @@ def combo_tab(ss, mst_s):
     names = ss.get("cb_names") or {}
     _sec = int(ss.get("cb_int", "2 min").split()[0]) * 60
     due = mst_s == "open" and time.time() - ss.get("cb_last", 0) > (_sec - 10)
-    if due and not _pilot_ok("cb", ss):
-        due = False
-        _cb_view_sync(ss)                 # 🤖 autopilot drives — live view only
-    _want_scan = (rescan_cb or due
-                  or (not ss.get("cb") and time.time() - ss.get("cb_last", 0) > 90))
-    if _want_scan:
-        _pilot_beat("cb", ss)
-        cb_bg_start(watch, names)          # 🧵 refresh-proof background sweep
-    _bg_done = _CB_BG.get("done") or 0.0
-    if _bg_done and _bg_done > (ss.get("cb_last") or 0):
-        # 🧵 background sweep finished → harvest the board
-        ss["cb"] = _CB_BG.get("res") or []
-        cons_capture(ss["cb"])              # 🏅 9:30/9:45/10:00/10:15 TOP-20 snapshots
-        cons_announce(names)               # 📲 guaranteed Telegram delivery of the final list
-        try:                                # 🏔️ 52-week-high club (cached 30 min)
-            if time.time() - ss.get("cb_52w_ts", 0) > 1800:
-                ss["cb_52w"] = high52_map([c["sym"] for c in ss["cb"][:48]])
-                ss["cb_52w_ts"] = time.time()
-            _h52 = ss.get("cb_52w") or {}
-            for c in ss["cb"]:
-                _hh = _h52.get(c["sym"])
-                c["near52"] = bool(_hh and _hh["dist"] >= -2.5)
-        except Exception:
-            pass
-        ss["cb_last"] = time.time()
-        ss["cb_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
-        try:                                # 🩺 connection probe (20 stocks)
-            _prb = fetch_chunk(tuple(watch[:20]), "5m", "1d") if watch else {}
-            ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": len(_prb)}
-        except Exception:
-            ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": 0}
-        ss.pop("cb_recheck", None)
+    if rescan_cb or due or not ss.get("cb"):
+        with st.spinner("🎯 Combo scan — live candles + calculation for the whole board…"):
+            ss["cb"] = combo_scan(watch, names)
+            cons_capture(ss["cb"])          # 🏅 9:30/9:45/10:00/10:15 TOP-20 snapshots
+            cons_announce(names)           # 📲 guaranteed Telegram delivery of the final list
+            try:                            # 🏔️ 52-week-high club (cached 30 min)
+                if time.time() - ss.get("cb_52w_ts", 0) > 1800:
+                    ss["cb_52w"] = high52_map([c["sym"] for c in ss["cb"][:48]])
+                    ss["cb_52w_ts"] = time.time()
+                _h52 = ss.get("cb_52w") or {}
+                for c in ss["cb"]:
+                    _hh = _h52.get(c["sym"])
+                    c["near52"] = bool(_hh and _hh["dist"] >= -2.5)
+            except Exception:
+                pass
+            ss["cb_last"] = time.time()
+            ss["cb_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
+            try:                                # 🩺 connection probe (20 stocks)
+                _prb = fetch_chunk(tuple(watch[:20]), "5m", "1d") if watch else {}
+                ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": len(_prb)}
+            except Exception:
+                ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": 0}
+            ss.pop("cb_recheck", None)
         rt_save("cb", on=True, watch=watch, names=names, combos=ss["cb"],
                 last_scan=ss["cb_last"], ts_str=ss.get("cb_ts_str"),
                 src=ss.get("cb_src"), n=ss.get("cb_n", 500))
-    if cb_bg_alive():
-        st.info("🧵 Full-board scan running in the BACKGROUND — refresh-proof, the board lands by "
-                "itself in ~2–3 minutes. You can refresh or switch tabs freely; this page updates "
-                "the moment the board is ready.")
-        try:
-            from streamlit_autorefresh import st_autorefresh
-            if mst_s == "open":
-                st_autorefresh(interval=15 * 1000, key="cb_bg_tick")   # quick poll while scanning
-        except Exception:
-            pass
 
     combos = ss.get("cb") or []
     _cbh = ss.get("cb_health") or {}
-    if not combos and not cb_bg_alive():
+    if not combos:
         _pr = int(_cbh.get("probe") or -1)
         if _pr == 0:
             st.markdown("<div style='background:#2a0e0e;border:1px solid #ef4444;border-radius:12px;padding:14px 18px;"
@@ -6544,17 +5576,9 @@ def combo_tab(ss, mst_s):
             st.warning(f"⚠️ PARTIAL DATA — connection test got only {_pr}/20 stocks. The server connection is "
                        f"struggling; scores may be incomplete. Auto-retry on the next scan — no action needed.")
         else:
-            if _FEED.get("fb_fail", 0) > _FEED.get("fb", 0) and time.time() - _FEED.get("fb_fail", 0) < 900:
-                st.error("📡 The Upstox fallback tried but returned no candles. Check the 📡 panel — "
-                         "if the green ANALYTICS box is showing, wait for the next scan cycle; if the "
-                         "token expired, paste a fresh one.")
-            elif feed_status()[0] == "fallback":
-                st.info("📡 Yahoo is resting (global throttle) — the Upstox fallback is carrying the "
-                        "board. Scores appear within a couple of scan cycles; everything else runs normally.")
-            else:
-                st.info("No scorable stocks yet — first reliable scores from ~9:45 AM IST (see the timing note above)."
-                        + (f" 🩺 Connection test: {_pr}/20 OK — the data line is healthy; the filters just "
-                           "haven't found agreement yet." if _pr >= 0 else ""))
+            st.info("No scorable stocks yet — first reliable scores from ~9:45 AM IST (see the timing note above)."
+                    + (f" 🩺 Connection test: {_pr}/20 OK — the data line is healthy; the filters just "
+                       "haven't found agreement yet." if _pr >= 0 else ""))
         return
     if mst_s == "closed":
         st.markdown("<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:10px;padding:8px 14px;"
@@ -6572,13 +5596,6 @@ def combo_tab(ss, mst_s):
                    if _age > 15 and mst_s == "open" else "")
                 + " · every card below shows 🕒 <b>NOW vs SCAN</b> — still on / fading / ended.</div>",
                 unsafe_allow_html=True)
-    _fsm, _fsb = feed_status()
-    if _fsm == "fallback":
-        st.markdown(f"<div style='background:#0b2540;border:1px solid #0ea5e9;border-radius:10px;"
-                    f"padding:8px 14px;color:#bae6fd;font-size:12px;margin-bottom:10px;'>"
-                    f"📡 <b>LIVE FALLBACK ACTIVE (since {_fsb} IST)</b> — Yahoo is resting; the radar "
-                    f"continues on Upstox live prices (last-good candles + live ticks). "
-                    f"<b>No interruption.</b></div>", unsafe_allow_html=True)
 
     # 🔄 live re-check of the top picks (current price vs scan price)
     _rc = ss.get("cb_recheck") or {}
@@ -6615,11 +5632,6 @@ def combo_tab(ss, mst_s):
     else:
         st.info("No PERFECT/MATCH picks right now — the two engines don't agree on anything this moment. "
                 "That's the system protecting you (no trade is better than a bad trade). Re-scan later.")
-
-    st.caption("🌋 The VOLCANO eruption radar now lives in the 🎯 Coach tab — it watches "
-               "continuously with the coach engine (every ~80 s), together with the whole "
-               "combo board when this radar runs.")
-
     if liveonly:
         with st.expander(f"⚠️ LIVE ONLY — climbing but calculation neutral ({len(liveonly)}) · higher risk"):
             st.markdown("".join(_combo_row(i + 1, c, _scan_short, _now_map) for i, c in enumerate(liveonly[:20])),
@@ -6638,8 +5650,7 @@ def combo_tab(ss, mst_s):
                               "SellT1": c.get("t1"), "SellT2": c.get("t2"),
                               "Support": c.get("support"), "Resist": c.get("resistance"),
                               "ResDist%": c.get("res_dist"),
-                              "SlowSteady": "🐢" if c["steady"] else "",
-                              "Volcano": (c.get("volc") or {}).get("state") or ""} for c in combos])
+                              "SlowSteady": "🐢" if c["steady"] else ""} for c in combos])
         try:
             st.dataframe(disp, **STRETCH, height=420, hide_index=True)
         except Exception:
@@ -7121,11 +6132,11 @@ def dashboard_tab(ss, mst_s, ml, mm):
                     st.plotly_chart(spark_fig(r), **STRETCH)
                 except Exception:
                     pass
-                st.markdown(f"<div class='sc-r'><b style='color:{r['sc']};'>{r['act']}</b><div style='color:#cbd5e1;"
+                st.markdown(f"<div class='sc-r'><b style='color:{r['sc']};'>{r['act']}</b><div style='color:#374151;"
                             f"font-size:12px;margin-top:6px;'>Entry ₹{r['buy_at']:.2f} · Stop ₹{r['sl']:.2f} · "
                             f"T1 ₹{r['t1']:.2f} · T2 ₹{r['t2']:.2f} · R:R 1:{r['rr']} · intraday: {r['itrend'].title()} · "
                             f"RSI {r['rsi']:.0f} · vol {r['vr']:.1f}x avg</div>"
-                            f"<div style='color:#64748b;font-size:11px;margin-top:4px;'>Quick plan from the live board — the full "
+                            f"<div style='color:#9ca3af;font-size:11px;margin-top:4px;'>Quick plan from the live board — the full "
                             f"Analyze tab adds pivots, Fibonacci, circuits, news & ML.</div></div>", unsafe_allow_html=True)
                 if st.button(f"📊 Open FULL analysis → {r['name'][:14]}", key=f"dt_{r['sym']}",
                              **STRETCH, type="primary"):
@@ -7447,8 +6458,8 @@ def run_scan(stocks, iv, per, min_conf, stype, workers=10, cap_n=None, stats_out
             for f in concurrent.futures.as_completed(futs):
                 cnt[0] += 1
                 bar.progress(min(cnt[0] / total, 1.0))
-                stat.markdown(f"<div style='background:#16233d;border:1px solid #bfdbfe;border-radius:8px;"
-                              f"padding:8px 16px;display:inline-block;color:#60a5fa;font-size:13px;font-weight:600;'>"
+                stat.markdown(f"<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;"
+                              f"padding:8px 16px;display:inline-block;color:#1d4ed8;font-size:13px;font-weight:600;'>"
                               f"🔍 {label} {min(cnt[0], total)}/{total} · ✅ data OK {len(results)}</div>",
                               unsafe_allow_html=True)
                 try:
@@ -7498,22 +6509,7 @@ def main():
             ss[k] = v
     mst_s, ml, mm = mkt_status()
     tg_daily_cleanup()   # 🧹 after close: clear today's alert messages from the phones
-    tg_morning_purge()   # 🧹 new day: delete ALL of yesterday's messages — clean morning chat
-    try:                  # 🧹 NEW-DAY RESET — yesterday's data never leaks into today
-        _nd = now_ist().strftime("%Y-%m-%d")
-        if (rt_load().get("dayrst") or {}).get("day") != _nd:
-            _keepcap = (rt_load().get("co") or {}).get("cap")   # 💰 capital survives the reset
-            for _eng in ("co", "cb", "mv", "bc", "cons"):   # dead sessions + old boards/alerts/snapshots
-                rt_clear(_eng)
-            if _keepcap:
-                rt_save("co", cap=_keepcap)
-            for _k in ("co_log", "co_feed", "co_volc", "co_ctx", "mv_alerts", "bc_alerts",
-                       "cb", "co_pos", "dash", "mv", "bc", "bc_prev", "mv_prevform"):
-                ss.pop(_k, None)
-            rt_save("dayrst", day=_nd)
-    except Exception:
-        pass
-    tg_online_ping()   # 🔔 ONE morning "online"/day + "program updated" on version change
+    tg_online_ping()   # 🔔 "app is online" Telegram message (max 1 per 30 min)
     mclr = "#22c55e" if mst_s == "open" else "#f59e0b" if mst_s == "pre" else "#ef4444"
 
     # live breadth badge for the navbar once the dashboard has data
@@ -7529,7 +6525,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.24 · BACKGROUND SCAN</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.15 · SCAN DIAGNOSIS · FULL</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
@@ -7547,9 +6543,9 @@ def main():
         try:
             dashboard_tab(ss, mst_s, ml, mm)
         except Exception as e:
-            st.markdown(f"<div style='background:#2a0e0e;border:2px solid #dc2626;border-radius:14px;"
+            st.markdown(f"<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:14px;"
                         f"padding:16px 20px;'><b style='color:#dc2626;'>⚠️ Dashboard hit a snag</b>"
-                        f"<div style='color:#cbd5e1;font-size:13px;margin-top:6px;'>Usually a temporary "
+                        f"<div style='color:#374151;font-size:13px;margin-top:6px;'>Usually a temporary "
                         f"data issue — press 🔄 Refresh, reduce the watchlist size, or use ⚡ Light mode. "
                         f"Details: <code>{type(e).__name__}: {e}</code></div></div>", unsafe_allow_html=True)
 
@@ -7591,7 +6587,7 @@ def main():
     # ── TAB 1: ANALYZE ──
     with tab_analyze:
         st.markdown('<div class="input-row">', unsafe_allow_html=True)
-        st.markdown("<div style='font-size:15px;font-weight:800;color:#60a5fa;margin-bottom:14px;'>⚙️ SETTINGS — pick timeframe, then choose a stock &amp; ANALYZE</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:15px;font-weight:800;color:#1d4ed8;margin-bottom:14px;'>⚙️ SETTINGS — pick timeframe, then choose a stock &amp; ANALYZE</div>", unsafe_allow_html=True)
         r3, r4 = st.columns(2)
         with r3:
             iv = st.selectbox("⏱️ Timeframe", ["1m", "5m", "15m", "30m", "1h", "1d"], index=2, key="iv_in"); ss.iv = iv
@@ -7626,7 +6622,7 @@ def main():
                              disabled=not live_on)]
         with lr3:
             if live_on:
-                st.markdown(f"<div style='background:#2a0e0e;border:1px solid #fecaca;border-radius:10px;"
+                st.markdown(f"<div style='background:#fff1f2;border:1px solid #fecaca;border-radius:10px;"
                             f"padding:8px 14px;margin-top:2px;color:#dc2626;font-size:12px;font-weight:600;'>"
                             f"🔴 LIVE — refreshing every {live_secs}s. Best during market hours (9:15–3:30).</div>",
                             unsafe_allow_html=True)
@@ -7639,13 +6635,13 @@ def main():
 
         if ss.analyzed and ss.sym:
             if live_on:
-                st.markdown(f"<div style='background:#2a0e0e;border:1px solid #fecaca;border-radius:10px;padding:8px 16px;margin-bottom:10px;color:#dc2626;font-weight:700;'>🔴 LIVE · {ss.stock_name} · updates every {live_secs}s · {datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:8px 16px;margin-bottom:10px;color:#dc2626;font-weight:700;'>🔴 LIVE · {ss.stock_name} · updates every {live_secs}s · {datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
             try:
                 show_analysis(ss.sym, ss.stock_name, iv, per)
             except Exception as e:
-                st.markdown(f"<div style='background:#2a0e0e;border:2px solid #dc2626;border-radius:14px;"
+                st.markdown(f"<div style='background:#fff1f2;border:2px solid #dc2626;border-radius:14px;"
                             f"padding:18px 22px;'><b style='color:#dc2626;font-size:16px;'>⚠️ Couldn't complete "
-                            f"this analysis</b><div style='color:#cbd5e1;font-size:13px;margin-top:6px;'>"
+                            f"this analysis</b><div style='color:#374151;font-size:13px;margin-top:6px;'>"
                             f"Often a temporary data issue — try again, switch timeframe to 15m + period 1mo, "
                             f"or pick another stock. Details: <code>{type(e).__name__}: {e}</code></div></div>",
                             unsafe_allow_html=True)
@@ -7667,12 +6663,12 @@ def main():
                     except RuntimeError:
                         pass
         else:
-            st.markdown("<div style='background:#0f1a2e;border:2px dashed #bfdbfe;border-radius:20px;padding:60px;text-align:center;margin-top:10px;'><div style='font-size:52px;margin-bottom:16px;'>📊</div><div style='font-size:22px;font-weight:800;color:#60a5fa;'>Select a stock above and click ANALYZE NOW</div><div style='color:#8fa3bd;font-size:14px;margin-top:8px;'>Signal · Fibonacci · Camarilla · Woodie · Chart · All 12 indicators · LIVE mode</div></div>", unsafe_allow_html=True)
+            st.markdown("<div style='background:white;border:2px dashed #bfdbfe;border-radius:20px;padding:60px;text-align:center;margin-top:10px;'><div style='font-size:52px;margin-bottom:16px;'>📊</div><div style='font-size:22px;font-weight:800;color:#1d4ed8;'>Select a stock above and click ANALYZE NOW</div><div style='color:#6b7280;font-size:14px;margin-top:8px;'>Signal · Fibonacci · Camarilla · Woodie · Chart · All 12 indicators · LIVE mode</div></div>", unsafe_allow_html=True)
 
     # ── TAB 2: SCANNER ──
     with tab_scan:
         st.markdown('<div class="input-row">', unsafe_allow_html=True)
-        st.markdown("<div style='font-size:15px;font-weight:800;color:#60a5fa;margin-bottom:14px;'>⚙️ SCANNER SETTINGS — tip: the 🔴 Live Dashboard scans up to 500 stocks far faster (batched)</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:15px;font-weight:800;color:#1d4ed8;margin-bottom:14px;'>⚙️ SCANNER SETTINGS — tip: the 🔴 Live Dashboard scans up to 500 stocks far faster (batched)</div>", unsafe_allow_html=True)
         sc3, sc4, sc5 = st.columns(3)
         with sc3: s_cat = st.selectbox("📂 Category", list(CAT_MAP.keys()), key="sc_cat")
         with sc4: s_sig = st.radio("Signal", ["📈 BUY", "📉 SELL", "🔍 ALL"], key="sc_sig")
@@ -7698,7 +6694,7 @@ def main():
             n_scan = cap_n if cap_n else total_n
             eta = max(1, int(n_scan / 160))
             note = f"Will scan <b>{n_scan:,}</b> stocks (~{eta}–{eta*2} min)" if is_all else f"Will scan <b>{total_n}</b> stocks"
-            st.markdown(f"<div style='background:#16233d;border-radius:10px;padding:10px 16px;margin-top:4px;'><span style='color:#60a5fa;font-size:13px;'>{note} · uptrend + confirmed setups first · keep this tab open while it runs</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background:#eff6ff;border-radius:10px;padding:10px 16px;margin-top:4px;'><span style='color:#1d4ed8;font-size:13px;'>{note} · uptrend + confirmed setups first · keep this tab open while it runs</span></div>", unsafe_allow_html=True)
 
         if scan_btn:
             sm = {"📈 BUY": "BUY", "📉 SELL": "SELL", "🔍 ALL": "ALL"}[s_sig]
@@ -7730,7 +6726,7 @@ def main():
                                      help="Expandable detail cards for the top N. The FULL table + CSV "
                                           "download below always covers everything you selected.")
             results = ss.scan_results[:show_n]
-            st.markdown(f"<div style='background:#052e16;border:1px solid #bbf7d0;border-radius:10px;"
+            st.markdown(f"<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;"
                         f"padding:8px 14px;color:#166534;font-size:12.5px;'>📋 Showing <b>{show_n}</b> of "
                         f"<b>{total_found}</b> matched stocks · full sortable table + ⬇️ CSV download below</div>",
                         unsafe_allow_html=True)
@@ -7739,12 +6735,12 @@ def main():
             for i, (col, r) in enumerate(zip(top3, results[:3])):
                 with col:
                     up = r['tr'] == 'UPTREND'
-                    st.markdown(f"<div style='background:#0f1a2e;border:2px solid {r['sc']};border-radius:18px;padding:20px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,0.08);'><div style='font-size:28px;'>{medals[i]}</div><div style='font-size:15px;font-weight:800;color:#e2e8f0;margin:6px 0;'>{r['name'][:22]}</div><div style='font-size:24px;font-weight:900;color:#60a5fa;'>₹{r['price']:.2f}</div><div style='background:{r['sc']};color:white;border-radius:20px;padding:5px 16px;font-size:12px;font-weight:800;margin:10px auto;display:inline-block;'>{r['sig']}</div><div style='font-size:15px;font-weight:800;color:{'#16a34a' if up else '#8fa3bd'};margin-top:6px;'>{'📈 UPTREND' if up else r['tr'].title()}</div><div style='color:#8fa3bd;font-size:12px;margin-top:4px;'>Conf {r['conf']:.0f}% · Buy ₹{r['buy_at']:.2f}</div></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background:white;border:2px solid {r['sc']};border-radius:18px;padding:20px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,0.08);'><div style='font-size:28px;'>{medals[i]}</div><div style='font-size:15px;font-weight:800;color:#1a1f36;margin:6px 0;'>{r['name'][:22]}</div><div style='font-size:24px;font-weight:900;color:#1d4ed8;'>₹{r['price']:.2f}</div><div style='background:{r['sc']};color:white;border-radius:20px;padding:5px 16px;font-size:12px;font-weight:800;margin:10px auto;display:inline-block;'>{r['sig']}</div><div style='font-size:15px;font-weight:800;color:{'#16a34a' if up else '#6b7280'};margin-top:6px;'>{'📈 UPTREND' if up else r['tr'].title()}</div><div style='color:#6b7280;font-size:12px;margin-top:4px;'>Conf {r['conf']:.0f}% · Buy ₹{r['buy_at']:.2f}</div></div>", unsafe_allow_html=True)
             st.markdown("---"); st.markdown(f"### 📋 Top {min(detail_n, len(results))} — detail cards")
             for i, r in enumerate(results[:detail_n]):
                 up = r['tr'] == 'UPTREND'
                 with st.expander(f"{'📈' if up else '•'} #{i+1} · {r['name'][:26]} · ₹{r['price']:.2f} · {r['sig']} · {r['conf']:.0f}% · {r['tr'].title()} · Gap {r['gap']:+.1f}%", expanded=i < 3):
-                    st.markdown(f"<div class='sc-r'><div style='font-size:15px;font-weight:800;color:{r['ac']};margin-bottom:12px;'>{r['act']}</div><div style='display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center;'><div style='background:#16233d;border-radius:10px;padding:10px;'><div style='color:#8fa3bd;font-size:10px;'>TREND</div><div style='color:{'#16a34a' if up else '#8fa3bd'};font-weight:900;font-size:14px;'>{r['tr'].title()}</div></div><div style='background:#0f1a2e;border:1px solid #1e293b;border-radius:10px;padding:10px;'><div style='color:#8fa3bd;font-size:10px;'>BUY AT</div><div style='color:{r['ac']};font-weight:800;font-size:15px;'>₹{r['buy_at']:.2f}</div></div><div style='background:#2a0e0e;border-radius:10px;padding:10px;'><div style='color:#8fa3bd;font-size:10px;'>STOP</div><div style='color:#dc2626;font-weight:800;font-size:15px;'>₹{r['sl']:.2f}</div></div><div style='background:#052e16;border-radius:10px;padding:10px;'><div style='color:#8fa3bd;font-size:10px;'>TARGET 2</div><div style='color:#16a34a;font-weight:800;font-size:15px;'>₹{r['t2']:.2f}</div><div style='color:#8fa3bd;font-size:9px;'>+{r['t2p']:.1f}%</div></div><div style='background:#16233d;border-radius:10px;padding:10px;'><div style='color:#8fa3bd;font-size:10px;'>RISK:REWARD</div><div style='color:#60a5fa;font-weight:900;font-size:16px;'>1:{r['rr']}</div></div></div><div style='color:#8fa3bd;font-size:11px;margin-top:10px;'>Conf {r['conf']:.0f}% · Vol {r['vr']:.1f}x · Buy strength {r['bp']:.0f}%</div></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='sc-r'><div style='font-size:15px;font-weight:800;color:{r['ac']};margin-bottom:12px;'>{r['act']}</div><div style='display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center;'><div style='background:#eff6ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>TREND</div><div style='color:{'#16a34a' if up else '#6b7280'};font-weight:900;font-size:14px;'>{r['tr'].title()}</div></div><div style='background:white;border:1px solid #e0e7ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>BUY AT</div><div style='color:{r['ac']};font-weight:800;font-size:15px;'>₹{r['buy_at']:.2f}</div></div><div style='background:#fff1f2;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>STOP</div><div style='color:#dc2626;font-weight:800;font-size:15px;'>₹{r['sl']:.2f}</div></div><div style='background:#f0fdf4;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>TARGET 2</div><div style='color:#16a34a;font-weight:800;font-size:15px;'>₹{r['t2']:.2f}</div><div style='color:#6b7280;font-size:9px;'>+{r['t2p']:.1f}%</div></div><div style='background:#eff6ff;border-radius:10px;padding:10px;'><div style='color:#6b7280;font-size:10px;'>RISK:REWARD</div><div style='color:#1d4ed8;font-weight:900;font-size:16px;'>1:{r['rr']}</div></div></div><div style='color:#6b7280;font-size:11px;margin-top:10px;'>Conf {r['conf']:.0f}% · Vol {r['vr']:.1f}x · Buy strength {r['bp']:.0f}%</div></div>", unsafe_allow_html=True)
                     if st.button(f"📊 Full Analysis → {r['name'][:20]}", key=f"scf_{i}_{r['sym']}", **STRETCH, type="primary"):
                         ss.sym = r['sym']; ss.stock_name = r['name']; ss.analyzed = True
                         st.info("✅ Open the '📊 Analyze Stock' tab — it's loaded with this stock.")
@@ -7771,9 +6767,9 @@ def main():
                 pass
 
     # ── TAB 3: SEARCH ──
-        st.markdown("<hr style='border:1px solid #1e3a5f;margin:22px 0 14px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border:1px solid #dbeafe;margin:22px 0 14px 0;'>", unsafe_allow_html=True)
         st.markdown('<div class="input-row">', unsafe_allow_html=True)
-        st.markdown("<div style='font-size:15px;font-weight:800;color:#60a5fa;margin-bottom:12px;'>🔎 SEARCH ANY NSE/BSE STOCK (full live universe)</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:15px;font-weight:800;color:#1d4ed8;margin-bottom:12px;'>🔎 SEARCH ANY NSE/BSE STOCK (full live universe)</div>", unsafe_allow_html=True)
         q1, q2 = st.columns([4, 1])
         with q1:
             sq = st.text_input("Search", placeholder="Zensar Technologies, Oil India, Vedanta, Suzlon, SBIN...", key="sq_in", label_visibility="collapsed")
@@ -7790,7 +6786,7 @@ def main():
                 for i, (label, data) in enumerate(ss.search_results.items()):
                     with cols[i % 3]:
                         p = data['price']
-                        st.markdown(f"<div style='background:#0f1a2e;border:1px solid #1e293b;border-radius:16px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06);margin:4px 0;'><div style='font-weight:800;color:#e2e8f0;font-size:14px;'>{data['name']}</div><div style='font-size:30px;font-weight:900;color:#60a5fa;margin:10px 0;'>₹{p:,.2f}</div><div style='color:#64748b;font-size:11px;'>{data['sym']}</div></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='background:white;border:1px solid #e0e7ff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06);margin:4px 0;'><div style='font-weight:800;color:#1a1f36;font-size:14px;'>{data['name']}</div><div style='font-size:30px;font-weight:900;color:#1d4ed8;margin:10px 0;'>₹{p:,.2f}</div><div style='color:#9ca3af;font-size:11px;'>{data['sym']}</div></div>", unsafe_allow_html=True)
                         if st.button("📊 Analyze", key=f"sr_{i}", **STRETCH):
                             ss.sym = data['sym']; ss.stock_name = data['name']; ss.analyzed = True
                             st.success("✅ Open the '📊 Analyze Stock' tab.")
@@ -7810,9 +6806,9 @@ def main():
 
     # ── TAB 5: JOURNAL ──
     with tab_journal:
-        st.markdown("<div style='background:linear-gradient(135deg,#16233d,#1e3a5f);border:2px solid #3b82f6;"
+        st.markdown("<div style='background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #3b82f6;"
                     "border-radius:16px;padding:18px;margin-bottom:16px;'><div style='font-size:18px;font-weight:800;"
-                    "color:#60a5fa;'>📓 Trade Journal — did the plan work?</div><div style='color:#cbd5e1;"
+                    "color:#1d4ed8;'>📓 Trade Journal — did the plan work?</div><div style='color:#374151;"
                     "font-size:13px;margin-top:8px;'>Save any analysis (button under 'Save this analysis'), then come "
                     "back the next day. It checks what price actually did and marks each call a WIN, LOSS, or NO-FILL — "
                     "so you build a real accuracy record and see what to improve.</div></div>", unsafe_allow_html=True)
@@ -7838,7 +6834,7 @@ def main():
             with k3: st.metric("Losses", losses)
             with k4: st.metric("No-fill (waited)", nofill)
             with k5: st.metric("Hit-rate", f"{acc}%", "of resolved")
-            st.markdown("<div style='color:#8fa3bd;font-size:12px;margin:6px 0 14px;'>Hit-rate counts only "
+            st.markdown("<div style='color:#6b7280;font-size:12px;margin:6px 0 14px;'>Hit-rate counts only "
                         "resolved trades (win vs loss). 'No-fill' means price never reached your buy level — "
                         "that's the plan correctly keeping you out.</div>", unsafe_allow_html=True)
             for e, v in rows:
@@ -7847,11 +6843,11 @@ def main():
                 with st.expander(f"{v['status']} · {e['name'][:26]} · saved {e['saved']} · "
                                  f"{e.get('trend','')} {e.get('signal','')}", expanded=False):
                     st.markdown(
-                        f"<div style='background:#0f1a2e;border:1px solid #1e293b;border-left:5px solid {v['color']};"
+                        f"<div style='background:white;border:1px solid #e0e7ff;border-left:5px solid {v['color']};"
                         f"border-radius:0 12px 12px 0;padding:14px 18px;'>"
                         f"<div style='font-size:15px;font-weight:800;color:{v['color']};'>{v['status']}</div>"
-                        f"<div style='color:#cbd5e1;font-size:13px;margin-top:4px;'>{v['detail']}</div>"
-                        f"<div style='color:#8fa3bd;font-size:12px;margin-top:8px;'>Planned: buy ₹{e['buy_at']:.2f} · "
+                        f"<div style='color:#374151;font-size:13px;margin-top:4px;'>{v['detail']}</div>"
+                        f"<div style='color:#6b7280;font-size:12px;margin-top:8px;'>Planned: buy ₹{e['buy_at']:.2f} · "
                         f"stop ₹{e['sl']:.2f} · T1 ₹{e['t1']:.2f} · T2 ₹{e['t2']:.2f} · saved at ₹{e['price']:.2f} · "
                         f"stage {e.get('stage','')} · news: {e.get('news','—')}</div></div>", unsafe_allow_html=True)
                     if st.button("🗑️ Delete this entry", key=f"del_{e.get('id','')}"):
@@ -7859,7 +6855,7 @@ def main():
                         st.rerun()
 
     # ── TAB: EOD REVIEW (before vs after) ──
-        st.markdown("<hr style='border:1px solid #1e3a5f;margin:22px 0 14px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border:1px solid #dbeafe;margin:22px 0 14px 0;'>", unsafe_allow_html=True)
         try:
             eod_review_tab(ss)
         except Exception as e:
@@ -7872,8 +6868,8 @@ def main():
         <div class='tr-g'><b style='color:#16a34a;'>Rule 1 — Target price hit = book &amp; stop.</b> Price reached your target? Take profit, don't get greedy.</div>
         <div class='tr-b'><b style='color:#dc2626;'>Rule 2 — Always use the stop loss.</b> No SL = no trade.</div>
         <div class='tr-b'><b style='color:#dc2626;'>Rule 3 — Never average down.</b> SL hit → exit, don't buy more.</div>
-        <div class='tr-w'><b style='color:#fbbf24;'>Rule 4 — 9:15 AM is not for buying.</b> Wait for the 9:30 first candle.</div>
-        <div class='tr-w'><b style='color:#fbbf24;'>Rule 5 — Gap up > 2%? Don't chase.</b> Wait for a pullback or skip.</div>
+        <div class='tr-w'><b style='color:#b45309;'>Rule 4 — 9:15 AM is not for buying.</b> Wait for the 9:30 first candle.</div>
+        <div class='tr-w'><b style='color:#b45309;'>Rule 5 — Gap up > 2%? Don't chase.</b> Wait for a pullback or skip.</div>
         <div class='tr-i'><b style='color:#2563eb;'>Rule 6 — Trend is your friend.</b> Uptrend → buy dips. Downtrend → avoid longs.</div>
         <div class='tr-i'><b style='color:#2563eb;'>🔴 Live Dashboard workflow:</b> START the board → watch the 🚀 UPTREND panel → open a stock's tab or click Analyze on a top card → confirm with pivots/news/ML in the full analysis → trade only with a stop. The board finds candidates; the deep analysis confirms.</div>
         <div class='tr-i'><b style='color:#2563eb;'>Pivots — which to use:</b> Standard = general S/R · Camarilla = tight intraday reversals (R3/S3) & breakouts (R4/S4) · Woodie = faster, momentum-weighted · Fibonacci = 38.2/50/61.8% pullback zones.</div>
@@ -7886,7 +6882,7 @@ def main():
         <div class='tr-g'><b style='color:#16a34a;'>Honest truth:</b> no tool predicts price. These stack the odds and define your risk — they don't remove it. The stop loss is what actually protects your capital.</div>
         """), unsafe_allow_html=True)
 
-    st.markdown("<div style='text-align:center;color:#64748b;font-size:10px;padding:16px;border-top:2px solid #1e293b;margin-top:20px;'>⚠️ EDUCATIONAL PURPOSE ONLY · NOT FINANCIAL ADVICE · ALWAYS USE STOP LOSS · TRADE AT YOUR OWN RISK · Past performance ≠ future results</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center;color:#9ca3af;font-size:10px;padding:16px;border-top:2px solid #e0e7ff;margin-top:20px;'>⚠️ EDUCATIONAL PURPOSE ONLY · NOT FINANCIAL ADVICE · ALWAYS USE STOP LOSS · TRADE AT YOUR OWN RISK · Past performance ≠ future results</div>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
