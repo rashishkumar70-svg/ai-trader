@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.22.1 · FRESH START"
+APP_VERSION = "v13.22.2 · TRUE FALLBACK"
 
 
 def tg_online_ping():
@@ -3272,6 +3272,51 @@ def up_fallback_candles(syms):
                     out[s] = df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
             except Exception:
                 continue
+    except Exception:
+        pass
+    return out
+
+
+def up_intraday_candles(syms):
+    """📡 TRUE FALLBACK — today's REAL candles from Upstox (1-min intraday,
+    resampled to 5-min). Used when Yahoo is fully blocked: the board is
+    rebuilt from market open, not just from live ticks. One call per symbol,
+    throttled — ~15-20 s for a 500-stock board, once per scan cycle."""
+    out = {}
+    try:
+        if not up_token_valid() or not syms:
+            return out
+        d = up_load()
+        kmap = up_keys_map(list(syms))
+        for s, k in kmap.items():
+            try:
+                rq = urllib.request.Request(
+                    f"https://api.upstox.com/v2/historical-candle/intraday/{k}/1minute",
+                    headers={"Accept": "application/json", "User-Agent": UP_UA,
+                             "Authorization": f"Bearer {up_auth_token()}"})
+                r = _json.loads(urllib.request.urlopen(rq, timeout=6).read().decode("utf-8"))
+                candles = (r.get("data") or {}).get("candles") or []
+                if not candles:
+                    continue
+                df = pd.DataFrame([c[:6] for c in candles],
+                                  columns=["ts", "Open", "High", "Low", "Close", "Volume"])
+                df.index = pd.to_datetime(df["ts"])
+                try:
+                    df.index = df.index.tz_convert("Asia/Calcutta")
+                except Exception:
+                    pass
+                df = df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
+                agg = df.resample("5min").agg(
+                    {"Open": "first", "High": "max", "Low": "min",
+                     "Close": "last", "Volume": "sum"}).dropna()
+                if len(agg):
+                    out[s] = agg
+            except Exception:
+                continue
+            try:
+                time.sleep(0.02)
+            except Exception:
+                pass
     except Exception:
         pass
     return out
@@ -4759,7 +4804,9 @@ def fetch_chunk(syms, iv, per):
         _miss = [s for s in syms if s not in out]
         _fb = {}
         if _miss and up_token_valid():
-            _fb = up_fallback_candles(_miss) or {}
+            _fb = up_intraday_candles(_miss) or {}          # 📡 real candles from open
+            if not _fb:
+                _fb = up_fallback_candles(_miss) or {}      # 📡 tick-stitch backup
             if _fb:
                 out.update(_fb)
                 _FEED["fb"] = time.time()
@@ -6301,7 +6348,7 @@ def combo_tab(ss, mst_s):
     if due and not _pilot_ok("cb", ss):
         due = False
         _cb_view_sync(ss)                 # 🤖 autopilot drives — live view only
-    if rescan_cb or due or not ss.get("cb"):
+    if rescan_cb or due or (not ss.get("cb") and time.time() - ss.get("cb_last", 0) > 120):
         _pilot_beat("cb", ss)
         with st.spinner("🎯 Combo scan — live candles + calculation for the whole board…"):
             ss["cb"] = combo_scan(watch, names)
@@ -6344,9 +6391,13 @@ def combo_tab(ss, mst_s):
             st.warning(f"⚠️ PARTIAL DATA — connection test got only {_pr}/20 stocks. The server connection is "
                        f"struggling; scores may be incomplete. Auto-retry on the next scan — no action needed.")
         else:
-            st.info("No scorable stocks yet — first reliable scores from ~9:45 AM IST (see the timing note above)."
-                    + (f" 🩺 Connection test: {_pr}/20 OK — the data line is healthy; the filters just "
-                       "haven't found agreement yet." if _pr >= 0 else ""))
+            if feed_status()[0] == "fallback":
+                st.info("📡 Yahoo is resting (global throttle) — the Upstox fallback is carrying the "
+                        "board. Scores appear within a couple of scan cycles; everything else runs normally.")
+            else:
+                st.info("No scorable stocks yet — first reliable scores from ~9:45 AM IST (see the timing note above)."
+                        + (f" 🩺 Connection test: {_pr}/20 OK — the data line is healthy; the filters just "
+                           "haven't found agreement yet." if _pr >= 0 else ""))
         return
     if mst_s == "closed":
         st.markdown("<div style='background:#3f2d04;border:1px solid #f59e0b;border-radius:10px;padding:8px 14px;"
@@ -7321,7 +7372,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.22.1 · FRESH START</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.22.2 · TRUE FALLBACK</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
