@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.25.2 · TOP 150"
+APP_VERSION = "v13.26 · FRESH WIPE"
 
 
 def tg_online_ping():
@@ -4728,7 +4728,15 @@ SECTORS_FOR_BREADTH = {"💻 IT": IT_S, "🏦 Bank": BANK_S, "⚡ Power": POWER_
                         "🛡️ Defence": DEF_S, "🚗 Auto": AUTO_S, "💊 Pharma": PHARMA_S}
 
 
-_RANK_BG = {"t": None, "day": None, "fin": 0.0}   # 🧵 background universe ranker
+@st.cache_resource
+def _rank_bg_store():
+    """🧵 ONE ranker worker for the whole process — survives page reruns (a
+    plain module dict re-inits on every rerun and spawned DUPLICATE
+    2000-stock ranking threads — the server drowning in its own work)."""
+    return {"t": None, "day": None, "fin": 0.0}
+
+
+_RANK_BG = _rank_bg_store()
 
 
 def rank_universe(n):
@@ -4752,10 +4760,13 @@ def rank_universe(n):
         if _RANK_BG.get("day") == today and (_alive or time.time() - _RANK_BG.get("fin", 0) < 600):
             return None, None                     # running / recently failed — don't storm
         def _work():
+            blog(f"🌐 ranker started · {n} of the whole NSE (background)")
+            _t0 = time.time()
             try:
                 _rank_work(n)
-            except Exception:
-                pass
+                blog(f"🌐 ranker DONE in {time.time()-_t0:.0f}s")
+            except Exception as _e:
+                blog(f"🌐 ranker FAILED after {time.time()-_t0:.0f}s · {type(_e).__name__}")
             finally:
                 _RANK_BG["fin"] = time.time()
         _RANK_BG.update(day=today, fin=0.0)
@@ -4928,8 +4939,11 @@ def _yf_ok():
         urllib.request.urlopen(req, timeout=8).read()
         return True
     except Exception:
+        _was_ok = _YF_THROTTLE.get("ts") == 0
         _YF_THROTTLE["ts"] = time.time()
         _YF_THROTTLE["hits"] += 1
+        if _was_ok:
+            blog("⚡ Yahoo throttled — switching to Upstox (auto, 5-min recheck)")
         return False
 
 
@@ -6337,16 +6351,21 @@ def cb_bg_start(watch, names):
         return False
     def _work():
         _CB_BG["busy"] = True          # suppresses st.progress inside the thread
+        _t0 = time.time()
         try:
             _CB_BG["res"] = combo_scan(list(watch), dict(names or {}))
-        except Exception:
+            blog(f"🎯 combo sweep DONE · {len(_CB_BG['res'])} rows in {time.time()-_t0:.0f}s "
+                 f"· feed={'Upstox' if _FEED.get('fb', 0) > _FEED.get('yahoo_ok', 0) else 'Yahoo'}")
+        except Exception as _e:
             _CB_BG["res"] = []
+            blog(f"🎯 combo sweep FAILED · {type(_e).__name__}: {_e}")
         finally:
             _CB_BG["busy"] = False
             _CB_BG["done"] = time.time()
     _CB_BG.update(done=0.0, res=None, key=key)
     _CB_BG["t"] = threading.Thread(target=_work, daemon=True)
     _CB_BG["t"].start()
+    blog(f"🎯 combo sweep started · {len(watch)} stocks")
     return True
 
 
@@ -6462,14 +6481,15 @@ def combo_tab(ss, mst_s):
             and ss.get("cb_auto", True)
             and _pilot_ok("cb", ss)):
         try:
-            _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 150))
+            _w, _nm = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
         except Exception:
             _w, _nm = [], {}
         if _w:
             ss["cb_watch"] = _w; ss["cb_names"] = _nm
             ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
-            rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 150), watch=_w, names=_nm)
+            rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=_w, names=_nm)
             ss["_cb_autostarted"] = True
+            blog(f"🚀 combo AUTO-START · {len(_w)} stocks · n={ss.get('cb_n', 500)}")
             st.rerun()
 
     # ♾️ AUTO-RESUME — the combo scan keeps running across page refreshes
@@ -6488,7 +6508,7 @@ def combo_tab(ss, mst_s):
             if _rt.get("src"):
                 ss["cb_src"] = _rt["src"]
             if _rt.get("n"):
-                ss["cb_n"] = min(int(_rt["n"]), 150)   # 🎯 TOP-150 board (old 500s shrink)
+                ss["cb_n"] = _rt["n"]
             ss["_cb_resumed"] = True
 
     cons_announce()   # 📲 reopen later/evening: today's final result still gets delivered
@@ -6519,11 +6539,11 @@ def combo_tab(ss, mst_s):
             _keys = list(DASH_SRC.keys())
             _def = _keys.index("🌐 Full NSE (auto-fill to your count)") if "🌐 Full NSE (auto-fill to your count)" in _keys else 0
             st.selectbox("Universe", _keys, index=_def, key="cb_src")
-            st.slider("How many stocks", 100, 500, 150, 50, key="cb_n")
+            st.slider("How many stocks", 100, 500, 500, 50, key="cb_n")
         with k2:
             st.selectbox("Auto-refresh every", ["1 min", "2 min", "3 min", "5 min"], index=1, key="cb_int")
-            st.caption("🎯 TOP-150 board by design: the PERFECT picks always sit at the TOP of the "
-                       "ranking — 150 gives you every one of them at ~3× the refresh speed of 500.")
+            st.caption("📡 FULL 500 board — carried by Upstox real-time data. The PERFECT picks "
+                       "always sit at the TOP; if a heavy day ever feels slow, slide to 250 for ~2× speed.")
             st.caption("One scan = live 5-minute candles + daily history for the whole board (~1–2 min).")
         s1, s2, s3 = st.columns(3)
         with s1:
@@ -6538,10 +6558,10 @@ def combo_tab(ss, mst_s):
         ss["cb_stop_day"] = now_ist().strftime("%Y-%m-%d")
         rt_clear("cb")
     if start_cb:
-        watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 150))
+        watch, names = build_watchlist(ss.get("cb_src"), ss.get("cb_n", 500))
         ss["cb_watch"] = watch; ss["cb_names"] = names
         ss["cb_on"] = True; ss["cb"] = None; ss["cb_last"] = 0
-        rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 150), watch=watch, names=names)
+        rt_save("cb", on=True, src=ss.get("cb_src"), n=ss.get("cb_n", 500), watch=watch, names=names)
 
     if not ss.get("cb_on"):
         if mst_s == "open" and up_wait_reason():
@@ -6612,6 +6632,7 @@ def combo_tab(ss, mst_s):
             pass
         ss["cb_last"] = time.time()
         ss["cb_ts_str"] = now_ist().strftime("%d %b %Y · %H:%M")
+        blog(f"📊 board HARVESTED · {len(ss['cb'])} rows")
         try:                                # 🩺 connection probe (20 stocks)
             _prb = fetch_chunk(tuple(watch[:20]), "5m", "1d") if watch else {}
             ss["cb_health"] = {"ts": now_ist().strftime("%H:%M:%S"), "probe": len(_prb)}
@@ -6620,20 +6641,20 @@ def combo_tab(ss, mst_s):
         ss.pop("cb_recheck", None)
         rt_save("cb", on=True, watch=watch, names=names, combos=ss["cb"],
                 last_scan=ss["cb_last"], ts_str=ss.get("cb_ts_str"),
-                src=ss.get("cb_src"), n=ss.get("cb_n", 150))
+                src=ss.get("cb_src"), n=ss.get("cb_n", 500))
     # 🌐 ranked board landed in the background? swap once — only before the
     #    first consensus snapshot, so windows are never disturbed
     try:
         if ss.get("cb_on") and not ss.get("cb_ranked_swapped"):
             _cs = cons_state()
             if not sum(int(w.get("n") or 0) for w in (_cs.get("wins") or {}).values()):
-                _rw, _rn = rank_universe(ss.get("cb_n", 150))
+                _rw, _rn = rank_universe(ss.get("cb_n", 500))
                 if _rw and _rw != ss.get("cb_watch"):
                     ss["cb_watch"] = _rw
                     ss["cb_names"] = _rn
                     ss["cb_ranked_swapped"] = True
                     rt_save("cb", on=True, watch=_rw, names=_rn, combos=ss.get("cb") or [],
-                            src=ss.get("cb_src"), n=ss.get("cb_n", 150))
+                            src=ss.get("cb_src"), n=ss.get("cb_n", 500))
     except Exception:
         pass
     if cb_bg_alive():
@@ -7606,8 +7627,54 @@ def run_scan(stocks, iv, per, min_conf, stype, workers=10, cap_n=None, stats_out
 # ============================================================
 # MAIN APP
 # ============================================================
+def blog(msg):
+    """🗒️ boot log — every key step with a timestamp, so a stall can be located
+    in one glance:  cat /opt/app/boot_log.txt"""
+    try:
+        with open("boot_log.txt", "a", encoding="utf-8") as f:
+            f.write(f"{now_ist().strftime('%H:%M:%S')} {msg}\n")
+    except Exception:
+        pass
+
+
+def deploy_wipe():
+    """🧹 FRESH DEPLOY = CLEAN SLATE — when APP_VERSION changes, erase ALL
+    market data (sessions, boards, caches, snapshots, rankings). Credentials
+    (Upstox token, Telegram) are KEPT — only data dies."""
+    import glob
+    wiped = 0
+    try:
+        vfn = "last_version.txt"
+        last = ""
+        try:
+            last = open(vfn, encoding="utf-8").read().strip()
+        except Exception:
+            pass
+        if last == APP_VERSION:
+            return False
+        for pat in ("runtime_*.json", "universe_rank_*.json", "board_snapshots_*.json",
+                    "cons_state_*.json", "eod_results_*.json", "alerts_*.json",
+                    "candle_cache_*.pkl", "upstox_daily_*.pkl", "upstox_keys_*.json"):
+            for f in glob.glob(pat):
+                try:
+                    _os.remove(f)
+                    wiped += 1
+                except Exception:
+                    pass
+        try:
+            open(vfn, "w", encoding="utf-8").write(APP_VERSION)
+        except Exception:
+            pass
+    except Exception:
+        pass
+    blog(f"🧹 deploy wipe · {APP_VERSION} · {wiped} data files erased (creds kept)")
+    return True
+
+
 def main():
     ss = st.session_state
+    deploy_wipe()   # 🧹 program updated → ALL previous data erased, fresh start
+    blog(f"boot · {APP_VERSION} · market={mkt_status()[0]}")
     defaults = {'analyzed': False, 'sym': 'RELIANCE.NS', 'stock_name': 'RELIANCE',
                 'capital': 10000, 'target': 500, 'iv': '15m', 'per': '1mo',
                 'scan_results': None, 'search_results': None}
@@ -7647,7 +7714,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.25.2 · TOP 150</span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.26 · FRESH WIPE</span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
