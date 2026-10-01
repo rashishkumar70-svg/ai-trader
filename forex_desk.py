@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 st.set_page_config(page_title=" Forex Desk", page_icon="🌍", layout="wide",
                    initial_sidebar_state="collapsed")
 
-APP_VERSION = "v1.0 · FX LONDON BREAKOUT"
+APP_VERSION = "v1.1 · FX LIVE LEVELS"
 IST = ZoneInfo("Asia/Kolkata")
 LON = ZoneInfo("Europe/London")
 NY = ZoneInfo("America/New_York")
@@ -528,6 +528,54 @@ def online_ping():
         pass
 
 
+def live_levels(dfs):
+    """🔴 LIVE NOW (user request 2 Oct): whenever the desk is open, show
+    which pair is moving well RIGHT NOW — with Entry, SL and Targets,
+    the same information style as the stock alerts. Rolling last-hour
+    box, so it works in ANY session (not just London/NY opens).
+    Page-only — the official paper scorecard stays the consensus windows."""
+    out = []
+    for sym, df in (dfs or {}).items():
+        try:
+            if df is None or len(df) < 16:
+                continue
+            info = FX[sym]
+            pip = info["pip"]; dec = info["dec"]
+            tail = df.tail(16)              # last ~80 minutes
+            box = tail.iloc[:12]            # the 1-hour range
+            move = tail.iloc[12:]           # the recent candles (the move)
+            if len(move) < 2:
+                continue
+            hi = float(box["High"].max()); lo = float(box["Low"].min())
+            rng = hi - lo
+            if rng <= 4 * pip:              # dead box — nothing to break
+                continue
+            lc = float(df["Close"].iloc[-1])
+            bias = sum(1 if float(c) > float(o) else -1 if float(c) < float(o) else 0
+                       for o, c in zip(move["Open"], move["Close"]))
+            if lc > hi + 0.15 * rng and bias >= 1:          # broke UP, holding
+                entry, sl = lc, hi - 0.15 * rng
+                t1, t2 = entry + rng, entry + 1.6 * rng
+                d = "BUY"
+            elif lc < lo - 0.15 * rng and bias <= -1:       # broke DOWN, holding
+                entry, sl = lc, lo + 0.15 * rng
+                t1, t2 = entry - rng, entry - 1.6 * rng
+                d = "SELL"
+            else:
+                continue
+            risk = abs(entry - sl); rew = abs(t1 - entry)
+            if risk < 2 * pip or rew < 1.2 * risk:          # junk geometry
+                continue
+            out.append({"sym": sym, "name": info["name"], "dir": d, "entry": entry,
+                        "sl": sl, "t1": t1, "t2": t2, "dec": dec,
+                        "pips_risk": round(risk / pip, 1), "pips_t1": round(rew / pip, 1),
+                        "rr": round(rew / risk, 1), "box_hi": hi, "box_lo": lo})
+        except Exception:
+            continue
+    out.sort(key=lambda x: -x["pips_t1"])
+    return out
+
+
 # ═══════════════ UI ═══════════════
 def main():
     ss = st.session_state
@@ -582,11 +630,12 @@ def main():
     # data + engines
     cal = fetch_calendar()
     bo, ev = blackout_active(cal)
-    all_sig, prices, boxes = {}, {}, {}
+    all_sig, prices, boxes, dfs = {}, {}, {}, {}
     for sym in FX:
         df = fetch_5m(sym)
         if df is None:
             continue
+        dfs[sym] = df
         try:
             prices[sym] = float(df["Close"].iloc[-1])
         except Exception:
@@ -611,6 +660,36 @@ def main():
                     f"No new signals until ±{NEWS_BLACKOUT_MIN} min has passed. "
                     f"<b>STAY OUT of the market.</b></div>", unsafe_allow_html=True)
     nxt = next_events(cal)
+    # ── 🔴 LIVE NOW — what's moving with Entry/SL/Target (anytime view) ──
+    live = live_levels(dfs)
+    _now = now_ist().strftime("%H:%M")
+    if live:
+        st.markdown("<div style='background:#052e16;border:2px solid #16a34a;border-radius:14px;"
+                    "padding:12px 18px;color:#bbf7d0;font-size:15px;font-weight:800;margin:14px 0 8px;'>"
+                    f"🔴 LIVE NOW — moving well at {_now} IST</div>", unsafe_allow_html=True)
+        for L in live:
+            _c = "#16a34a" if L["dir"] == "BUY" else "#dc2626"
+            _ico = "🟢 BUY" if L["dir"] == "BUY" else "🔴 SELL"
+            st.markdown(
+                f"<div style='background:#0f1a2e;border:1px solid {_c};border-left:5px solid {_c};"
+                f"border-radius:12px;padding:14px 18px;margin:6px 0;'>"
+                f"<b style='font-size:16px;color:white;'>{_ico} · {L['name']}</b> "
+                f"<span style='color:#93c5fd;font-size:12px;'>broke its 1-hour range "
+                f"{L['box_lo']:.{L['dec']}f}–{L['box_hi']:.{L['dec']}f}</span><br>"
+                f"<span style='color:#e2e8f0;font-size:14px;'>"
+                f"Entry <b>{L['entry']:.{L['dec']}f}</b> · "
+                f"SL <b style='color:#f87171;'>{L['sl']:.{L['dec']}f}</b> (−{L['pips_risk']} pips) · "
+                f"Target <b style='color:#4ade80;'>{L['t1']:.{L['dec']}f}</b> (+{L['pips_t1']} pips) · "
+                f"runner {L['t2']:.{L['dec']}f}</span><br>"
+                f"<span style='color:#64748b;font-size:11px;'>risk {L['pips_risk']} → reward "
+                f"{L['pips_t1']} pips (1:{L['rr']}) · information only — paper desk, nothing is placed</span>"
+                f"</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div style='background:#16233d;border:1px solid #1e3a5f;border-radius:12px;"
+                    "padding:12px 18px;color:#93c5fd;font-size:13px;margin:14px 0 8px;'>"
+                    f"⚪ LIVE NOW at {_now} IST — no clean breakout right now. Pairs are ranging; "
+                    "the desk shows a card the moment a real move starts. Honest beats busy.</div>",
+                    unsafe_allow_html=True)
     if nxt:
         def _chip(e):
             fc = f" (fc {e['forecast']})" if e["forecast"] != "—" else ""
