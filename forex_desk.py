@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 st.set_page_config(page_title=" Forex Desk", page_icon="🌍", layout="wide",
                    initial_sidebar_state="collapsed")
 
-APP_VERSION = "v1.1 · FX LIVE LEVELS"
+APP_VERSION = "v1.2 · CLEAR NAMES"
 IST = ZoneInfo("Asia/Kolkata")
 LON = ZoneInfo("Europe/London")
 NY = ZoneInfo("America/New_York")
@@ -24,10 +24,14 @@ TG_CHATS = "8585402983,1996619549"
 
 # ── instruments: pip = 1 unit of "price move" we count ──
 FX = {
-    "EURUSD=X": {"name": "EUR/USD", "pip": 0.0001, "dec": 5},
-    "GBPUSD=X": {"name": "GBP/USD", "pip": 0.0001, "dec": 5},
-    "USDJPY=X": {"name": "USD/JPY", "pip": 0.01, "dec": 3},
-    "GC=F":     {"name": "GOLD",    "pip": 0.1, "dec": 1},
+    "EURUSD=X": {"name": "EUR/USD", "pip": 0.0001, "dec": 5,
+                 "desc": "Euro vs US Dollar — how many dollars 1 Euro costs. World's most-traded pair."},
+    "GBPUSD=X": {"name": "GBP/USD", "pip": 0.0001, "dec": 5,
+                 "desc": "British Pound vs US Dollar — the Pound priced in dollars."},
+    "USDJPY=X": {"name": "USD/JPY", "pip": 0.01, "dec": 3,
+                 "desc": "US Dollar vs Japanese Yen — how many Yen 1 dollar buys."},
+    "GC=F":     {"name": "GOLD",    "pip": 0.1, "dec": 1,
+                 "desc": "Gold — price in dollars per ounce. Safe-haven metal, moves like a currency."},
 }
 SESSIONS = {"asian": "ASIAN", "london": "LONDON", "ny": "NEW YORK"}
 NEWS_BLACKOUT_MIN = 20          # ±minutes around high-impact events — NO new signals
@@ -627,6 +631,20 @@ def main():
                    "Sunday evening / Monday morning IST.")
     st_autorefresh(interval=120_000, key="fx_refresh")
 
+    # ── 📖 legend: what these names mean (first-time friendly) ──
+    st.markdown(
+        "<div style='background:#1e1b3a;border:1px solid #9333ea;border-radius:12px;"
+        "padding:12px 18px;color:#cbd5e1;font-size:12px;line-height:1.8;margin-bottom:12px;'>"
+        "📖 <b>WHAT AM I LOOKING AT?</b> "
+        "<b>EUR/USD</b> = Euro vs Dollar · <b>GBP/USD</b> = Pound vs Dollar · "
+        "<b>USD/JPY</b> = Dollar vs Yen · <b>GOLD</b> = gold price in dollars.<br>"
+        "💰 <b>pip</b> = the smallest price step (like paise for rupees) — profit is counted in pips. "
+        "A pair moving <b>+20 pips</b> is a good day.<br>"
+        "📄 This page: <b>🔴 LIVE NOW</b> (0–4 cards — only what is actually moving right now) + "
+        "<b>🎯 4 instrument cards</b> (always shown, one per pair, each with its state) + "
+        "<b>📝 paper scorecard</b>. Telegram gets London 2 + New York 2 results + the daily scorecard."
+        "</div>", unsafe_allow_html=True)
+
     # data + engines
     cal = fetch_calendar()
     bo, ev = blackout_active(cal)
@@ -675,7 +693,8 @@ def main():
                 f"border-radius:12px;padding:14px 18px;margin:6px 0;'>"
                 f"<b style='font-size:16px;color:white;'>{_ico} · {L['name']}</b> "
                 f"<span style='color:#93c5fd;font-size:12px;'>broke its 1-hour range "
-                f"{L['box_lo']:.{L['dec']}f}–{L['box_hi']:.{L['dec']}f}</span><br>"
+                f"{L['box_lo']:.{L['dec']}f}–{L['box_hi']:.{L['dec']}f}</span>"
+                f"<div style='color:#8fa3bd;font-size:11px;margin:2px 0;'>📖 {FX[L['sym']]['desc']}</div><br>"
                 f"<span style='color:#e2e8f0;font-size:14px;'>"
                 f"Entry <b>{L['entry']:.{L['dec']}f}</b> · "
                 f"SL <b style='color:#f87171;'>{L['sl']:.{L['dec']}f}</b> (−{L['pips_risk']} pips) · "
@@ -739,6 +758,7 @@ def main():
                 b = s["box"]
                 body += f"<br><span style='color:#8fa3bd;font-size:11px;'>box {fmt_p(sym, b['lo'])} – " \
                         f"{fmt_p(sym, b['hi'])} ({to_pips(sym, b['hi'] - b['lo']):.0f} pips wide)</span>"
+            body = f"<span style='color:#8fa3bd;'>📖 {FX[sym]['desc']}</span><br>" + body
             st.markdown(_card(nm, px, sym, lbl, col, body), unsafe_allow_html=True)
 
     # chart
@@ -761,6 +781,7 @@ def main():
                           margin=dict(l=10, r=10, t=30, b=10),
                           title=f"{FX[pick]['name']} · 5-min · box = today's quiet range")
         st.plotly_chart(fig, use_container_width=True)
+        st.caption(f"📖 {FX[pick]['desc']}")
 
     # paper scorecard
     st.markdown("### 📝 Paper scorecard (pips, spread already paid)")
