@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 st.set_page_config(page_title=" Forex Desk", page_icon="🌍", layout="wide",
                    initial_sidebar_state="collapsed")
 
-APP_VERSION = "v1.2 · CLEAR NAMES"
+APP_VERSION = "v1.3 · SIGNAL LOG"
 IST = ZoneInfo("Asia/Kolkata")
 LON = ZoneInfo("Europe/London")
 NY = ZoneInfo("America/New_York")
@@ -38,6 +38,7 @@ NEWS_BLACKOUT_MIN = 20          # ±minutes around high-impact events — NO new
 CAL_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 STATE_FX = "forex_paper.json"   # paper positions + history (NEVER wiped on update)
 STATE_CONS = "forex_cons.json"  # today's snapshots (wiped on new version)
+STATE_LOG = "forex_live_log.json"  # 📜 LIVE-signal log of the day (kept, resets daily)
 
 
 # ═══════════════ helpers ═══════════════
@@ -532,6 +533,62 @@ def online_ping():
         pass
 
 
+def live_log():
+    """📜 today's LIVE-signal log — fresh list each day, kept across refreshes
+    and restarts (file), so a card that appeared at 14:23 stays visible all day."""
+    d = jload(STATE_LOG, {})
+    today = now_ist().strftime("%Y-%m-%d")
+    if d.get("day") != today:
+        d = {"day": today, "e": []}
+    return d
+
+
+def update_live_log(live, prices):
+    """📜 every LIVE NOW card gets stamped into the log (time + full levels),
+    then each open entry is auto-scored against the live price:
+    ⏳ running · ✅ target hit · ❌ SL hit. One entry per pair+direction
+    per 30 min (no spam), opposite direction always allowed."""
+    d = live_log()
+    e = d.setdefault("e", [])
+    now = now_ist()
+    for L in live or []:
+        key = L["sym"] + "|" + L["dir"]
+        if any(x["key"] == key and x["status"] == "run" for x in e):
+            continue
+        try:
+            last = max(x["t"] for x in e if x["key"] == key)
+        except ValueError:
+            last = ""
+        if last and last >= (now - timedelta(minutes=30)).strftime("%H:%M:%S"):
+            continue
+        e.append({"key": key, "sym": L["sym"], "dir": L["dir"], "entry": L["entry"],
+                  "sl": L["sl"], "t1": L["t1"], "t2": L["t2"], "dec": L["dec"],
+                  "pips_risk": L["pips_risk"], "pips_t1": L["pips_t1"], "rr": L["rr"],
+                  "t": now.strftime("%H:%M:%S"), "status": "run", "end": None, "now_pips": 0.0})
+    for x in e:
+        if x["status"] != "run":
+            continue
+        px = (prices or {}).get(x["sym"])
+        if not px:
+            continue
+        if x["dir"] == "BUY":
+            if px >= x["t1"]:
+                x["status"], x["end"] = "win", now.strftime("%H:%M")
+            elif px <= x["sl"]:
+                x["status"], x["end"] = "loss", now.strftime("%H:%M")
+            else:
+                x["now_pips"] = round((px - x["entry"]) / FX[x["sym"]]["pip"], 1)
+        else:
+            if px <= x["t1"]:
+                x["status"], x["end"] = "win", now.strftime("%H:%M")
+            elif px >= x["sl"]:
+                x["status"], x["end"] = "loss", now.strftime("%H:%M")
+            else:
+                x["now_pips"] = round((x["entry"] - px) / FX[x["sym"]]["pip"], 1)
+    jsave(STATE_LOG, d)
+    return e
+
+
 def live_levels(dfs):
     """🔴 LIVE NOW (user request 2 Oct): whenever the desk is open, show
     which pair is moving well RIGHT NOW — with Entry, SL and Targets,
@@ -709,6 +766,32 @@ def main():
                     f"⚪ LIVE NOW at {_now} IST — no clean breakout right now. Pairs are ranging; "
                     "the desk shows a card the moment a real move starts. Honest beats busy.</div>",
                     unsafe_allow_html=True)
+    # ── 📜 SIGNAL LOG — every card of today, kept with its time + result ──
+    log = update_live_log(live, prices)
+    if log:
+        st.markdown("<div style='background:#16233d;border:1px solid #1e3a5f;border-radius:14px;"
+                    "padding:12px 18px;color:#93c5fd;font-size:14px;font-weight:800;margin:14px 0 6px;'>"
+                    "📜 TODAY'S LIVE SIGNALS — every card stays here, newest first</div>",
+                    unsafe_allow_html=True)
+        for x in reversed(log):
+            nm = FX[x["sym"]]["name"]
+            if x["dir"] == "BUY":
+                ico, _c = "🟢 BUY", "#16a34a"
+            else:
+                ico, _c = "🔴 SELL", "#dc2626"
+            if x["status"] == "win":
+                tail, tc = f"✅ target hit (+{x['pips_t1']} pips) at {x['end']}", "#4ade80"
+            elif x["status"] == "loss":
+                tail, tc = f"❌ SL hit (−{x['pips_risk']} pips) at {x['end']}", "#f87171"
+            else:
+                tail, tc = f"⏳ running · now {x['now_pips']:+.1f} pips", "#fbbf24"
+            st.markdown(
+                f"<div style='background:#0f1a2e;border-left:4px solid {_c};border-radius:10px;"
+                f"padding:9px 14px;margin:4px 0;color:#cbd5e1;font-size:12px;'>"
+                f"<b style='color:white;'>{x['t'][:5]}</b> · {ico} <b>{nm}</b> · "
+                f"entry {x['entry']:.{x['dec']}f} · SL {x['sl']:.{x['dec']}f} · "
+                f"target {x['t1']:.{x['dec']}f} · "
+                f"<b style='color:{tc};'>{tail}</b></div>", unsafe_allow_html=True)
     if nxt:
         def _chip(e):
             fc = f" (fc {e['forecast']})" if e["forecast"] != "—" else ""
