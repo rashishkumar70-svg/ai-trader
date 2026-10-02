@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 st.set_page_config(page_title=" Forex Desk", page_icon="🌍", layout="wide",
                    initial_sidebar_state="collapsed")
 
-APP_VERSION = "v1.3 · SIGNAL LOG"
+APP_VERSION = "v1.4 · RUPEE CARDS"
 IST = ZoneInfo("Asia/Kolkata")
 LON = ZoneInfo("Europe/London")
 NY = ZoneInfo("America/New_York")
@@ -24,13 +24,13 @@ TG_CHATS = "8585402983,1996619549"
 
 # ── instruments: pip = 1 unit of "price move" we count ──
 FX = {
-    "EURUSD=X": {"name": "EUR/USD", "pip": 0.0001, "dec": 5,
+    "EURUSD=X": {"name": "EUR/USD", "pip": 0.0001, "dec": 5, "inr_pip": 9,
                  "desc": "Euro vs US Dollar — how many dollars 1 Euro costs. World's most-traded pair."},
-    "GBPUSD=X": {"name": "GBP/USD", "pip": 0.0001, "dec": 5,
+    "GBPUSD=X": {"name": "GBP/USD", "pip": 0.0001, "dec": 5, "inr_pip": 9,
                  "desc": "British Pound vs US Dollar — the Pound priced in dollars."},
-    "USDJPY=X": {"name": "USD/JPY", "pip": 0.01, "dec": 3,
+    "USDJPY=X": {"name": "USD/JPY", "pip": 0.01, "dec": 3, "inr_pip": 6,
                  "desc": "US Dollar vs Japanese Yen — how many Yen 1 dollar buys."},
-    "GC=F":     {"name": "GOLD",    "pip": 0.1, "dec": 1,
+    "GC=F":     {"name": "GOLD",    "pip": 0.1, "dec": 1, "inr_pip": None,
                  "desc": "Gold — price in dollars per ounce. Safe-haven metal, moves like a currency."},
 }
 SESSIONS = {"asian": "ASIAN", "london": "LONDON", "ny": "NEW YORK"}
@@ -533,6 +533,15 @@ def online_ping():
         pass
 
 
+def inr_note(sym, pips_risk, pips_t1):
+    """💰 pips → rupees for 1 NSE lot (the legal Indian size: €1,000 / £1,000 /
+    $1,000 per lot). GOLD has no NSE lot — watch-only for a ₹10,000 account."""
+    p = FX.get(sym, {}).get("inr_pip")
+    if not p:
+        return "watch-only — gold trades on MCX (big lots), not for a ₹10,000 account"
+    return f"1 NSE lot ≈ ₹{pips_risk * p:.0f} risk → ₹{pips_t1 * p:.0f} target"
+
+
 def live_log():
     """📜 today's LIVE-signal log — fresh list each day, kept across refreshes
     and restarts (file), so a card that appeared at 14:23 stays visible all day."""
@@ -699,7 +708,12 @@ def main():
         "A pair moving <b>+20 pips</b> is a good day.<br>"
         "📄 This page: <b>🔴 LIVE NOW</b> (0–4 cards — only what is actually moving right now) + "
         "<b>🎯 4 instrument cards</b> (always shown, one per pair, each with its state) + "
-        "<b>📝 paper scorecard</b>. Telegram gets London 2 + New York 2 results + the daily scorecard."
+        "<b>📝 paper scorecard</b>. Telegram gets London 2 + New York 2 results + the daily scorecard.<br>"
+        "💵 <b>Your ₹10,000, translated:</b> on NSE (the legal exchange) 1 lot ≈ ₹2,500–3,000 margin — "
+        "so ONE lot to start. 1 pip ≈ ₹9 on EUR/USD &amp; GBP/USD, ≈ ₹6 on USD/JPY. "
+        "A typical card (risk 8 → target 10 pips) ≈ <b>₹72 risk → ₹90 target per lot</b> — "
+        "same small-steps logic as your ₹3–4 stock rule. GOLD = watch-only (MCX, big lots). "
+        "This desk is PAPER — nothing is ever placed."
         "</div>", unsafe_allow_html=True)
 
     # data + engines
@@ -758,7 +772,8 @@ def main():
                 f"Target <b style='color:#4ade80;'>{L['t1']:.{L['dec']}f}</b> (+{L['pips_t1']} pips) · "
                 f"runner {L['t2']:.{L['dec']}f}</span><br>"
                 f"<span style='color:#64748b;font-size:11px;'>risk {L['pips_risk']} → reward "
-                f"{L['pips_t1']} pips (1:{L['rr']}) · information only — paper desk, nothing is placed</span>"
+                f"{L['pips_t1']} pips (1:{L['rr']}) · 💰 {inr_note(L['sym'], L['pips_risk'], L['pips_t1'])}"
+                f" · paper desk, nothing is placed</span>"
                 f"</div>", unsafe_allow_html=True)
     else:
         st.markdown("<div style='background:#16233d;border:1px solid #1e3a5f;border-radius:12px;"
@@ -785,13 +800,15 @@ def main():
                 tail, tc = f"❌ SL hit (−{x['pips_risk']} pips) at {x['end']}", "#f87171"
             else:
                 tail, tc = f"⏳ running · now {x['now_pips']:+.1f} pips", "#fbbf24"
+            _p = FX[x["sym"]].get("inr_pip")
+            _rs = f" · 💰 ≈₹{x['pips_t1'] * _p:.0f}/lot" if _p else " · 👀 watch-only"
             st.markdown(
                 f"<div style='background:#0f1a2e;border-left:4px solid {_c};border-radius:10px;"
                 f"padding:9px 14px;margin:4px 0;color:#cbd5e1;font-size:12px;'>"
                 f"<b style='color:white;'>{x['t'][:5]}</b> · {ico} <b>{nm}</b> · "
                 f"entry {x['entry']:.{x['dec']}f} · SL {x['sl']:.{x['dec']}f} · "
                 f"target {x['t1']:.{x['dec']}f} · "
-                f"<b style='color:{tc};'>{tail}</b></div>", unsafe_allow_html=True)
+                f"<b style='color:{tc};'>{tail}</b>{_rs}</div>", unsafe_allow_html=True)
     if nxt:
         def _chip(e):
             fc = f" (fc {e['forecast']})" if e["forecast"] != "—" else ""
