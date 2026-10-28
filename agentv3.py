@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.27.1 · MY SCHEDULE · UPSTOX API"
+APP_VERSION = "v13.27.2 · MY SCHEDULE · UPSTOX API"
 
 
 def tg_online_ping():
@@ -7678,17 +7678,44 @@ def run_scan(stocks, iv, per, min_conf, stype, workers=10, cap_n=None, stats_out
         stats_out["ok"] = len({r["sym"] for r in results})
         stats_out["fails"] = max(total - stats_out["ok"], 0)
     results = [r for r in results if MIN_PRICE <= (r.get("price") or 0) <= MAX_PRICE]
-    # 💧 LOW-VOLUME REMOVAL (27 Oct): a stock must average ≥100k shares/day
-    #    (20-day avg) to appear in ANY scanner result. Stocks not yet in the
-    #    liquidity map are kept — a missing map never blanks the scan.
+    # 💧 LOW-VOLUME REMOVAL (28 Oct FIX): a stock must average ≥100k
+    #    shares/day (20-day avg DAILY volume) to appear in ANY scanner
+    #    result. The ranker's map is used when present — and any symbol
+    #    MISSING from the map gets a live daily-candle lookup right here
+    #    (batched 50s, seconds not minutes) so the SCANNER works standalone
+    #    even if the dashboard ranker never ran today. Symbols with no
+    #    volume data at all are KEPT — the filter never blanks a scan.
     try:
         _lm = liq_map()
+        _before = len(results)
+        _need = [r["sym"] for r in results if r["sym"] not in _lm]
+        if _need:
+            _need = list(dict.fromkeys(_need))[:600]        # bound the work
+            _got = {}
+            for i in range(0, len(_need), 50):
+                try:
+                    _got.update(fetch_chunk(tuple(_need[i:i + 50]), "1d", "3mo") or {})
+                except Exception:
+                    pass
+            for _s, _df in _got.items():
+                try:
+                    if _df is not None and len(_df) >= 20 and "Volume" in _df.columns:
+                        _v = float(_df["Volume"].astype(float).tail(20).mean())
+                        if _v > 0:
+                            _lm[_s] = int(_v)
+                except Exception:
+                    pass
+            try:      # 💾 persist — the NEXT scan starts from the map (instant)
+                if _lm:
+                    _json.dump(_lm, open(f"universe_liq_{_ukey()}.json", "w",
+                                         encoding="utf-8"))
+            except Exception:
+                pass
         if _lm:
-            _before = len(results)
             results = [r for r in results
                        if r["sym"] not in _lm or float(_lm[r["sym"]]) >= 100_000]
-            if stats_out is not None:
-                stats_out["liq_drop"] = _before - len(results)
+        if stats_out is not None:
+            stats_out["liq_drop"] = _before - len(results)
     except Exception:
         pass
     if stype == "BUY":
