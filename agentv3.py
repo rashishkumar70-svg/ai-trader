@@ -1922,7 +1922,7 @@ def tg_send(text, buttons=None, keep=False):
     return sent_any
 
 
-APP_VERSION = "v13.27 · MY SCHEDULE · UPSTOX API"
+APP_VERSION = "v13.27.1 · MY SCHEDULE · UPSTOX API"
 
 
 def tg_online_ping():
@@ -4762,6 +4762,20 @@ def _rank_bg_store():
 _RANK_BG = _rank_bg_store()
 
 
+def liq_map():
+    """💧 20-day avg daily volume per symbol, written daily by the ranker.
+    Empty dict = map not built yet → callers keep everything (old behavior)."""
+    try:
+        p = f"universe_liq_{_ukey()}.json"
+        if _os.path.exists(p):
+            d = _json.load(open(p, encoding="utf-8"))
+            if isinstance(d, dict):
+                return d
+    except Exception:
+        pass
+    return {}
+
+
 def rank_universe(n):
     """🌐 FIRST SCAN OF THE DAY — TOP n of the whole NSE, cached to disk for
     the day. The heavy sweep runs in a BACKGROUND thread (the old inline
@@ -4839,6 +4853,25 @@ def _rank_work(n):
     def _c01(x):
         return max(-1.0, min(1.0, x))
 
+    # 💧 LIQUIDITY MAP — 20-day avg DAILY volume for the WHOLE market (even
+    #    stocks outside the price band), saved undated so the scanner can use
+    #    yesterday's map in the morning until today's ranker finishes.
+    try:
+        _liq = {}
+        for s, y in items:
+            try:
+                _df = got.get(y)
+                if _df is not None and len(_df) >= 20 and "Volume" in _df.columns:
+                    _v = float(_df["Volume"].astype(float).tail(20).mean())
+                    if _v > 0:
+                        _liq[y] = int(_v)
+            except Exception:
+                pass
+        if _liq:
+            _json.dump(_liq, open(f"universe_liq_{_ukey()}.json", "w", encoding="utf-8"))
+    except Exception:
+        pass
+
     scored = []
     for s, y in items:
         df = got.get(y)
@@ -4849,6 +4882,11 @@ def _rank_work(n):
             price = float(cl[-1])
             if price < MIN_PRICE or price > MAX_PRICE:   # keep ₹100–₹600 only
                 continue
+            try:      # 💧 LIQUIDITY FLOOR — low-volume stocks never rank
+                if float(df["Volume"].astype(float).tail(20).mean()) < 100_000:
+                    continue
+            except Exception:
+                pass
             chg5 = (price / float(cl[-6]) - 1) * 100 if len(cl) >= 6 else 0.0
             chg20 = (price / float(cl[-21]) - 1) * 100 if len(cl) >= 21 else 0.0
             base = float(cl[-200:].mean()) if len(cl) >= 200 else float(cl.mean())
@@ -7640,6 +7678,19 @@ def run_scan(stocks, iv, per, min_conf, stype, workers=10, cap_n=None, stats_out
         stats_out["ok"] = len({r["sym"] for r in results})
         stats_out["fails"] = max(total - stats_out["ok"], 0)
     results = [r for r in results if MIN_PRICE <= (r.get("price") or 0) <= MAX_PRICE]
+    # 💧 LOW-VOLUME REMOVAL (27 Oct): a stock must average ≥100k shares/day
+    #    (20-day avg) to appear in ANY scanner result. Stocks not yet in the
+    #    liquidity map are kept — a missing map never blanks the scan.
+    try:
+        _lm = liq_map()
+        if _lm:
+            _before = len(results)
+            results = [r for r in results
+                       if r["sym"] not in _lm or float(_lm[r["sym"]]) >= 100_000]
+            if stats_out is not None:
+                stats_out["liq_drop"] = _before - len(results)
+    except Exception:
+        pass
     if stype == "BUY":
         results = [r for r in results if r['conf'] >= min_conf and r['bp'] > r['sp'] and r['sit'] not in ('SELL', 'GAP_DN')]
         results.sort(key=lambda x: (x['tr'] == 'UPTREND', x['bp'], x['conf']), reverse=True)
@@ -7742,7 +7793,7 @@ def main():
 
     st.markdown(_H(f"""<div class='navbar'><div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>
     <div><span style='font-size:28px;font-weight:900;color:white;'>💹 AI Trader Pro</span>
-    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>v13.27 · MY SCHEDULE · <b style='color:#4ade80;'>📡 UPSTOX API</b></span></div>
+    <span style='font-size:14px;color:#93c5fd;margin-left:12px;'>{_esc(APP_VERSION)} · <b style='color:#4ade80;'>📡 UPSTOX API</b></span></div>
     <div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;'>
     <div style='background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;text-align:center;'>
     <div style='color:{mclr};font-weight:700;font-size:13px;'>{ml}</div><div style='color:#93c5fd;font-size:10px;'>{mm}</div></div>
@@ -7921,8 +7972,10 @@ def main():
             _ok, _tot = _st8.get("ok", 0), _st8.get("total", 0)
             _fail = _st8.get("fails", 0)
             if res:
+                _ld = _st8.get("liq_drop") or 0
                 st.success(f"✅ Found {len(res)} stocks! · data OK for {_ok}/{_tot} scanned · "
-                           f"uptrend + strongest setups on top.")
+                           f"uptrend + strongest setups on top."
+                           + (f" · 💧 {_ld} low-volume removed" if _ld else ""))
             elif _fail > _ok:
                 st.warning(f"⚠️ Yahoo didn't answer for {_fail} of {_tot} stocks (server throttling — "
                            f"NOT a scan problem). Press 🚀 START SCAN once more, or use the 🔴 Live Dashboard / "
